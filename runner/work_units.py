@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 import hashlib
 import json
-from typing import Mapping
+from typing import Mapping, Any
 
 from .models import ExactSubject
 
@@ -35,6 +35,7 @@ class WorkUnit:
     expected_outputs: tuple[str, ...]
     completion_criteria: tuple[str, ...]
     status: WorkUnitStatus
+    payload: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.id.strip():
@@ -47,6 +48,10 @@ class WorkUnit:
             raise ValueError("recursion depth must be non-negative")
         if any(int(value) < 0 for value in self.budget_allocation.values()):
             raise ValueError("budget allocation must be non-negative")
+        try:
+            json.dumps(self.payload, sort_keys=True, separators=(",", ":"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("work payload must be JSON-serializable") from exc
 
 
 def _subject_payload(subject: ExactSubject) -> dict[str, str | None]:
@@ -76,6 +81,7 @@ def work_unit_fingerprint(work: WorkUnit) -> str:
         "collision_keys": sorted(set(work.collision_keys)),
         "expected_outputs": sorted(set(work.expected_outputs)),
         "completion_criteria": sorted(set(work.completion_criteria)),
+        "payload": work.payload,
     }
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
