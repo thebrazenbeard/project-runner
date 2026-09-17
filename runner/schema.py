@@ -12,6 +12,7 @@ _SCHEMA_FILES = {
     "project": _ROOT / "schemas" / "project.schema.json",
     "worker": _ROOT / "schemas" / "worker.schema.json",
     "observation": _ROOT / "schemas" / "observation.schema.json",
+    "dependency": _ROOT / "schemas" / "dependency.schema.json",
 }
 
 

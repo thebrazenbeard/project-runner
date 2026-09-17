@@ -181,3 +181,56 @@ class Observation:
             observed_at=str(data["observed_at"]),
             observer=str(data["observer"]),
         )
+
+
+class DependencyReaction(str, Enum):
+    NO_ACTION = "NO_ACTION"
+    INSPECT = "INSPECT"
+    RETEST = "RETEST"
+    REREVIEW = "REREVIEW"
+    REQUALIFY = "REQUALIFY"
+    BLOCK = "BLOCK"
+
+
+@dataclass(frozen=True)
+class DependencySelector:
+    repository: str
+    ref: str | None = None
+    path_prefix: str | None = None
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> "DependencySelector":
+        repository = str(data.get("repository", "")).strip()
+        if not repository:
+            raise ValueError("dependency selector requires repository")
+        return cls(
+            repository=repository,
+            ref=str(data["ref"]) if data.get("ref") is not None else None,
+            path_prefix=str(data["path_prefix"]) if data.get("path_prefix") is not None else None,
+        )
+
+
+@dataclass(frozen=True)
+class DependencyEdge:
+    id: str
+    provider: str
+    consumer: str
+    kind: str
+    selector: DependencySelector
+    reaction: DependencyReaction
+    evidence: str
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> "DependencyEdge":
+        raw_selector = data.get("selector")
+        if not isinstance(raw_selector, Mapping):
+            raise ValueError("dependency selector must be a mapping")
+        return cls(
+            id=str(data["id"]),
+            provider=str(data["provider"]),
+            consumer=str(data["consumer"]),
+            kind=str(data["kind"]),
+            selector=DependencySelector.from_mapping(raw_selector),
+            reaction=DependencyReaction(str(data["reaction"])),
+            evidence=str(data["evidence"]),
+        )
