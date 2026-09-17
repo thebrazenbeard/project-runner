@@ -1,0 +1,23 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from jsonschema import Draft202012Validator
+
+
+_ROOT = Path(__file__).resolve().parents[1]
+_SCHEMA_FILES = {
+    "project": _ROOT / "schemas" / "project.schema.json",
+    "worker": _ROOT / "schemas" / "worker.schema.json",
+}
+
+
+def validate_document(schema_name: str, payload: Any) -> None:
+    try:
+        schema_path = _SCHEMA_FILES[schema_name]
+    except KeyError as exc:
+        raise ValueError(f"unknown schema: {schema_name}") from exc
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(payload)
