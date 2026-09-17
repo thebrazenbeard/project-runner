@@ -12,6 +12,9 @@ dependencies = [
   "jsonschema>=4.23,<5",
 ]
 
+[project.scripts]
+project-runner = "runner.cli:entrypoint"
+
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 
