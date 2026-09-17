@@ -6,19 +6,19 @@ Public-safe orchestration kernel for Patrick's multi-repository project ecosyste
 
 Project Runner is intended to answer five questions: what exists, what changed, what depends on the change, what work is now justified and authorized, and what evidence demonstrates completion.
 
-## Current state: M1 kernel
+## Current state: M2 observation and dependency graph candidate
 
-M1 is intentionally read-only outside this repository. It provides:
+M1 established the typed project/worker registry kernel. M2 adds the read-only evidence-propagation layer:
 
-- typed project and worker definitions;
-- JSON Schema-backed YAML registries;
-- duplicate-ID and worker-lifecycle validation;
-- a five-project seed inventory;
-- a twelve-worker Custom GPT inventory;
-- `project-runner validate` and `project-runner inventory` commands;
-- CI that tests the kernel and validates the registries.
+- exact-subject observations with explicit evidence class;
+- typed dependency edges and reactions;
+- deterministic repository/ref/path-prefix intersection;
+- exact-subject currentness comparison;
+- consumer invalidation derivation;
+- a small public-safe seed topology;
+- `project-runner evaluate-change` for deterministic before/after fixture evaluation.
 
-It does **not** yet dispatch workers, mutate downstream repositories, calculate dependency invalidation, or claim that any registered Custom GPT is callable. Those arrive only after evidence-backed later milestones.
+M2 still does **not** dispatch workers, mutate downstream repositories, grant authority from observations, discover live provider state by itself, or claim that any registered Custom GPT is callable. It only loads declared evidence, derives changes, and reports the dependency consequences supported by that evidence.
 
 ## Quick start
 
@@ -26,6 +26,10 @@ It does **not** yet dispatch workers, mutate downstream repositories, calculate 
 python -m pip install -e '.[dev]'
 project-runner validate
 project-runner inventory
+project-runner evaluate-change \
+  --before tests/fixtures/observations-before.yaml \
+  --after tests/fixtures/observations-after.yaml \
+  --dependencies topology/dependencies.yaml
 python -m pytest -q
 ```
 
@@ -38,6 +42,7 @@ Core rules include:
 - observation is not authority;
 - coordination is not authorization;
 - exact evidence outranks convenience pointers;
+- provider movement invalidates only matching declared consumers;
 - worker authority cannot expand through delegation;
 - recursive parallelism must be budgeted, deduplicated, collision-aware, and terminating;
 - public repository state must remain public-safe.

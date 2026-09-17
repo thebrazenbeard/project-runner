@@ -22,11 +22,15 @@ Workers move through evidence-backed states:
 
 A stable locator is sufficient only for `REGISTERED`. A worker is `EXECUTABLE` only after an end-to-end route is actually demonstrated. Invocation routes are verified independently.
 
-## M1 capability ceiling
+## M2 evidence-propagation ceiling
 
-M1 loads and validates project and worker registries. It does not dispatch work, create recursive workers, acquire downstream credentials, or mutate downstream projects.
+M2 may load exact observations and dependency declarations, compare exact subjects, identify changed subjects, and derive declared consumer reactions such as `INSPECT`, `RETEST`, `REREVIEW`, or `REQUALIFY`.
 
-The twelve Custom GPT records currently encode locators only. Their route states remain `UNVERIFIED` until Project Runner has evidence of a working route.
+Those derived reactions are evidence-backed coordination state only. M2 does not dispatch workers, mutate downstream repositories, create credentials, expand capabilities, merge, deploy, or convert a derived invalidation into authority.
+
+Path-selective dependencies are matched only when the changed observation identifies a path. A broad repository/head observation does not silently claim knowledge of which path changed; provider-specific diff discovery belongs in a later observation adapter.
+
+The twelve Custom GPT records remain locator registrations. Their route states stay `UNVERIFIED` until an end-to-end connection is demonstrated.
 
 ## Future recursive execution invariant
 

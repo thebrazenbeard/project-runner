@@ -5,7 +5,7 @@ from typing import Iterable, TypeVar
 
 import yaml
 
-from .models import DependencyEdge, ProjectDefinition, WorkerDefinition
+from .models import DependencyEdge, Observation, ProjectDefinition, WorkerDefinition
 from .schema import validate_document
 
 
@@ -51,3 +51,10 @@ def load_dependencies(path: Path) -> tuple[DependencyEdge, ...]:
     assert isinstance(payload, dict)
     edges = (DependencyEdge.from_mapping(item) for item in payload["dependencies"])
     return _reject_duplicate_ids(edges, "dependency")
+
+
+def load_observations(path: Path) -> tuple[Observation, ...]:
+    payload = _load_yaml(path)
+    validate_document("observation", payload)
+    assert isinstance(payload, dict)
+    return tuple(Observation.from_mapping(item) for item in payload["observations"])
