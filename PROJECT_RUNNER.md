@@ -1,66 +1,67 @@
 # Project Runner Operating Contract
 
-This document states the operational invariants for the repository. It does not grant authority over downstream projects.
+This document states Project Runner operational invariants. It does not grant authority over downstream projects.
 
 ## Public-safe repository
 
-Everything committed here must be safe for public disclosure. Do not commit credentials, private source payloads, private relational or autobiographical material, confidential mechanisms, or private project contents. Private projects may be represented only by the minimum public-safe metadata needed for orchestration.
+Everything committed here must be safe for public disclosure. Do not commit credentials, private source payloads, private relational/autobiographical material, confidential mechanisms, or private project contents.
 
 ## Evidence and authority
 
-An observation, registry entry, workflow result, review, frontier, priority decision, work unit, backend result, lease, or run receipt is evidence or coordination state. It is not authority by itself. Connector permissions likewise do not silently become governance authority.
+Observations, registry entries, workflow results, reviews, frontiers, priority decisions, work units, backend results, leases, and receipts are evidence or coordination state. None grants authority by itself.
 
-Downstream actions require target-specific capability and currentness checks. Project Runner may say work appears useful while still classifying the frontier as WAITING_AUTHORITY.
+## M5 GitHub execution boundary
 
-## Worker lifecycle
+Project Runner now has a real GitHub REST backend, but technical execution capability and target authority are distinct.
 
-Workers move through evidence-backed states:
+A GitHub operation proceeds only when:
 
-REGISTERED -> DISCOVERED -> PROFILED -> CONNECTED -> EXECUTABLE
+1. the backend route advertises the required technical capability;
+2. an explicit target grant permits the exact repository and operation;
+3. the requested ref/path is inside that grant;
+4. mutable predecessor state matches the request's expected head/blob where required;
+5. the effect is read back after mutation;
+6. later completion verification still rechecks exact currentness and independent evidence.
 
-UNAVAILABLE is a separate current-state classification for a previously expected route.
+Possessing a token with broad GitHub permissions does not satisfy target authority.
 
-A stable locator is sufficient only for REGISTERED. A worker is EXECUTABLE only after an end-to-end route is actually demonstrated. Invocation routes are verified independently.
+### Persistent lineage budget
 
-## M4 recursive-dispatcher ceiling
+M5 includes a SQLite lineage budget ledger with generation compare-and-swap. A workflow/process may reserve remaining lineage budget; a stale generation cannot overwrite a newer reservation. Restarting execution therefore cannot silently restore consumed child/active/retry/backend-job quota.
 
-M4 may load/derive M2-M3 state and convert READY frontiers into bounded local/mock work units.
+### Persistent leases and fencing
 
-### Capability inheritance
+M5 includes a SQLite lease store. Claim/reclaim state survives process restarts. Expired work can be reclaimed with a strictly higher fencing token. Older holders cannot complete or release the reclaimed work.
 
-A child work unit receives only the intersection of capabilities available to its parent and capabilities permitted by the target. Delegation may narrow capability. It may never expand it.
+### GitHub operations
 
-### Budget lineage
+The reference backend supports:
 
-Recursive work consumes an existing lineage budget. Child work cannot reset recursion depth, child-count, active-work, retry, or backend-job ceilings. Budget exhaustion terminates or defers work rather than creating new quota.
+- exact ref read;
+- create branch from an exact expected source head;
+- create/update UTF-8 file under an authorized ref/path scope with expected-state checks and post-write readback.
 
-### Semantic identity and leases
+Existing-file updates require the expected blob SHA; blind stale overwrite is rejected.
 
-Equivalent work is identified from semantic inputs rather than work IDs or scheduling order. Execution claims are atomic at the lease-store boundary. The M4 in-memory store is the reference implementation; distributed implementations must provide equivalent atomic claim/reclaim semantics.
+### CI proof
 
-Every lease carries a monotonic fencing token. When an expired lease is reclaimed, the new fence is higher. A stale worker holding an older fence may not complete or release the reclaimed work.
+The repository CI uses the actual GitHub REST transport in read-only mode against the exact push branch and requires the observed head to equal the workflow subject SHA.
 
-### Recursive guards
+CI retains `contents: read`. The live smoke test is connectivity/currentness evidence, not downstream mutation authority.
 
-A child must be semantically distinct from every work unit in its ancestry. Self-cycles and longer ancestry cycles fail closed. A child depth must advance exactly one level and remain within inherited budget.
+## Preserved M4 rules
 
-### Collision domains
+- child capabilities are intersections, never expansions;
+- recursive work consumes inherited budget;
+- semantic work deduplicates before claim;
+- collision domains serialize conflicting mutable targets only;
+- recursion/cycles terminate fail-closed;
+- backend/worker success is not completion;
+- stale output becomes SUPERSEDED rather than COMPLETE;
+- unresolved currentness or fencing becomes bounded OUTCOME_UNKNOWN.
 
-Collision keys describe mutable targets. Shared read-only evidence does not by itself serialize independent consumers. Only one representative of an overlapping collision component is admitted in a dispatch batch. Unrelated READY groups remain independently executable.
+## Current effect ceiling
 
-### Completion verification
+M5 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission.
 
-Backend/worker success is a claim, not completion evidence. After execution, Project Runner rechecks every declared exact input subject.
-
-- unchanged exact subject + independent completion evidence + valid current fence -> COMPLETE;
-- exact subject moved -> SUPERSEDED;
-- currentness cannot be established or completion fence is lost -> OUTCOME_UNKNOWN;
-- backend succeeded but independent completion evidence is absent -> VERIFYING.
-
-A stale result must never become COMPLETE.
-
-### M4 effect boundary
-
-M4's backend is deterministic and side-effect-free. M4 does not mutate downstream repositories, create downstream credentials, invoke registered Custom GPTs, dispatch GitHub Actions as workers, merge/deploy downstream work, or perform provider/runtime mutation. Those belong to later milestones and remain governed by target-specific authority.
-
-The twelve Custom GPT records remain locator registrations. Their route states stay UNVERIFIED until an end-to-end connection is demonstrated.
+The twelve Custom GPT records remain registrations with UNVERIFIED routes until an end-to-end executable path is independently demonstrated.
