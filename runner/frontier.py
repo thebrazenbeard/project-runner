@@ -32,12 +32,9 @@ def _frontier_id(invalidation: Invalidation) -> str:
 
 
 def _collision_keys(invalidation: Invalidation) -> tuple[str, ...]:
-    keys = [f"project:{invalidation.consumer}"]
-    if invalidation.changed_subject.path:
-        keys.append(
-            f"provider-path:{invalidation.changed_subject.repository}:{invalidation.changed_subject.path}"
-        )
-    return tuple(keys)
+    # Collision keys describe the mutable target, not shared read-only evidence.
+    # Different consumers of the same provider artifact therefore remain parallelizable.
+    return (f"project:{invalidation.consumer}",)
 
 
 def derive_frontiers(
