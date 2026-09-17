@@ -14,6 +14,7 @@ _SCHEMA_FILES = {
     "observation": _ROOT / "schemas" / "observation.schema.json",
     "dependency": _ROOT / "schemas" / "dependency.schema.json",
     "frontier": _ROOT / "schemas" / "frontier.schema.json",
+    "work-unit": _ROOT / "schemas" / "work-unit.schema.json",
 }
 
 
