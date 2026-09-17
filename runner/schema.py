@@ -13,6 +13,7 @@ _SCHEMA_FILES = {
     "worker": _ROOT / "schemas" / "worker.schema.json",
     "observation": _ROOT / "schemas" / "observation.schema.json",
     "dependency": _ROOT / "schemas" / "dependency.schema.json",
+    "frontier": _ROOT / "schemas" / "frontier.schema.json",
 }
 
 
