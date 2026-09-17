@@ -8,7 +8,7 @@ Everything committed here must be safe for public disclosure. Do not commit cred
 
 ## Evidence and authority
 
-An observation, registry entry, workflow result, review, or run receipt is evidence. It is not authority by itself. Connector permissions likewise do not silently become governance authority.
+An observation, registry entry, workflow result, review, frontier, priority decision, or run receipt is evidence or coordination state. It is not authority by itself. Connector permissions likewise do not silently become governance authority.
 
 Downstream actions require target-specific capability and currentness checks. Project Runner may say work appears useful while still classifying the frontier as `WAITING_AUTHORITY`.
 
@@ -22,13 +22,21 @@ Workers move through evidence-backed states:
 
 A stable locator is sufficient only for `REGISTERED`. A worker is `EXECUTABLE` only after an end-to-end route is actually demonstrated. Invocation routes are verified independently.
 
-## M2 evidence-propagation ceiling
+## M3 frontier-engine ceiling
 
-M2 may load exact observations and dependency declarations, compare exact subjects, identify changed subjects, and derive declared consumer reactions such as `INSPECT`, `RETEST`, `REREVIEW`, or `REQUALIFY`.
+M3 may load exact observations and dependency declarations, compare exact subjects, derive invalidations, generate frontiers, deduplicate equivalent work, group overlapping collision domains, and deterministically rank work with explicit reasons.
 
-Those derived reactions are evidence-backed coordination state only. M2 does not dispatch workers, mutate downstream repositories, create credentials, expand capabilities, merge, deploy, or convert a derived invalidation into authority.
+Frontier state is not effect authority:
 
-Path-selective dependencies are matched only when the changed observation identifies a path. A broad repository/head observation does not silently claim knowledge of which path changed; provider-specific diff discovery belongs in a later observation adapter.
+- `READY` means the frontier is not currently blocked by its declared dependency state or required-capability comparison.
+- `WAITING_DEPENDENCY` means the declared dependency condition blocks progress.
+- `WAITING_AUTHORITY` means the required capability is absent from the current declared capability set.
+
+A high-priority blocked frontier remains visible but must not suppress unrelated `READY` work. Numeric priority never overrides authority or dependency classification.
+
+Collision keys describe mutable targets. Shared provider evidence is not itself a reason to serialize independent consumers. Overlapping target collision domains are grouped transitively.
+
+M3 does not dispatch workers, mutate downstream repositories, create credentials, expand capabilities, merge, deploy, or turn a priority decision into authority.
 
 The twelve Custom GPT records remain locator registrations. Their route states stay `UNVERIFIED` until an end-to-end connection is demonstrated.
 
