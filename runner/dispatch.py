@@ -7,7 +7,7 @@ from .backends import BackendResult, ExecutionBackend
 from .budgets import BudgetEnvelope
 from .collisions import partition_collision_groups
 from .dedup import deduplicate_frontiers, frontier_fingerprint
-from .leases import InMemoryLeaseStore, Lease
+from .leases import Lease, LeaseStore
 from .models import Frontier, FrontierStatus
 from .prioritize import rank_frontiers
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
@@ -56,7 +56,7 @@ def frontier_to_work_unit(frontier: Frontier, *, depth: int = 0) -> WorkUnit:
 def dispatch_ready(
     frontiers: Iterable[Frontier],
     *,
-    lease_store: InMemoryLeaseStore,
+    lease_store: LeaseStore,
     backend: ExecutionBackend,
     budget: BudgetEnvelope,
     holder: str,
