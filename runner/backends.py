@@ -12,6 +12,7 @@ class BackendResult:
     succeeded: bool
     outputs: tuple[str, ...]
     evidence: tuple[str, ...]
+    classification: str = "SUCCEEDED"
 
 
 class ExecutionBackend(Protocol):
@@ -19,7 +20,7 @@ class ExecutionBackend(Protocol):
 
 
 class MockBackend:
-    """Deterministic side-effect-free backend for M4."""
+    """Deterministic side-effect-free backend for M4/M5 tests."""
 
     def __init__(self, *, succeed: bool = True) -> None:
         self.succeed = succeed
@@ -33,4 +34,5 @@ class MockBackend:
             succeeded=self.succeed,
             outputs=tuple(work.expected_outputs) if self.succeed else (),
             evidence=("mock-backend",),
+            classification="SUCCEEDED" if self.succeed else "FAILED",
         )
