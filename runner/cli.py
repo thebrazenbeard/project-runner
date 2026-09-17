@@ -6,13 +6,20 @@ import json
 from pathlib import Path
 from typing import Sequence
 
+from .backends import MockBackend
+from .budgets import BudgetEnvelope
 from .collisions import partition_collision_groups
 from .currentness import observation_locus, subject_changed
 from .dedup import deduplicate_frontiers, frontier_fingerprint
+from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
+from .leases import InMemoryLeaseStore
+from .models import FrontierStatus
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import load_dependencies, load_observations, load_projects, load_workers
+from .verify import verify_attempt
+from .work_units import work_unit_fingerprint
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -116,7 +123,7 @@ def _frontier_payload(frontier) -> dict[str, object]:
     }
 
 
-def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
+def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     previous = load_observations(before)
     current = load_observations(after)
     edges = load_dependencies(dependencies)
@@ -125,7 +132,11 @@ def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
 
     invalidations = derive_invalidations(previous, current, edges)
     derived = derive_frontiers(invalidations, capability_lookup=capability_lookup)
-    frontiers = deduplicate_frontiers(derived)
+    return deduplicate_frontiers(derived)
+
+
+def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
+    frontiers = _derive_frontier_set(before, after, dependencies)
     ordered_frontiers = tuple(sorted(frontiers, key=frontier_fingerprint))
     collision_groups = partition_collision_groups(ordered_frontiers)
     ranked = rank_frontiers(ordered_frontiers)
@@ -152,6 +163,87 @@ def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
     return 0
 
 
+def _dispatch_report(before: Path, after: Path, dependencies: Path) -> int:
+    frontiers = _derive_frontier_set(before, after, dependencies)
+    blocked = tuple(
+        sorted(
+            (
+                frontier
+                for frontier in frontiers
+                if frontier.status is not FrontierStatus.READY
+            ),
+            key=frontier_fingerprint,
+        )
+    )
+
+    budget = BudgetEnvelope(
+        lineage_id="m4-cli-fixture",
+        max_depth=3,
+        depth=0,
+        remaining_children=16,
+        remaining_active=8,
+        remaining_retries=4,
+        remaining_backend_jobs=8,
+    )
+    store = InMemoryLeaseStore()
+    backend = MockBackend()
+    batch = dispatch_ready(
+        frontiers,
+        lease_store=store,
+        backend=backend,
+        budget=budget,
+        holder="project-runner-m4-mock",
+        now=0.0,
+        lease_ttl=60.0,
+    )
+
+    attempts = []
+    for attempt in batch.attempts:
+        outcome = verify_attempt(
+            attempt,
+            lease_store=store,
+            now=1.0,
+            current_subject_reader=lambda subject: subject,
+            evidence_verifier=lambda work, result: (
+                result.succeeded and "mock-backend" in result.evidence
+            ),
+        )
+        attempts.append(
+            {
+                "frontier_id": attempt.frontier.id,
+                "project": attempt.frontier.project,
+                "work_id": attempt.work.id,
+                "work_fingerprint": work_unit_fingerprint(attempt.work),
+                "fencing_token": attempt.lease.fencing_token,
+                "backend_succeeded": attempt.result.succeeded,
+                "verification_status": outcome.status.value,
+                "verification_reason": outcome.reason,
+            }
+        )
+
+    payload = {
+        "mode": "M4_MOCK_NO_DOWNSTREAM_EFFECTS",
+        "attempts": attempts,
+        "blocked": [
+            {
+                "id": frontier.id,
+                "project": frontier.project,
+                "work_type": frontier.work_type,
+                "status": frontier.status.value,
+            }
+            for frontier in blocked
+        ],
+        "remaining_budget": {
+            "children": batch.remaining_budget.remaining_children,
+            "active": batch.remaining_budget.remaining_active,
+            "retries": batch.remaining_budget.remaining_retries,
+            "backend_jobs": batch.remaining_budget.remaining_backend_jobs,
+        },
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="project-runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -168,6 +260,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     frontier_report.add_argument("--after", type=Path, required=True)
     frontier_report.add_argument("--dependencies", type=Path, required=True)
 
+    dispatch_report = subparsers.add_parser("dispatch-report")
+    dispatch_report.add_argument("--before", type=Path, required=True)
+    dispatch_report.add_argument("--after", type=Path, required=True)
+    dispatch_report.add_argument("--dependencies", type=Path, required=True)
+
     args = parser.parse_args(argv)
     if args.command == "validate":
         return _validate()
@@ -175,7 +272,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _inventory()
     if args.command == "evaluate-change":
         return _evaluate_change(args.before, args.after, args.dependencies)
-    return _frontier_report(args.before, args.after, args.dependencies)
+    if args.command == "frontier-report":
+        return _frontier_report(args.before, args.after, args.dependencies)
+    return _dispatch_report(args.before, args.after, args.dependencies)
 
 
 def entrypoint() -> None:
