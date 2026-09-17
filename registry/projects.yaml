@@ -1,0 +1,52 @@
+projects:
+- id: project-runner
+  name: Project Runner
+  visibility: public
+  repositories:
+  - thebrazenbeard/project-runner
+  capabilities:
+  - read
+  - analyze
+  - propose
+  - create_branch
+  - write_branch
+  - open_pr
+  - comment
+  - request_review
+  - merge
+- id: chat-communication-bus
+  name: Chat Communication Bus
+  visibility: private
+  repositories:
+  - thebrazenbeard/chat-communication-bus
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: vera
+  name: Vera
+  visibility: private
+  repositories:
+  - thebrazenbeard/vera
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: vera-control-plane
+  name: Vera Control Plane
+  visibility: private
+  repositories:
+  - thebrazenbeard/vera-control-plane
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: hc-brain
+  name: HC Brain
+  visibility: public
+  repositories:
+  - thebrazenbeard/hc-brain
+  capabilities:
+  - read
+  - analyze
+  - propose
