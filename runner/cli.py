@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import json
+import os
 from pathlib import Path
 from typing import Sequence
 
@@ -13,13 +14,14 @@ from .currentness import observation_locus, subject_changed
 from .dedup import deduplicate_frontiers, frontier_fingerprint
 from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
+from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .leases import InMemoryLeaseStore
 from .models import FrontierStatus
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import load_dependencies, load_observations, load_projects, load_workers
 from .verify import verify_attempt
-from .work_units import work_unit_fingerprint
+from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -244,6 +246,51 @@ def _dispatch_report(before: Path, after: Path, dependencies: Path) -> int:
     return 0
 
 
+
+def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    backend = GitHubBackend(
+        transport=GitHubRestTransport(token=token),
+        route_capabilities={"github.read_ref"},
+        grants=(
+            TargetAuthorityGrant(
+                repository=repository,
+                operations=(GitHubOperation.READ_REF,),
+                ref_prefixes=(ref,),
+            ),
+        ),
+    )
+    work = WorkUnit(
+        id="github-read-smoke",
+        root_frontier_id="github-read-smoke",
+        parent_work_id=None,
+        inputs=(),
+        operation="GITHUB",
+        required_capabilities=("read",),
+        collision_keys=(f"repo:{repository}",),
+        recursion_depth=0,
+        budget_allocation={"active": 1, "backend_jobs": 1},
+        expected_outputs=("github-ref",),
+        completion_criteria=("readback",),
+        status=WorkUnitStatus.PENDING,
+        payload={
+            "github": {
+                "operation": "READ_REF",
+                "repository": repository,
+                "ref": ref,
+                "expected_head": expected_head,
+            }
+        },
+    )
+    result = backend.execute(work)
+    print(json.dumps({
+        "classification": result.classification,
+        "succeeded": result.succeeded,
+        "outputs": list(result.outputs),
+        "evidence": list(result.evidence),
+    }, sort_keys=True))
+    return 0 if result.succeeded else 1
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="project-runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -265,6 +312,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     dispatch_report.add_argument("--after", type=Path, required=True)
     dispatch_report.add_argument("--dependencies", type=Path, required=True)
 
+    github_smoke = subparsers.add_parser("github-read-smoke")
+    github_smoke.add_argument("--repository", required=True)
+    github_smoke.add_argument("--ref", required=True)
+    github_smoke.add_argument("--expected-head")
+
     args = parser.parse_args(argv)
     if args.command == "validate":
         return _validate()
@@ -274,7 +326,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _evaluate_change(args.before, args.after, args.dependencies)
     if args.command == "frontier-report":
         return _frontier_report(args.before, args.after, args.dependencies)
-    return _dispatch_report(args.before, args.after, args.dependencies)
+    if args.command == "dispatch-report":
+        return _dispatch_report(args.before, args.after, args.dependencies)
+    return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
 
 def entrypoint() -> None:
