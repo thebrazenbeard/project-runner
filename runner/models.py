@@ -234,3 +234,69 @@ class DependencyEdge:
             reaction=DependencyReaction(str(data["reaction"])),
             evidence=str(data["evidence"]),
         )
+
+
+class FrontierStatus(str, Enum):
+    READY = "READY"
+    WAITING_DEPENDENCY = "WAITING_DEPENDENCY"
+    WAITING_AUTHORITY = "WAITING_AUTHORITY"
+    RUNNING = "RUNNING"
+    VERIFYING = "VERIFYING"
+    COMPLETE = "COMPLETE"
+    FAILED_RETRYABLE = "FAILED_RETRYABLE"
+    FAILED_DETERMINISTIC = "FAILED_DETERMINISTIC"
+    OUTCOME_UNKNOWN = "OUTCOME_UNKNOWN"
+    SUPERSEDED = "SUPERSEDED"
+
+
+class CostClass(str, Enum):
+    TRIVIAL = "TRIVIAL"
+    SMALL = "SMALL"
+    MEDIUM = "MEDIUM"
+    LARGE = "LARGE"
+
+
+@dataclass(frozen=True)
+class Frontier:
+    id: str
+    project: str
+    subject: ExactSubject
+    work_type: str
+    reason: str
+    dependencies: tuple[str, ...]
+    required_capabilities: tuple[str, ...]
+    collision_keys: tuple[str, ...]
+    cost_class: CostClass
+    priority_inputs: Mapping[str, int]
+    status: FrontierStatus
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> "Frontier":
+        raw_subject = data.get("subject")
+        if not isinstance(raw_subject, Mapping):
+            raise ValueError("frontier subject must be a mapping")
+        raw_dependencies = data["dependencies"]
+        raw_capabilities = data["required_capabilities"]
+        raw_collision_keys = data["collision_keys"]
+        raw_priority_inputs = data["priority_inputs"]
+        if not isinstance(raw_dependencies, list):
+            raise ValueError("dependencies must be a list")
+        if not isinstance(raw_capabilities, list):
+            raise ValueError("required_capabilities must be a list")
+        if not isinstance(raw_collision_keys, list):
+            raise ValueError("collision_keys must be a list")
+        if not isinstance(raw_priority_inputs, Mapping):
+            raise ValueError("priority_inputs must be a mapping")
+        return cls(
+            id=str(data["id"]),
+            project=str(data["project"]),
+            subject=ExactSubject.from_mapping(raw_subject),
+            work_type=str(data["work_type"]),
+            reason=str(data["reason"]),
+            dependencies=tuple(str(item) for item in raw_dependencies),
+            required_capabilities=tuple(str(item) for item in raw_capabilities),
+            collision_keys=tuple(str(item) for item in raw_collision_keys),
+            cost_class=CostClass(str(data["cost_class"])),
+            priority_inputs={str(k): int(v) for k, v in raw_priority_inputs.items()},
+            status=FrontierStatus(str(data["status"])),
+        )
