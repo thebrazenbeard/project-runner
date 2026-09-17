@@ -23,6 +23,8 @@ _BLOCKING_PRECEDENCE = {
 
 
 def frontier_fingerprint(frontier: Frontier) -> str:
+    # Provenance paths explain why the work exists; they do not define the work itself.
+    # This lets the same operation discovered through multiple dependency edges deduplicate.
     payload = {
         "project": frontier.project,
         "subject": {
@@ -33,13 +35,20 @@ def frontier_fingerprint(frontier: Frontier) -> str:
             "digest": frontier.subject.digest,
         },
         "work_type": frontier.work_type,
-        "dependencies": sorted(frontier.dependencies),
         "required_capabilities": sorted(frontier.required_capabilities),
         "collision_keys": sorted(frontier.collision_keys),
         "cost_class": frontier.cost_class.value,
     }
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _merged_priority_inputs(a: Frontier, b: Frontier) -> dict[str, int]:
+    keys = set(a.priority_inputs) | set(b.priority_inputs)
+    return {
+        key: max(int(a.priority_inputs.get(key, 0)), int(b.priority_inputs.get(key, 0)))
+        for key in keys
+    }
 
 
 def deduplicate_frontiers(frontiers: Iterable[Frontier]) -> tuple[Frontier, ...]:
@@ -52,6 +61,16 @@ def deduplicate_frontiers(frontiers: Iterable[Frontier]) -> tuple[Frontier, ...]
             by_fingerprint[fingerprint] = frontier
             order.append(fingerprint)
             continue
-        if _BLOCKING_PRECEDENCE[frontier.status] > _BLOCKING_PRECEDENCE[existing.status]:
-            by_fingerprint[fingerprint] = replace(existing, status=frontier.status)
+
+        merged_status = (
+            frontier.status
+            if _BLOCKING_PRECEDENCE[frontier.status] > _BLOCKING_PRECEDENCE[existing.status]
+            else existing.status
+        )
+        by_fingerprint[fingerprint] = replace(
+            existing,
+            dependencies=tuple(sorted(set(existing.dependencies) | set(frontier.dependencies))),
+            priority_inputs=_merged_priority_inputs(existing, frontier),
+            status=merged_status,
+        )
     return tuple(by_fingerprint[item] for item in order)
