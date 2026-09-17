@@ -11,6 +11,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _SCHEMA_FILES = {
     "project": _ROOT / "schemas" / "project.schema.json",
     "worker": _ROOT / "schemas" / "worker.schema.json",
+    "observation": _ROOT / "schemas" / "observation.schema.json",
 }
 
 

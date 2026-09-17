@@ -124,3 +124,60 @@ class ProjectDefinition:
             repositories=tuple(str(repo) for repo in raw_repositories),
             capabilities=tuple(str(capability) for capability in raw_capabilities),
         )
+
+
+class EvidenceClass(str, Enum):
+    AUTHORITATIVE = "AUTHORITATIVE"
+    DECLARED = "DECLARED"
+    DERIVED = "DERIVED"
+    CACHED = "CACHED"
+
+
+@dataclass(frozen=True)
+class ExactSubject:
+    repository: str
+    ref: str
+    commit: str | None = None
+    path: str | None = None
+    digest: str | None = None
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> "ExactSubject":
+        repository = str(data.get("repository", "")).strip()
+        ref = str(data.get("ref", "")).strip()
+        if not repository or not ref:
+            raise ValueError("subject requires repository and ref")
+        return cls(
+            repository=repository,
+            ref=ref,
+            commit=str(data["commit"]) if data.get("commit") is not None else None,
+            path=str(data["path"]) if data.get("path") is not None else None,
+            digest=str(data["digest"]) if data.get("digest") is not None else None,
+        )
+
+    def identity(self) -> tuple[str, str, str | None, str | None, str | None]:
+        return (self.repository, self.ref, self.commit, self.path, self.digest)
+
+
+@dataclass(frozen=True)
+class Observation:
+    target: str
+    evidence_class: EvidenceClass
+    subject: ExactSubject
+    observed_value: str
+    observed_at: str
+    observer: str
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> "Observation":
+        raw_subject = data.get("subject")
+        if not isinstance(raw_subject, Mapping):
+            raise ValueError("observation subject must be a mapping")
+        return cls(
+            target=str(data["target"]),
+            evidence_class=EvidenceClass(str(data["evidence_class"])),
+            subject=ExactSubject.from_mapping(raw_subject),
+            observed_value=str(data["observed_value"]),
+            observed_at=str(data["observed_at"]),
+            observer=str(data["observer"]),
+        )
