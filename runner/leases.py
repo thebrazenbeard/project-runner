@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from threading import Lock
+from typing import Protocol
 
 
 @dataclass(frozen=True)
@@ -10,6 +11,29 @@ class Lease:
     holder: str
     fencing_token: int
     expires_at: float
+
+
+class LeaseStore(Protocol):
+    def claim(
+        self,
+        work_fingerprint: str,
+        *,
+        holder: str,
+        now: float,
+        ttl: float,
+    ) -> Lease | None: ...
+
+    def heartbeat(
+        self,
+        lease: Lease,
+        *,
+        now: float,
+        ttl: float,
+    ) -> Lease | None: ...
+
+    def release(self, lease: Lease, *, now: float) -> bool: ...
+
+    def complete(self, lease: Lease, *, now: float) -> bool: ...
 
 
 @dataclass
