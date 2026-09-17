@@ -3,11 +3,11 @@ from runner.models import DependencyReaction, ExactSubject, FrontierStatus
 from runner.propagate import Invalidation
 
 
-def _invalidation(reaction=DependencyReaction.REREVIEW):
+def _invalidation(reaction=DependencyReaction.REREVIEW, *, consumer="vera", dependency_id="dep-1"):
     return Invalidation(
-        dependency_id="dep-1",
+        dependency_id=dependency_id,
         provider="vera-control-plane",
-        consumer="vera",
+        consumer=consumer,
         changed_subject=ExactSubject(
             repository="thebrazenbeard/vera-control-plane",
             ref="main",
@@ -51,3 +51,17 @@ def test_no_action_creates_no_frontier():
         capability_lookup={"vera": {"read", "analyze"}},
     )
     assert frontiers == ()
+
+
+def test_shared_provider_evidence_does_not_create_cross_consumer_collision():
+    frontiers = derive_frontiers(
+        (
+            _invalidation(consumer="vera", dependency_id="dep-vera"),
+            _invalidation(consumer="project-runner", dependency_id="dep-runner"),
+        ),
+        capability_lookup={
+            "vera": {"read", "analyze"},
+            "project-runner": {"read", "analyze"},
+        },
+    )
+    assert set(frontiers[0].collision_keys).isdisjoint(frontiers[1].collision_keys)
