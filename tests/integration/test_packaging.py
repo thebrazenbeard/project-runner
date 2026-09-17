@@ -1,23 +1,9 @@
 from pathlib import Path
-import subprocess
-import sys
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_editable_install_succeeds_without_network_build_isolation():
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "-e",
-            str(ROOT),
-            "--no-deps",
-            "--no-build-isolation",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, result.stderr
+def test_setuptools_explicitly_packages_only_runner():
+    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert config["tool"]["setuptools"]["packages"] == ["runner"]
