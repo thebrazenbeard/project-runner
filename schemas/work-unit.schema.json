@@ -38,42 +38,17 @@
       }
     },
     "operation": {"type": "string", "minLength": 1},
-    "required_capabilities": {
-      "type": "array",
-      "items": {"type": "string"},
-      "uniqueItems": true
-    },
-    "collision_keys": {
-      "type": "array",
-      "items": {"type": "string"},
-      "uniqueItems": true
-    },
+    "required_capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "collision_keys": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "recursion_depth": {"type": "integer", "minimum": 0},
-    "budget_allocation": {
-      "type": "object",
-      "additionalProperties": {"type": "integer", "minimum": 0}
-    },
-    "expected_outputs": {
-      "type": "array",
-      "items": {"type": "string"},
-      "uniqueItems": true
-    },
-    "completion_criteria": {
-      "type": "array",
-      "items": {"type": "string"},
-      "uniqueItems": true
-    },
+    "budget_allocation": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "expected_outputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "completion_criteria": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "payload": {"type": "object"},
     "status": {
       "enum": [
-        "PENDING",
-        "CLAIMED",
-        "RUNNING",
-        "VERIFYING",
-        "COMPLETE",
-        "FAILED_RETRYABLE",
-        "FAILED_DETERMINISTIC",
-        "OUTCOME_UNKNOWN",
-        "SUPERSEDED"
+        "PENDING","CLAIMED","RUNNING","VERIFYING","COMPLETE",
+        "FAILED_RETRYABLE","FAILED_DETERMINISTIC","OUTCOME_UNKNOWN","SUPERSEDED"
       ]
     }
   }
