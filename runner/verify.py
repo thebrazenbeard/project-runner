@@ -5,7 +5,7 @@ from typing import Callable
 
 from .backends import BackendResult
 from .dispatch import DispatchAttempt
-from .leases import InMemoryLeaseStore
+from .leases import LeaseStore
 from .models import ExactSubject
 from .work_units import WorkUnit, WorkUnitStatus
 
@@ -24,7 +24,7 @@ EvidenceVerifier = Callable[[WorkUnit, BackendResult], bool]
 def verify_attempt(
     attempt: DispatchAttempt,
     *,
-    lease_store: InMemoryLeaseStore,
+    lease_store: LeaseStore,
     now: float,
     current_subject_reader: SubjectReader,
     evidence_verifier: EvidenceVerifier,
