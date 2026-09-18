@@ -31,14 +31,32 @@ def _project_registry_path() -> Path:
     override = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY")
     if override is None:
         return ROOT / "registry" / "projects.yaml"
+
     path = Path(override).expanduser()
     if not path.is_absolute():
-        raise ValueError("PROJECT_RUNNER_PROJECT_REGISTRY must be an absolute path")
-    return path
+        raise ValueError("external project registry requires an absolute path")
+
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError:
+        raise ValueError("external project registry is unavailable") from None
+
+    root = ROOT.resolve()
+    if resolved == root or root in resolved.parents:
+        raise ValueError(
+            "external project registry must be outside the Project Runner checkout"
+        )
+    if not resolved.is_file():
+        raise ValueError("external project registry is unavailable")
+    return resolved
 
 
 def _load_project_registry():
-    return load_projects(_project_registry_path())
+    external = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY") is not None
+    return load_projects(
+        _project_registry_path(),
+        require_scope_metadata=external,
+    )
 
 
 def _load_all():
