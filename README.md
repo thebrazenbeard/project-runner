@@ -35,6 +35,16 @@ The M5 CI route has only `contents: read`; it proves live GitHub connectivity wi
     project-runner github-read-smoke --repository thebrazenbeard/project-runner --ref main
     python -m pytest -q
 
+## Private portfolio registry
+
+The committed `registry/projects.yaml` is a public-safe seed. It may name repositories that were already part of Project Runner's historical public baseline, but it must not expand the public repository with additional private project identifiers merely because those projects are relevant to orchestration.
+
+For a complete private portfolio, supply a **complete replacement registry** from outside this checkout:
+
+    PROJECT_RUNNER_PROJECT_REGISTRY=/absolute/private/path/projects.yaml project-runner inventory
+
+The override must be an absolute path. Project Runner does not merge a hidden/private layer into the committed seed, which keeps the provenance boundary explicit and prevents a local private inventory from being accidentally written back as public source.
+
 ## Authority model
 
 Backend capability answers "can this route technically perform an operation?"
