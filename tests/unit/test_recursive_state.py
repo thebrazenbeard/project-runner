@@ -654,12 +654,13 @@ def test_terminal_completion_rejects_stale_reclaimed_fence(tmp_path: Path):
     assert current is not None and current.fencing_token == 2
 
     with pytest.raises(ValueError, match="fencing token is stale"):
-        store.compare_and_swap_status(
+        store.finalize_terminal_status(
             lineage_id="lineage-fence",
             work_fingerprint_value=fingerprint,
             expected_generation=3,
             status=WorkUnitStatus.COMPLETE,
             lease=stale,
+            now=12.0,
         )
 
     unchanged = store.get("lineage-fence", fingerprint)
