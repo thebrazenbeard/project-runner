@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS recursive_work_state (
     budget_scope_id TEXT NOT NULL,
     parent_fingerprint TEXT,
     ancestry_json TEXT NOT NULL,
+    effective_capabilities_json TEXT NOT NULL,
     immutable_sha256 TEXT NOT NULL,
     status TEXT NOT NULL,
     generation INTEGER NOT NULL,
@@ -45,6 +46,7 @@ class StoredRecursiveWork:
     budget_scope_id: str
     parent_fingerprint: str | None
     ancestry_fingerprints: frozenset[str]
+    effective_capabilities: tuple[str, ...]
     generation: int
 
 
@@ -56,6 +58,7 @@ class SqliteRecursiveWorkStore:
         self.connection = sqlite3.connect(self.path, timeout=5.0, isolation_level=None)
         self.connection.execute("PRAGMA journal_mode=WAL")
         self.connection.executescript(_SCHEMA)
+        _migrate_recursive_capability_schema(self.connection)
 
     def close(self) -> None:
         self.connection.close()
@@ -68,6 +71,7 @@ class SqliteRecursiveWorkStore:
         budget_scope_id: str,
         parent_fingerprint: str | None,
         ancestry_fingerprints: Collection[str],
+        effective_capabilities: Collection[str],
     ) -> StoredRecursiveWork:
         if parent_fingerprint is not None or work.recursion_depth != 0:
             raise ValueError(
@@ -82,6 +86,11 @@ class SqliteRecursiveWorkStore:
         ancestry = frozenset(str(item) for item in ancestry_fingerprints)
         if any(not item for item in ancestry):
             raise ValueError("recursive work ancestry contains an empty fingerprint")
+        capabilities = _normalize_capabilities(effective_capabilities)
+        if not set(work.required_capabilities).issubset(set(capabilities)):
+            raise ValueError(
+                "work capability requirement exceeds durable capability ceiling"
+            )
 
         parent: StoredRecursiveWork | None = None
         if parent_fingerprint is None:
@@ -110,12 +119,14 @@ class SqliteRecursiveWorkStore:
 
         work_json = _canonical_json(_work_payload(work))
         ancestry_json = _canonical_json(sorted(ancestry))
+        effective_capabilities_json = _canonical_json(list(capabilities))
         immutable_sha256 = _immutable_digest(
             work_json=work_json,
             lineage_id=lineage_id,
             budget_scope_id=budget_scope_id,
             parent_fingerprint=parent_fingerprint,
             ancestry_json=ancestry_json,
+            effective_capabilities_json=effective_capabilities_json,
         )
 
         try:
@@ -124,9 +135,9 @@ class SqliteRecursiveWorkStore:
                 """
                 INSERT INTO recursive_work_state (
                     lineage_id, work_fingerprint, work_json, budget_scope_id,
-                    parent_fingerprint, ancestry_json, immutable_sha256,
-                    status, generation
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    parent_fingerprint, ancestry_json, effective_capabilities_json,
+                    immutable_sha256, status, generation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 """,
                 (
                     lineage_id,
@@ -135,6 +146,7 @@ class SqliteRecursiveWorkStore:
                     budget_scope_id,
                     parent_fingerprint,
                     ancestry_json,
+                    effective_capabilities_json,
                     immutable_sha256,
                     work.status.value,
                 ),
@@ -160,7 +172,8 @@ class SqliteRecursiveWorkStore:
         row = self.connection.execute(
             """
             SELECT work_json, budget_scope_id, parent_fingerprint,
-                   ancestry_json, immutable_sha256, status, generation
+                   ancestry_json, effective_capabilities_json,
+                   immutable_sha256, status, generation
             FROM recursive_work_state
             WHERE lineage_id = ? AND work_fingerprint = ?
             """,
@@ -174,6 +187,7 @@ class SqliteRecursiveWorkStore:
             budget_scope_id,
             parent_fingerprint,
             ancestry_json,
+            effective_capabilities_json,
             immutable_sha256,
             raw_status,
             generation,
@@ -187,6 +201,7 @@ class SqliteRecursiveWorkStore:
                 str(parent_fingerprint) if parent_fingerprint is not None else None
             ),
             ancestry_json=str(ancestry_json),
+            effective_capabilities_json=str(effective_capabilities_json),
         )
         if not hmac.compare_digest(str(immutable_sha256), expected_digest):
             raise ValueError("recursive work state digest mismatch")
@@ -194,6 +209,7 @@ class SqliteRecursiveWorkStore:
         try:
             work_payload = json.loads(str(work_json))
             ancestry_payload = json.loads(str(ancestry_json))
+            capability_payload = json.loads(str(effective_capabilities_json))
             status = WorkUnitStatus(str(raw_status))
         except (json.JSONDecodeError, TypeError, ValueError) as exc:
             raise ValueError("recursive work state is structurally invalid") from exc
@@ -204,8 +220,17 @@ class SqliteRecursiveWorkStore:
             not isinstance(item, str) or not item for item in ancestry_payload
         ):
             raise ValueError("recursive work ancestry is structurally invalid")
+        if not isinstance(capability_payload, list):
+            raise ValueError("recursive work capability ceiling is structurally invalid")
+        capabilities = _normalize_capabilities(capability_payload)
+        if capability_payload != list(capabilities):
+            raise ValueError("recursive work capability ceiling is not canonical")
 
         work = _work_from_payload(work_payload, status=status)
+        if not set(work.required_capabilities).issubset(set(capabilities)):
+            raise ValueError(
+                "recursive work requirement exceeds durable capability ceiling"
+            )
         observed_fingerprint = work_unit_fingerprint(work)
         if observed_fingerprint != work_fingerprint_value:
             raise ValueError("recursive work semantic identity mismatch")
@@ -236,6 +261,7 @@ class SqliteRecursiveWorkStore:
             budget_scope_id=str(budget_scope_id),
             parent_fingerprint=parent_fingerprint,
             ancestry_fingerprints=ancestry,
+            effective_capabilities=capabilities,
             generation=int(generation),
         )
 
@@ -382,6 +408,87 @@ def _work_from_payload(
         raise ValueError("recursive work payload is structurally invalid") from exc
 
 
+def _normalize_capabilities(values: Collection[str]) -> tuple[str, ...]:
+    normalized = tuple(sorted(set(str(item) for item in values)))
+    if any(not item for item in normalized):
+        raise ValueError("durable capability ceiling contains an empty capability")
+    return normalized
+
+
+def _migrate_recursive_capability_schema(connection: sqlite3.Connection) -> None:
+    columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(recursive_work_state)")
+    }
+    if "effective_capabilities_json" in columns:
+        return
+
+    connection.execute("BEGIN IMMEDIATE")
+    try:
+        connection.execute(
+            """
+            ALTER TABLE recursive_work_state
+            ADD COLUMN effective_capabilities_json TEXT NOT NULL DEFAULT '[]'
+            """
+        )
+        rows = connection.execute(
+            """
+            SELECT lineage_id, work_fingerprint, work_json, budget_scope_id,
+                   parent_fingerprint, ancestry_json
+            FROM recursive_work_state
+            """
+        ).fetchall()
+        for (
+            lineage_id,
+            work_fingerprint_value,
+            work_json,
+            budget_scope_id,
+            parent_fingerprint,
+            ancestry_json,
+        ) in rows:
+            try:
+                work_payload = json.loads(str(work_json))
+                raw_capabilities = work_payload["required_capabilities"]
+                if not isinstance(raw_capabilities, list):
+                    raise ValueError
+                capabilities = _normalize_capabilities(raw_capabilities)
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError(
+                    "legacy recursive work capability migration failed"
+                ) from exc
+            effective_capabilities_json = _canonical_json(list(capabilities))
+            immutable_sha256 = _immutable_digest(
+                work_json=str(work_json),
+                lineage_id=str(lineage_id),
+                budget_scope_id=str(budget_scope_id),
+                parent_fingerprint=(
+                    str(parent_fingerprint)
+                    if parent_fingerprint is not None
+                    else None
+                ),
+                ancestry_json=str(ancestry_json),
+                effective_capabilities_json=effective_capabilities_json,
+            )
+            connection.execute(
+                """
+                UPDATE recursive_work_state
+                SET effective_capabilities_json = ?, immutable_sha256 = ?
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (
+                    effective_capabilities_json,
+                    immutable_sha256,
+                    lineage_id,
+                    work_fingerprint_value,
+                ),
+            )
+    except BaseException:
+        connection.rollback()
+        raise
+    else:
+        connection.commit()
+
+
 def _canonical_json(value: Any) -> str:
     return json.dumps(
         value,
@@ -399,6 +506,7 @@ def _immutable_digest(
     budget_scope_id: str,
     parent_fingerprint: str | None,
     ancestry_json: str,
+    effective_capabilities_json: str,
 ) -> str:
     payload = _canonical_json(
         {
@@ -407,6 +515,7 @@ def _immutable_digest(
             "budget_scope_id": budget_scope_id,
             "parent_fingerprint": parent_fingerprint,
             "ancestry_json": ancestry_json,
+            "effective_capabilities_json": effective_capabilities_json,
         }
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
