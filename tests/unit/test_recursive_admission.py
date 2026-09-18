@@ -237,17 +237,35 @@ def test_terminal_parent_cannot_admit_child_and_budget_is_unchanged(tmp_path: Pa
     leases = SqliteLeaseStore(db)
     lease = leases.claim(root_fingerprint, holder="terminal-parent", now=0.0, ttl=10.0)
     assert lease is not None
-    assert leases.complete(lease, now=1.0)
 
     works = SqliteRecursiveWorkStore(db)
-    complete = works.compare_and_swap_status(
+    running = works.compare_and_swap_status(
         lineage_id="atomic-lineage",
         work_fingerprint_value=root_fingerprint,
         expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=0.25,
+    )
+    assert running.generation == 2
+    verifying = works.compare_and_swap_status(
+        lineage_id="atomic-lineage",
+        work_fingerprint_value=root_fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=lease,
+        now=0.5,
+    )
+    assert verifying.generation == 3
+    assert leases.complete(lease, now=1.0)
+    complete = works.compare_and_swap_status(
+        lineage_id="atomic-lineage",
+        work_fingerprint_value=root_fingerprint,
+        expected_generation=3,
         status=WorkUnitStatus.COMPLETE,
         lease=lease,
     )
-    assert complete.generation == 2
+    assert complete.generation == 4
     works.close()
     leases.close()
 
