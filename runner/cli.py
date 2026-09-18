@@ -69,6 +69,18 @@ def _external_project_registry_expected_sha256() -> str:
     return expected
 
 
+def _external_private_collision_key() -> str:
+    key = os.environ.get("PROJECT_RUNNER_PRIVATE_COLLISION_KEY", "")
+    if (
+        len(key) != 64
+        or any(character not in "0123456789abcdef" for character in key)
+    ):
+        raise ValueError(
+            "external project registry requires a private collision key"
+        )
+    return key
+
+
 def _load_project_registry_snapshot():
     external = _external_project_registry_selected()
     path = _project_registry_path()
@@ -196,9 +208,9 @@ def _frontier_payload(frontier) -> dict[str, object]:
     }
 
 
-def _private_collision_key(key: str, registry_sha256: str) -> str:
+def _private_collision_key(key: str, private_collision_key: str) -> str:
     digest = hmac.new(
-        bytes.fromhex(registry_sha256),
+        bytes.fromhex(private_collision_key),
         key.encode("utf-8"),
         digestmod="sha256",
     ).hexdigest()
@@ -223,11 +235,12 @@ def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     invalidations = derive_invalidations(previous, current, edges)
     derived = derive_frontiers(invalidations, capability_lookup=capability_lookup)
     if _external_project_registry_selected():
+        private_collision_key = _external_private_collision_key()
         derived = tuple(
             replace(
                 frontier,
                 collision_keys=tuple(
-                    _private_collision_key(key, snapshot.sha256)
+                    _private_collision_key(key, private_collision_key)
                     for key in frontier.collision_keys
                 ),
             )
