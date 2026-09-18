@@ -137,6 +137,27 @@ def main() -> int:
             expected_generation=generation,
         )
         attempt = batch.attempts[0]
+        running_work = recursive_store.compare_and_swap_status(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=work_unit_fingerprint(attempt.work),
+            expected_generation=1,
+            status=WorkUnitStatus.RUNNING,
+            lease=attempt.lease,
+            now=0.25,
+        )
+        if running_work.generation != 2:
+            raise RuntimeError("durable recursive work did not enter RUNNING")
+        verifying_work = recursive_store.compare_and_swap_status(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=work_unit_fingerprint(attempt.work),
+            expected_generation=2,
+            status=WorkUnitStatus.VERIFYING,
+            lease=attempt.lease,
+            now=0.5,
+        )
+        if verifying_work.generation != 3:
+            raise RuntimeError("durable recursive work did not enter VERIFYING")
+
         independent_reader = GitHubCurrentSubjectReader(_github_backend(token))
         outcome = verify_attempt(
             attempt,
@@ -157,7 +178,7 @@ def main() -> int:
         durable_work = recursive_store.compare_and_swap_status(
             lineage_id=persisted_budget.lineage_id,
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            expected_generation=1,
+            expected_generation=3,
             status=outcome.status,
             lease=attempt.lease,
         )
@@ -167,8 +188,8 @@ def main() -> int:
                 f"{outcome.status.value} "
                 f"(backend={attempt.result.classification})"
             )
-        if durable_work.generation != 2:
-            raise RuntimeError("durable recursive work generation did not advance")
+        if durable_work.generation != 4:
+            raise RuntimeError("durable recursive work generation did not reach terminal state")
 
         budget_store.close()
         lease_store.close()
