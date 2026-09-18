@@ -10,6 +10,8 @@ Portfolio relevance does not imply publication authority. The committed project 
 
 External records must explicitly declare scheduling posture. `HELD` records are observable portfolio state but are not schedulable and contribute no runnable capabilities. Detailed CLI reports that would expose project IDs, repositories, dependency IDs, subjects, or collision keys are disabled while an external registry is selected.
 
+Private collision domains must be derived with separate runtime secret material, not the registry digest or another public/currentness token. `PROJECT_RUNNER_PRIVATE_COLLISION_KEY` remains outside public source/evidence and must be stable across any restart that is expected to preserve private semantic/collision identity.
+
 The three private project identifiers already present on canonical M5 `main` are legacy public baseline metadata. Their prior disclosure does not authorize adding more private identifiers.
 
 ## Evidence and authority
