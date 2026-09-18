@@ -365,14 +365,19 @@ def _validate_terminal_lease_state(
     if lease.work_fingerprint != work_fingerprint_value:
         raise ValueError("terminal recursive work lease subject mismatch")
 
-    row = connection.execute(
-        """
-        SELECT holder, fencing_token, expires_at, completed
-        FROM leases
-        WHERE work_fingerprint = ?
-        """,
-        (work_fingerprint_value,),
-    ).fetchone()
+    try:
+        row = connection.execute(
+            """
+            SELECT holder, fencing_token, expires_at, completed
+            FROM leases
+            WHERE work_fingerprint = ?
+            """,
+            (work_fingerprint_value,),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        raise ValueError(
+            "terminal recursive work lease state is unavailable"
+        ) from exc
     if row is None:
         raise ValueError("terminal recursive work lease state not found")
 
