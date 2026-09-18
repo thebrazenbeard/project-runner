@@ -1,4 +1,5 @@
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -438,7 +439,7 @@ projects:
     ) == 0
 
     output = capsys.readouterr().out
-    payload = __import__("json").loads(output)
+    payload = json.loads(output)
     assert payload == {
         "blocked": 1,
         "ready": 0,
