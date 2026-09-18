@@ -6,7 +6,7 @@ Public-safe orchestration kernel for Patrick's multi-repository project ecosyste
 
 Project Runner answers: what exists, what changed, what depends on the change, what work is justified and authorized, what can execute now, and what evidence demonstrates completion.
 
-## Current state: M5 GitHub backend
+## Current state: M6 bounded execution fabric
 
 M1 established typed project/worker registries. M2 added exact observations, dependency/currentness logic, and invalidation propagation. M3 added frontier generation, semantic deduplication, collision grouping, and deterministic priority. M4 added bounded recursive work units, budgets, fenced leases, mock dispatch, and exact-subject completion checks.
 
@@ -20,11 +20,13 @@ M5 adds the first real GitHub execution route:
 - successful writes require post-write ref/file readback;
 - SQLite-backed lineage budgets persist across process/workflow boundaries with generation CAS;
 - SQLite-backed leases persist claim/reclaim/completion state and monotonic fencing tokens;
+- recursive work identity, parent linkage, exact ancestry, budget scope, lifecycle status, and generation survive restart in a digest-verified SQLite record;
+- durable work status cannot roll terminal states back or reset active work to `PENDING`;
 - stale generations/fences fail closed;
 - CI exercises the actual GitHub backend against the workflow repository in read-only mode;
 - M4 post-work currentness and independent completion-evidence rules remain in force.
 
-The M5 CI route has only `contents: read`; it proves live GitHub connectivity without performing downstream mutation.
+The live CI route still has only `contents: read`; it proves exact-head GitHub connectivity and the read-only HC Brain → Transcendence M6 path without manufacturing downstream mutation authority.
 
 ## Quick start
 
