@@ -434,7 +434,7 @@ def _migrate_recursive_capability_schema(connection: sqlite3.Connection) -> None
         rows = connection.execute(
             """
             SELECT lineage_id, work_fingerprint, work_json, budget_scope_id,
-                   parent_fingerprint, ancestry_json
+                   parent_fingerprint, ancestry_json, immutable_sha256
             FROM recursive_work_state
             """
         ).fetchall()
@@ -445,7 +445,27 @@ def _migrate_recursive_capability_schema(connection: sqlite3.Connection) -> None
             budget_scope_id,
             parent_fingerprint,
             ancestry_json,
+            legacy_immutable_sha256,
         ) in rows:
+            expected_legacy_digest = _legacy_immutable_digest(
+                work_json=str(work_json),
+                lineage_id=str(lineage_id),
+                budget_scope_id=str(budget_scope_id),
+                parent_fingerprint=(
+                    str(parent_fingerprint)
+                    if parent_fingerprint is not None
+                    else None
+                ),
+                ancestry_json=str(ancestry_json),
+            )
+            if not hmac.compare_digest(
+                str(legacy_immutable_sha256),
+                expected_legacy_digest,
+            ):
+                raise ValueError(
+                    "legacy recursive work state digest mismatch during migration"
+                )
+
             try:
                 work_payload = json.loads(str(work_json))
                 raw_capabilities = work_payload["required_capabilities"]
@@ -497,6 +517,26 @@ def _canonical_json(value: Any) -> str:
         ensure_ascii=False,
         allow_nan=False,
     )
+
+
+def _legacy_immutable_digest(
+    *,
+    work_json: str,
+    lineage_id: str,
+    budget_scope_id: str,
+    parent_fingerprint: str | None,
+    ancestry_json: str,
+) -> str:
+    payload = _canonical_json(
+        {
+            "work_json": work_json,
+            "lineage_id": lineage_id,
+            "budget_scope_id": budget_scope_id,
+            "parent_fingerprint": parent_fingerprint,
+            "ancestry_json": ancestry_json,
+        }
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _immutable_digest(
