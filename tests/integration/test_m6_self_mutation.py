@@ -366,3 +366,53 @@ def test_mutation_transport_failure_stays_outcome_unknown(tmp_path: Path):
     )
     assert outcome.status is WorkUnitStatus.OUTCOME_UNKNOWN
     assert outcome.reason == "mutation outcome requires reconciliation"
+
+
+def test_mutation_precondition_drift_is_superseded(tmp_path: Path):
+    transport = MutationTransport()
+    lease_store = SqliteLeaseStore(tmp_path / "proof.sqlite3")
+    transport.create_branch(REPOSITORY, PROOF_BRANCH, SOURCE_HEAD)
+    subject = ExactSubject(
+        repository=REPOSITORY,
+        ref=PROOF_BRANCH,
+        commit=SOURCE_HEAD,
+    )
+    work = _work(
+        subject,
+        {
+            "operation": "PUT_FILE",
+            "repository": REPOSITORY,
+            "ref": PROOF_BRANCH,
+            "path": "README.md",
+            "content": MUTATED,
+            "message": "test",
+            "expected_head": SOURCE_HEAD,
+            "expected_blob_sha": _blob(ORIGINAL),
+        },
+    )
+    lease = lease_store.claim(
+        work_unit_fingerprint(work),
+        holder="m6-self-proof-precondition",
+        now=0.0,
+        ttl=60.0,
+    )
+    assert lease is not None
+
+    from runner.backends import BackendResult
+
+    result = BackendResult(
+        work_fingerprint=work_unit_fingerprint(work),
+        succeeded=False,
+        outputs=(),
+        evidence=("github:precondition_failed",),
+        classification="PRECONDITION_FAILED",
+    )
+    outcome = verify_github_mutation_attempt(
+        _attempt(work, result, lease),
+        lease_store=lease_store,
+        now=1.0,
+        verification_backend=_verification_backend(transport),
+    )
+
+    assert outcome.status is WorkUnitStatus.SUPERSEDED
+    assert outcome.reason == "mutation precondition moved before execution"
