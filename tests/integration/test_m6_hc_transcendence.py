@@ -107,6 +107,7 @@ def test_substantive_frontier_is_superseded_when_hc_main_moves_again():
         evidence_verifier=lambda work, result: (
             result.succeeded and "mock-backend" in result.evidence
         ),
+        manage_lease=False,
     )
 
     assert outcome.status is WorkUnitStatus.SUPERSEDED
@@ -190,6 +191,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         now=1.0,
         current_subject_reader=lambda subject: subject,
         evidence_verifier=lambda work, result: False,
+        manage_lease=False,
     )
     assert still_verifying.status is WorkUnitStatus.VERIFYING
 
@@ -206,12 +208,13 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     assert completed.reason == (
         "exact subject current and completion evidence verified"
     )
-    durable_complete = recursive_store.compare_and_swap_status(
+    durable_complete = recursive_store.finalize_terminal_status(
         lineage_id=persisted_budget.lineage_id,
         work_fingerprint_value=work_unit_fingerprint(attempt.work),
         expected_generation=3,
         status=completed.status,
         lease=attempt.lease,
+        now=2.0,
     )
     assert durable_complete.generation == 4
     assert durable_complete.work.status is WorkUnitStatus.COMPLETE
