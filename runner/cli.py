@@ -249,6 +249,28 @@ def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     return deduplicate_frontiers(derived)
 
 
+def _frontier_summary(before: Path, after: Path, dependencies: Path) -> int:
+    try:
+        frontiers = _derive_frontier_set(before, after, dependencies)
+    except Exception:
+        if _external_project_registry_selected():
+            raise ValueError(
+                "external frontier summary is unavailable or structurally invalid"
+            ) from None
+        raise
+
+    status_counts = Counter(frontier.status.value for frontier in frontiers)
+    ready = status_counts.get(FrontierStatus.READY.value, 0)
+    payload = {
+        "total": len(frontiers),
+        "ready": ready,
+        "blocked": len(frontiers) - ready,
+        "statuses": dict(sorted(status_counts.items())),
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
     _require_public_safe_reporting()
     frontiers = _derive_frontier_set(before, after, dependencies)
@@ -416,6 +438,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     evaluate.add_argument("--after", type=Path, required=True)
     evaluate.add_argument("--dependencies", type=Path, required=True)
 
+    frontier_summary = subparsers.add_parser("frontier-summary")
+    frontier_summary.add_argument("--before", type=Path, required=True)
+    frontier_summary.add_argument("--after", type=Path, required=True)
+    frontier_summary.add_argument("--dependencies", type=Path, required=True)
+
     frontier_report = subparsers.add_parser("frontier-report")
     frontier_report.add_argument("--before", type=Path, required=True)
     frontier_report.add_argument("--after", type=Path, required=True)
@@ -438,6 +465,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _inventory()
     if args.command == "evaluate-change":
         return _evaluate_change(args.before, args.after, args.dependencies)
+    if args.command == "frontier-summary":
+        return _frontier_summary(args.before, args.after, args.dependencies)
     if args.command == "frontier-report":
         return _frontier_report(args.before, args.after, args.dependencies)
     if args.command == "dispatch-report":
