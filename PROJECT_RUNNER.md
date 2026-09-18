@@ -43,6 +43,14 @@ M5 includes a SQLite lineage budget ledger with generation compare-and-swap. A w
 
 M5 includes a SQLite lease store. Claim/reclaim state survives process restarts. Expired work can be reclaimed with a strictly higher fencing token. Older holders cannot complete or release the reclaimed work.
 
+### Persistent recursive work lineage
+
+M6 persists each recursive work subject under `(lineage_id, semantic work fingerprint)` together with its exact immutable work payload, parent semantic fingerprint, exact ancestry set, budget scope, lifecycle status, and generation.
+
+Immutable recursive state is digest-verified on read. A child may be persisted only after its parent is already durable, its ancestry must equal the durable parent ancestry plus the child's own semantic fingerprint, and its budget scope must be `work:<fingerprint>`. Root work uses the `root` scope.
+
+Lifecycle updates use generation compare-and-swap. `COMPLETE`, `FAILED_DETERMINISTIC`, and `SUPERSEDED` are terminal durable states; active work cannot be reset to `PENDING`; same-status updates are idempotent and do not churn generation.
+
 ### GitHub operations
 
 The reference backend supports:
