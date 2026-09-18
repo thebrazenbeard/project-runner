@@ -174,13 +174,7 @@ def main() -> int:
                     "subjects=2",
                 )
             ),
-        )
-        durable_work = recursive_store.compare_and_swap_status(
-            lineage_id=persisted_budget.lineage_id,
-            work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            expected_generation=3,
-            status=outcome.status,
-            lease=attempt.lease,
+            manage_lease=False,
         )
         if outcome.status is not WorkUnitStatus.COMPLETE:
             raise RuntimeError(
@@ -188,6 +182,14 @@ def main() -> int:
                 f"{outcome.status.value} "
                 f"(backend={attempt.result.classification})"
             )
+        durable_work = recursive_store.finalize_terminal_status(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=work_unit_fingerprint(attempt.work),
+            expected_generation=3,
+            status=outcome.status,
+            lease=attempt.lease,
+            now=1.0,
+        )
         if durable_work.generation != 4:
             raise RuntimeError("durable recursive work generation did not reach terminal state")
 
