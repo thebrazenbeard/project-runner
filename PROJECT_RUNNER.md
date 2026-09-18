@@ -51,6 +51,10 @@ Immutable recursive state is digest-verified on read. A child may be persisted o
 
 Lifecycle updates use generation compare-and-swap. `COMPLETE`, `FAILED_DETERMINISTIC`, and `SUPERSEDED` are terminal durable states; active work cannot be reset to `PENDING`; same-status updates are idempotent and do not churn generation.
 
+Recursive child admission is transactional across all durable state it creates or consumes. The admission transaction re-reads the exact durable parent work, verifies its immutable digest and nonterminal status, re-reads the exact parent budget generation, and re-runs `admit_child_work` using explicit parent/target capability ceilings. The caller-supplied admission must exactly equal that recomputed result. Only then may the same transaction decrement the parent budget and insert the child budget plus child work/ancestry record. Any collision, stale generation, forged depth/capability, missing/tampered parent, or other failure rolls the whole transaction back.
+
+Ordinary initial-state APIs accept root scope only. Child budget/work creation outside the atomic recursive-admission path is rejected.
+
 ### GitHub operations
 
 The reference backend supports:
