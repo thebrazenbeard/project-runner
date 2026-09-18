@@ -269,3 +269,45 @@ projects:
     assert len(frontiers) == 1
     assert frontiers[0].project == "transcendence"
     assert frontiers[0].status.value == "WAITING_AUTHORITY"
+
+
+def test_external_registry_obscures_collision_keys(tmp_path, monkeypatch):
+    registry = tmp_path / "private-schedulable.yaml"
+    registry.write_text(
+        """
+projects:
+- id: transcendence
+  name: Private Transcendence
+  visibility: private
+  repositories: [secret-owner/private-transcendence]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: transcendence-family
+  scheduling_state: SCHEDULABLE
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+    first = cli_module._derive_frontier_set(
+        fixtures / "m6-hc-substantive.yaml",
+        fixtures / "m6-hc-current.yaml",
+        fixtures / "m6-hc-transcendence-dependencies.yaml",
+    )
+    second = cli_module._derive_frontier_set(
+        fixtures / "m6-hc-substantive.yaml",
+        fixtures / "m6-hc-current.yaml",
+        fixtures / "m6-hc-transcendence-dependencies.yaml",
+    )
+
+    assert len(first) == len(second) == 1
+    assert first[0].status.value == "READY"
+    assert first[0].collision_keys == second[0].collision_keys
+    assert len(first[0].collision_keys) == 1
+    collision_key = first[0].collision_keys[0]
+    assert collision_key.startswith("private:")
+    assert "transcendence" not in collision_key
+    assert "secret-owner" not in collision_key
+    assert "project:" not in collision_key
