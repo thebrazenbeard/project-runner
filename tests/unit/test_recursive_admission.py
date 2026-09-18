@@ -257,13 +257,13 @@ def test_terminal_parent_cannot_admit_child_and_budget_is_unchanged(tmp_path: Pa
         now=0.5,
     )
     assert verifying.generation == 3
-    assert leases.complete(lease, now=1.0)
-    complete = works.compare_and_swap_status(
+    complete = works.finalize_terminal_status(
         lineage_id="atomic-lineage",
         work_fingerprint_value=root_fingerprint,
         expected_generation=3,
         status=WorkUnitStatus.COMPLETE,
         lease=lease,
+        now=1.0,
     )
     assert complete.generation == 4
     works.close()
