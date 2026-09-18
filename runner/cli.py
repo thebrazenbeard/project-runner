@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from dataclasses import replace
 import hmac
 import json
 import os
@@ -195,11 +196,21 @@ def _frontier_payload(frontier) -> dict[str, object]:
     }
 
 
+def _private_collision_key(key: str, registry_sha256: str) -> str:
+    digest = hmac.new(
+        bytes.fromhex(registry_sha256),
+        key.encode("utf-8"),
+        digestmod="sha256",
+    ).hexdigest()
+    return f"private:{digest}"
+
+
 def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     previous = load_observations(before)
     current = load_observations(after)
     edges = load_dependencies(dependencies)
-    projects = _load_project_registry()
+    snapshot = _load_project_registry_snapshot()
+    projects = snapshot.projects
     capability_lookup = {
         project.id: (
             set(project.capabilities)
@@ -211,6 +222,17 @@ def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
 
     invalidations = derive_invalidations(previous, current, edges)
     derived = derive_frontiers(invalidations, capability_lookup=capability_lookup)
+    if _external_project_registry_selected():
+        derived = tuple(
+            replace(
+                frontier,
+                collision_keys=tuple(
+                    _private_collision_key(key, snapshot.sha256)
+                    for key in frontier.collision_keys
+                ),
+            )
+            for frontier in derived
+        )
     return deduplicate_frontiers(derived)
 
 
