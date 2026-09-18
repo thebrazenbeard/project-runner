@@ -81,6 +81,7 @@ def _prepare_admission():
         parent=root,
         child=child,
         parent_budget=_root_budget(),
+        parent_capabilities={"read", "analyze"},
         target_capabilities={"read", "analyze"},
         ancestry_fingerprints=(),
         child_children=1,
