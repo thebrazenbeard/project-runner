@@ -381,28 +381,46 @@ def test_terminal_recursive_work_cannot_reset_or_transition(tmp_path: Path):
     leases = SqliteLeaseStore(tmp_path / "recursive.db")
     lease = leases.claim(fingerprint, holder="terminal-test", now=0.0, ttl=10.0)
     assert lease is not None
+    running = store.compare_and_swap_status(
+        lineage_id="lineage-terminal",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=0.25,
+    )
+    assert running.generation == 2
+    verifying = store.compare_and_swap_status(
+        lineage_id="lineage-terminal",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=lease,
+        now=0.5,
+    )
+    assert verifying.generation == 3
     assert leases.complete(lease, now=1.0)
     complete = store.compare_and_swap_status(
         lineage_id="lineage-terminal",
         work_fingerprint_value=fingerprint,
-        expected_generation=1,
+        expected_generation=3,
         status=WorkUnitStatus.COMPLETE,
         lease=lease,
     )
-    assert complete.generation == 2
+    assert complete.generation == 4
 
     with pytest.raises(ValueError, match="terminal"):
         store.compare_and_swap_status(
             lineage_id="lineage-terminal",
             work_fingerprint_value=fingerprint,
-            expected_generation=2,
+            expected_generation=4,
             status=WorkUnitStatus.PENDING,
         )
     with pytest.raises(ValueError, match="terminal"):
         store.compare_and_swap_status(
             lineage_id="lineage-terminal",
             work_fingerprint_value=fingerprint,
-            expected_generation=2,
+            expected_generation=4,
             status=WorkUnitStatus.SUPERSEDED,
         )
     leases.close()
@@ -622,6 +640,15 @@ def test_terminal_completion_rejects_stale_reclaimed_fence(tmp_path: Path):
         now=1.0,
     )
     assert running.generation == 2
+    verifying = store.compare_and_swap_status(
+        lineage_id="lineage-fence",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=stale,
+        now=2.0,
+    )
+    assert verifying.generation == 3
 
     current = leases.claim(fingerprint, holder="B", now=11.0, ttl=10.0)
     assert current is not None and current.fencing_token == 2
@@ -630,26 +657,26 @@ def test_terminal_completion_rejects_stale_reclaimed_fence(tmp_path: Path):
         store.compare_and_swap_status(
             lineage_id="lineage-fence",
             work_fingerprint_value=fingerprint,
-            expected_generation=2,
+            expected_generation=3,
             status=WorkUnitStatus.COMPLETE,
             lease=stale,
         )
 
     unchanged = store.get("lineage-fence", fingerprint)
     assert unchanged is not None
-    assert unchanged.work.status is WorkUnitStatus.RUNNING
-    assert unchanged.generation == 2
+    assert unchanged.work.status is WorkUnitStatus.VERIFYING
+    assert unchanged.generation == 3
 
     assert leases.complete(current, now=12.0)
     completed = store.compare_and_swap_status(
         lineage_id="lineage-fence",
         work_fingerprint_value=fingerprint,
-        expected_generation=2,
+        expected_generation=3,
         status=WorkUnitStatus.COMPLETE,
         lease=current,
     )
     assert completed.work.status is WorkUnitStatus.COMPLETE
-    assert completed.generation == 3
+    assert completed.generation == 4
     leases.close()
     store.close()
 
@@ -678,17 +705,26 @@ def test_terminal_failure_requires_released_exact_fence(tmp_path: Path):
     leases = SqliteLeaseStore(db)
     lease = leases.claim(fingerprint, holder="worker", now=0.0, ttl=10.0)
     assert lease is not None
+    running = store.compare_and_swap_status(
+        lineage_id="lineage-failure-fence",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=0.5,
+    )
+    assert running.generation == 2
     assert leases.release(lease, now=1.0)
 
     failed = store.compare_and_swap_status(
         lineage_id="lineage-failure-fence",
         work_fingerprint_value=fingerprint,
-        expected_generation=1,
+        expected_generation=2,
         status=WorkUnitStatus.FAILED_DETERMINISTIC,
         lease=lease,
     )
     assert failed.work.status is WorkUnitStatus.FAILED_DETERMINISTIC
-    assert failed.generation == 2
+    assert failed.generation == 3
     leases.close()
     store.close()
 
@@ -713,13 +749,34 @@ def test_unfenced_terminal_status_is_rejected(tmp_path: Path):
         ancestry_fingerprints={fingerprint},
         effective_capabilities={"read", "analyze"},
     )
+    leases = SqliteLeaseStore(db)
+    lease = leases.claim(fingerprint, holder="unfenced-test", now=0.0, ttl=10.0)
+    assert lease is not None
+    store.compare_and_swap_status(
+        lineage_id="lineage-unfenced",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=0.25,
+    )
+    store.compare_and_swap_status(
+        lineage_id="lineage-unfenced",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=lease,
+        now=0.5,
+    )
+    assert leases.complete(lease, now=1.0)
     with pytest.raises(ValueError, match="requires a lease fence"):
         store.compare_and_swap_status(
             lineage_id="lineage-unfenced",
             work_fingerprint_value=fingerprint,
-            expected_generation=1,
+            expected_generation=3,
             status=WorkUnitStatus.COMPLETE,
         )
+    leases.close()
     store.close()
 
 
@@ -801,6 +858,73 @@ def test_active_status_requires_current_unexpired_fence(tmp_path: Path):
     )
     assert verifying.work.status is WorkUnitStatus.VERIFYING
     assert verifying.generation == 3
+
+    leases.close()
+    store.close()
+
+
+def test_active_lifecycle_rejects_forward_skip_and_backward_transition(tmp_path: Path):
+    db = tmp_path / "ordered-lifecycle.db"
+    work = _work(
+        "root-ordered",
+        depth=0,
+        parent=None,
+        commit="4" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+
+    store = SqliteRecursiveWorkStore(db)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-ordered",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+    leases = SqliteLeaseStore(db)
+    lease = leases.claim(fingerprint, holder="ordered", now=0.0, ttl=10.0)
+    assert lease is not None
+
+    with pytest.raises(ValueError, match="PENDING -> VERIFYING"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-ordered",
+            work_fingerprint_value=fingerprint,
+            expected_generation=1,
+            status=WorkUnitStatus.VERIFYING,
+            lease=lease,
+            now=1.0,
+        )
+
+    running = store.compare_and_swap_status(
+        lineage_id="lineage-ordered",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=1.0,
+    )
+    assert running.generation == 2
+    verifying = store.compare_and_swap_status(
+        lineage_id="lineage-ordered",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=lease,
+        now=2.0,
+    )
+    assert verifying.generation == 3
+
+    with pytest.raises(ValueError, match="VERIFYING -> CLAIMED"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-ordered",
+            work_fingerprint_value=fingerprint,
+            expected_generation=3,
+            status=WorkUnitStatus.CLAIMED,
+            lease=lease,
+            now=3.0,
+        )
 
     leases.close()
     store.close()
