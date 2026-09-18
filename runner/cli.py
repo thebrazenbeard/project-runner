@@ -27,8 +27,22 @@ from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _project_registry_path() -> Path:
+    override = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY")
+    if override is None:
+        return ROOT / "registry" / "projects.yaml"
+    path = Path(override).expanduser()
+    if not path.is_absolute():
+        raise ValueError("PROJECT_RUNNER_PROJECT_REGISTRY must be an absolute path")
+    return path
+
+
+def _load_project_registry():
+    return load_projects(_project_registry_path())
+
+
 def _load_all():
-    projects = load_projects(ROOT / "registry" / "projects.yaml")
+    projects = _load_project_registry()
     workers = load_workers(ROOT / "registry" / "workers.yaml")
     return projects, workers
 
@@ -129,7 +143,7 @@ def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     previous = load_observations(before)
     current = load_observations(after)
     edges = load_dependencies(dependencies)
-    projects = load_projects(ROOT / "registry" / "projects.yaml")
+    projects = _load_project_registry()
     capability_lookup = {project.id: set(project.capabilities) for project in projects}
 
     invalidations = derive_invalidations(previous, current, edges)
