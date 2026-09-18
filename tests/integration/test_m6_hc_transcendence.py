@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 from runner.backends import MockBackend
@@ -222,7 +223,10 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         work_unit_fingerprint(attempt.work),
     )
     assert resumed_work is not None
-    assert resumed_work.work == attempt.work
+    assert resumed_work.work == replace(
+        attempt.work,
+        status=WorkUnitStatus.COMPLETE,
+    )
     assert resumed_work.work.status is WorkUnitStatus.COMPLETE
     assert resumed_work.generation == 2
     assert resumed_work.ancestry_fingerprints == {
