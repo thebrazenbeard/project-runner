@@ -36,7 +36,7 @@ DEPENDENCIES = FIXTURES / "m6-hc-transcendence-dependencies.yaml"
 TRANSCENDENCE_SUBJECT = ExactSubject(
     repository="thebrazenbeard/transcendence",
     ref="architecture/consciousness-backup-v1",
-    commit="96e5cc93d5cf362342c3f0f323c4e63c66cc8784",
+    commit="04c8acbbc95eccd6b95db9ab02ff920a21acca6b",
 )
 
 
@@ -120,11 +120,6 @@ def main() -> int:
             expected_generation=generation,
         )
         attempt = batch.attempts[0]
-        if not attempt.result.succeeded:
-            raise RuntimeError(
-                f"live inspection backend failed: {attempt.result.classification}"
-            )
-
         independent_reader = GitHubCurrentSubjectReader(_github_backend(token))
         outcome = verify_attempt(
             attempt,
@@ -144,7 +139,9 @@ def main() -> int:
         )
         if outcome.status is not WorkUnitStatus.COMPLETE:
             raise RuntimeError(
-                f"live inspection did not complete: {outcome.status.value}"
+                "live inspection did not complete: "
+                f"{outcome.status.value} "
+                f"(backend={attempt.result.classification})"
             )
 
         budget_store.close()
