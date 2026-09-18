@@ -1,4 +1,5 @@
 import hashlib
+from pathlib import Path
 
 import pytest
 
@@ -47,6 +48,7 @@ projects:
   assignment_scope: EXTERNAL_BOUNDED
   review_scope: STANDING
   family_id: private-family
+  scheduling_state: SCHEDULABLE
 """.lstrip(),
         encoding="utf-8",
     )
@@ -117,6 +119,7 @@ projects:
   assignment_scope: EXTERNAL_BOUNDED
   review_scope: STANDING
   family_id: example-family
+  scheduling_state: SCHEDULABLE
 """.lstrip(),
         encoding="utf-8",
     )
@@ -140,6 +143,7 @@ projects:
   assignment_scope: EXTERNAL_BOUNDED
   review_scope: STANDING
   family_id: private-alpha
+  scheduling_state: SCHEDULABLE
 """.lstrip(),
         encoding="utf-8",
     )
@@ -169,6 +173,7 @@ projects:
   assignment_scope: EXTERNAL_BOUNDED
   review_scope: STANDING
   family_id: private-beta
+  scheduling_state: SCHEDULABLE
 """.lstrip(),
         encoding="utf-8",
     )
@@ -206,6 +211,7 @@ projects:
   assignment_scope: EXTERNAL_BOUNDED
   review_scope: STANDING
   family_id: private-family
+  scheduling_state: SCHEDULABLE
 """.lstrip(),
         encoding="utf-8",
     )
@@ -232,3 +238,34 @@ projects:
         )
 
     assert capsys.readouterr().out == ""
+
+
+def test_external_held_project_cannot_become_ready_frontier(tmp_path, monkeypatch):
+    registry = tmp_path / "private-held.yaml"
+    registry.write_text(
+        """
+projects:
+- id: transcendence
+  name: Held Transcendence
+  visibility: private
+  repositories: [secret-owner/private-transcendence]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: transcendence-family
+  scheduling_state: HELD
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+    frontiers = cli_module._derive_frontier_set(
+        fixtures / "m6-hc-substantive.yaml",
+        fixtures / "m6-hc-current.yaml",
+        fixtures / "m6-hc-transcendence-dependencies.yaml",
+    )
+
+    assert len(frontiers) == 1
+    assert frontiers[0].project == "transcendence"
+    assert frontiers[0].status.value == "WAITING_AUTHORITY"
