@@ -26,8 +26,9 @@ M5 adds the first real GitHub execution route:
 - each durable work record integrity-binds its effective capability ceiling; child admission derives the parent ceiling from durable state, so a restarted caller cannot widen inherited capabilities;
 - pre-ceiling legacy recursive records are accepted only after their legacy integrity digest verifies, then migrate conservatively to their recorded required-capability set;
 - the atomic boundary reconstructs the durable parent and re-runs decomposition/capability narrowing rather than trusting a caller-supplied `ChildAdmission`;
+- durable terminal work status is lease-fence-bound: `COMPLETE` requires the exact completed holder/token, while deterministic failure/supersession require the exact released token;
 - durable work status cannot roll terminal states back or reset active work to `PENDING`;
-- stale generations/fences fail closed;
+- stale generations/fences fail closed across both the lease table and the durable WorkUnit lifecycle;
 - CI exercises the actual GitHub backend against the workflow repository in read-only mode;
 - M4 post-work currentness and independent completion-evidence rules remain in force.
 
