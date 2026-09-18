@@ -109,6 +109,11 @@ class ProjectReviewScope(str, Enum):
     STANDING = "STANDING"
 
 
+class ProjectSchedulingState(str, Enum):
+    SCHEDULABLE = "SCHEDULABLE"
+    HELD = "HELD"
+
+
 @dataclass(frozen=True)
 class ProjectDefinition:
     id: str
@@ -118,6 +123,7 @@ class ProjectDefinition:
     capabilities: tuple[str, ...]
     assignment_scope: ProjectAssignmentScope
     review_scope: ProjectReviewScope
+    scheduling_state: ProjectSchedulingState
     family_id: str
     scope_note: str | None = None
 
@@ -148,6 +154,14 @@ class ProjectDefinition:
             ),
             review_scope=ProjectReviewScope(
                 str(data.get("review_scope", ProjectReviewScope.NONE.value))
+            ),
+            scheduling_state=ProjectSchedulingState(
+                str(
+                    data.get(
+                        "scheduling_state",
+                        ProjectSchedulingState.SCHEDULABLE.value,
+                    )
+                )
             ),
             family_id=family_id,
             scope_note=str(scope_note) if scope_note is not None else None,
