@@ -1007,3 +1007,96 @@ def test_atomic_terminal_finalization_commits_lease_and_work_together(tmp_path: 
 
     leases.close()
     store.close()
+
+
+@pytest.mark.parametrize(
+    "outcome_status",
+    (
+        WorkUnitStatus.FAILED_RETRYABLE,
+        WorkUnitStatus.OUTCOME_UNKNOWN,
+    ),
+)
+def test_retryable_and_unknown_outcomes_require_current_fence(
+    tmp_path: Path,
+    outcome_status: WorkUnitStatus,
+):
+    db = tmp_path / f"{outcome_status.value.lower()}.db"
+    work = _work(
+        f"root-{outcome_status.value.lower()}",
+        depth=0,
+        parent=None,
+        commit=("2" if outcome_status is WorkUnitStatus.FAILED_RETRYABLE else "1") * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+
+    store = SqliteRecursiveWorkStore(db)
+    store.put_initial(
+        work=work,
+        lineage_id=f"lineage-{outcome_status.value.lower()}",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+    leases = SqliteLeaseStore(db)
+    first = leases.claim(fingerprint, holder="A", now=0.0, ttl=10.0)
+    assert first is not None
+
+    running = store.compare_and_swap_status(
+        lineage_id=f"lineage-{outcome_status.value.lower()}",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=first,
+        now=1.0,
+    )
+    assert running.generation == 2
+
+    with pytest.raises(ValueError, match="requires a lease fence"):
+        store.compare_and_swap_status(
+            lineage_id=f"lineage-{outcome_status.value.lower()}",
+            work_fingerprint_value=fingerprint,
+            expected_generation=2,
+            status=outcome_status,
+            now=2.0,
+        )
+
+    owned = store.compare_and_swap_status(
+        lineage_id=f"lineage-{outcome_status.value.lower()}",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=outcome_status,
+        lease=first,
+        now=2.0,
+    )
+    assert owned.work.status is outcome_status
+    assert owned.generation == 3
+
+    second = leases.claim(fingerprint, holder="B", now=11.0, ttl=10.0)
+    assert second is not None
+    assert second.fencing_token == first.fencing_token + 1
+
+    with pytest.raises(ValueError, match="fencing token is stale"):
+        store.compare_and_swap_status(
+            lineage_id=f"lineage-{outcome_status.value.lower()}",
+            work_fingerprint_value=fingerprint,
+            expected_generation=3,
+            status=WorkUnitStatus.RUNNING,
+            lease=first,
+            now=12.0,
+        )
+
+    resumed = store.compare_and_swap_status(
+        lineage_id=f"lineage-{outcome_status.value.lower()}",
+        work_fingerprint_value=fingerprint,
+        expected_generation=3,
+        status=WorkUnitStatus.RUNNING,
+        lease=second,
+        now=12.0,
+    )
+    assert resumed.work.status is WorkUnitStatus.RUNNING
+    assert resumed.generation == 4
+
+    leases.close()
+    store.close()
