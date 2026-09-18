@@ -107,7 +107,6 @@ def test_substantive_frontier_is_superseded_when_hc_main_moves_again():
         evidence_verifier=lambda work, result: (
             result.succeeded and "mock-backend" in result.evidence
         ),
-        manage_lease=False,
     )
 
     assert outcome.status is WorkUnitStatus.SUPERSEDED
@@ -203,6 +202,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         evidence_verifier=lambda work, result: (
             result.succeeded and "mock-backend" in result.evidence
         ),
+        manage_lease=False,
     )
     assert completed.status is WorkUnitStatus.COMPLETE
     assert completed.reason == (
