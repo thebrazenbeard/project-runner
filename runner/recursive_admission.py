@@ -7,7 +7,7 @@ from pathlib import Path
 import sqlite3
 
 from .budgets import BudgetEnvelope
-from .decompose import ChildAdmission
+from .decompose import ChildAdmission, admit_child_work
 from .persistent_state import _SCHEMA as _PERSISTENT_SCHEMA
 from .persistent_state import _migrate_budget_scope_schema
 from .recursive_state import (
@@ -15,6 +15,7 @@ from .recursive_state import (
     _TERMINAL_STATUSES,
     _canonical_json,
     _immutable_digest,
+    _work_from_payload,
     _work_payload,
 )
 from .work_units import work_unit_fingerprint
@@ -51,6 +52,8 @@ class SqliteRecursiveAdmissionStore:
         parent_work_fingerprint: str,
         parent_budget_before: BudgetEnvelope,
         expected_parent_budget_generation: int,
+        parent_capabilities,
+        target_capabilities,
         admission: ChildAdmission,
     ) -> DurableChildAdmission:
         child_work = admission.work
@@ -128,11 +131,20 @@ class SqliteRecursiveAdmissionStore:
                 raise ValueError("durable parent ancestry is structurally invalid")
             parent_ancestry = frozenset(parent_ancestry_payload)
 
-            expected_child_ancestry = parent_ancestry | {child_fingerprint}
-            if admission.ancestry_fingerprints != expected_child_ancestry:
-                raise ValueError(
-                    "child ancestry does not extend durable parent exactly"
+            try:
+                parent_work_payload = json.loads(str(parent_work_json))
+                parent_work = _work_from_payload(
+                    parent_work_payload,
+                    status=parent_status,
                 )
+            except (json.JSONDecodeError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    "durable parent work payload is structurally invalid"
+                ) from exc
+            if work_unit_fingerprint(parent_work) != parent_work_fingerprint:
+                raise ValueError("durable parent semantic identity mismatch")
+            if child_work.status is not WorkUnitStatus.PENDING:
+                raise ValueError("recursive child work must begin pending")
 
             budget_row = self.connection.execute(
                 """
@@ -172,6 +184,23 @@ class SqliteRecursiveAdmissionStore:
                 raise ValueError("durable parent budget does not match admission subject")
             if int(parent_generation) != expected_parent_budget_generation:
                 raise ValueError("parent budget generation mismatch")
+
+            recomputed = admit_child_work(
+                parent=parent_work,
+                child=child_work,
+                parent_budget=observed_parent,
+                parent_capabilities=parent_capabilities,
+                target_capabilities=target_capabilities,
+                ancestry_fingerprints=parent_ancestry,
+                child_children=child_budget.remaining_children,
+                child_active=child_budget.remaining_active,
+                child_retries=child_budget.remaining_retries,
+                child_backend_jobs=child_budget.remaining_backend_jobs,
+            )
+            if recomputed != admission:
+                raise ValueError(
+                    "child admission does not match durable parent recomputation"
+                )
 
             updated = self.connection.execute(
                 """
