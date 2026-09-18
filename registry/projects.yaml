@@ -1,52 +1,828 @@
-projects:
-- id: project-runner
-  name: Project Runner
-  visibility: public
-  repositories:
-  - thebrazenbeard/project-runner
-  capabilities:
-  - read
-  - analyze
-  - propose
-  - create_branch
-  - write_branch
-  - open_pr
-  - comment
-  - request_review
-  - merge
-- id: chat-communication-bus
-  name: Chat Communication Bus
-  visibility: private
-  repositories:
-  - thebrazenbeard/chat-communication-bus
-  capabilities:
-  - read
-  - analyze
-  - propose
-- id: vera
-  name: Vera
-  visibility: private
-  repositories:
-  - thebrazenbeard/vera
-  capabilities:
-  - read
-  - analyze
-  - propose
-- id: vera-control-plane
-  name: Vera Control Plane
-  visibility: private
-  repositories:
-  - thebrazenbeard/vera-control-plane
-  capabilities:
-  - read
-  - analyze
-  - propose
-- id: hc-brain
-  name: HC Brain
-  visibility: public
-  repositories:
-  - thebrazenbeard/hc-brain
-  capabilities:
-  - read
-  - analyze
-  - propose
+{
+  "projects": [
+    {
+      "id": "bt2-hyperconnectome",
+      "name": "BT2 / Hyperconnectome",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/bt2"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "bt2"
+    },
+    {
+      "id": "project-lantern",
+      "name": "Project Lantern / BT2 runtime infrastructure",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/project-lantern"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "STANDING",
+      "family_id": "bt2"
+    },
+    {
+      "id": "chat-communication-bus-radar",
+      "name": "Chat Communication Bus / Radar",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/chat-communication-bus"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "bt2"
+    },
+    {
+      "id": "abil",
+      "name": "ABIL",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/abil"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "abil"
+    },
+    {
+      "id": "noema",
+      "name": "Noema",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/noema"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "noema"
+    },
+    {
+      "id": "hc-brain",
+      "name": "HC Brain",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/hc-brain"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "STANDING",
+      "family_id": "hyperconnectome"
+    },
+    {
+      "id": "vera-works",
+      "name": "Vera Works",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera-works"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "selfimage",
+      "name": "SelfImage",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/selfimage"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "spm",
+      "name": "SPM",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/spm"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "STANDING",
+      "family_id": "spm"
+    },
+    {
+      "id": "vera-chat",
+      "name": "Vera Chat",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/chat-communication-bus"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-repo-consolidation",
+      "name": "Vera Repo Consolidation",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-runtime-cohesion",
+      "name": "Vera Runtime Cohesion",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera",
+        "thebrazenbeard/vera-control-plane"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "world-zero",
+      "name": "World Zero",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/world-zero"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "world-zero"
+    },
+    {
+      "id": "intranel",
+      "name": "Intranel",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/intranel"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "intranel"
+    },
+    {
+      "id": "rezon",
+      "name": "Rezon",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/rezon"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "EXTERNAL_BOUNDED",
+      "review_scope": "NONE",
+      "family_id": "rezon"
+    },
+    {
+      "id": "bugops",
+      "name": "BugOps",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/bugops"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "bugops"
+    },
+    {
+      "id": "unvtrslr",
+      "name": "UNVTRSLR",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/unvtrslr"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "unvtrslr"
+    },
+    {
+      "id": "project-achilles",
+      "name": "Project Achilles",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/project-achilles"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "project-achilles"
+    },
+    {
+      "id": "skeletonkey",
+      "name": "Skeletonkey",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/skeletonkey"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "skeletonkey"
+    },
+    {
+      "id": "attune",
+      "name": "Attune",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/Attune"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "attune"
+    },
+    {
+      "id": "roots",
+      "name": "Roots",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/roots"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "roots"
+    },
+    {
+      "id": "firesafe",
+      "name": "Firesafe",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/firesafe"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "firesafe"
+    },
+    {
+      "id": "transcendence",
+      "name": "Transcendence",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/transcendence"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "transcendence"
+    },
+    {
+      "id": "mosaic",
+      "name": "Mosaic",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/mosaic"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "mosaic"
+    },
+    {
+      "id": "vera-habitat",
+      "name": "Vera Habitat",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera-habitat"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-mesh-runtime",
+      "name": "Vera Mesh / VeraRelay / Vera Synology",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera-mesh",
+        "thebrazenbeard/vera-synology"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-os",
+      "name": "Vera OS",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera-os"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-ark",
+      "name": "Vera Ark",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera_ark"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-apk",
+      "name": "Vera APK",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera-apk"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "BT2_ASSIGNMENT",
+      "review_scope": "NONE",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera",
+      "name": "Vera",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-model-training",
+      "name": "Vera Model Training",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera_model_training"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "vera-r9a0",
+      "name": "Vera R9A0",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera-R9A0"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "hephaestus",
+      "name": "Hephaestus",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/hephaestus"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "bt2-workers"
+    },
+    {
+      "id": "masamune",
+      "name": "Masamune",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/masamune"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "bt2-workers"
+    },
+    {
+      "id": "vera-control-plane",
+      "name": "Vera Control Plane",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/vera-control-plane"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "trek-data-core",
+      "name": "Trek Data Core",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/trek-data-core"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "deepmemorystorage",
+      "name": "Deep Memory Storage",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/deepmemorystorage"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "semanticatlas",
+      "name": "Semantic Atlas",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/semanticatlas"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "conations",
+      "name": "Conations",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/conations"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "empathy",
+      "name": "Empathy",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/empathy"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "entropyinc",
+      "name": "Entropy Inc",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/entropyinc"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "entropy"
+    },
+    {
+      "id": "sexuality",
+      "name": "Sexuality",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/sexuality"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "wip",
+      "name": "WIP",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/wip"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "wip"
+    },
+    {
+      "id": "mediaphile",
+      "name": "Mediaphile",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/mediaphile"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "mediaphile"
+    },
+    {
+      "id": "personification",
+      "name": "Personification",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/personification"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "temporal",
+      "name": "Temporal",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/temporal"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "orgasm",
+      "name": "Orgasm",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/orgasm"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "vera"
+    },
+    {
+      "id": "wreckforge",
+      "name": "Wreckforge",
+      "visibility": "private",
+      "repositories": [
+        "thebrazenbeard/wreckforge"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "wreckforge"
+    },
+    {
+      "id": "on-theo",
+      "name": "On Theo",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/on-theo"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "on-theo"
+    },
+    {
+      "id": "project-runner",
+      "name": "Project Runner",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/project-runner"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose",
+        "create_branch",
+        "write_branch",
+        "open_pr",
+        "comment",
+        "request_review",
+        "merge"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "bt2"
+    },
+    {
+      "id": "testament",
+      "name": "Testament",
+      "visibility": "public",
+      "repositories": [
+        "thebrazenbeard/testament"
+      ],
+      "capabilities": [
+        "read",
+        "analyze",
+        "propose"
+      ],
+      "assignment_scope": "NONE",
+      "review_scope": "STANDING",
+      "family_id": "testament"
+    }
+  ]
+}
