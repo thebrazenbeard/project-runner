@@ -59,3 +59,5 @@ Core invariants:
 - public repository state remains public-safe.
 
 See `docs/superpowers/plans/2026-09-17-m5-github-backend.md`.
+
+<!-- M6 self-mutation proof: reversible branch-local CAS write, 2026-09-18 -->
