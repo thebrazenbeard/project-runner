@@ -4,11 +4,12 @@ from runner.backends import MockBackend
 from runner.budgets import BudgetEnvelope
 from runner.collisions import partition_collision_groups
 from runner.dedup import deduplicate_frontiers
-from runner.dispatch import dispatch_ready
+from runner.dispatch import dispatch_ready, frontier_to_work_unit
 from runner.frontier import derive_frontiers
 from runner.leases import InMemoryLeaseStore
 from runner.models import ExactSubject, FrontierStatus
 from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
+from runner.recursive_state import SqliteRecursiveWorkStore
 from runner.propagate import derive_invalidations
 from runner.registry import load_dependencies, load_observations
 from runner.verify import verify_attempt
@@ -122,7 +123,21 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     assert observed_generation == generation == 1
 
     lease_store = SqliteLeaseStore(db)
+    recursive_store = SqliteRecursiveWorkStore(db)
     backend = MockBackend()
+
+    def durable_work_factory(frontier, depth):
+        work = frontier_to_work_unit(frontier, depth=depth)
+        fingerprint = work_unit_fingerprint(work)
+        recursive_store.put_initial(
+            work=work,
+            lineage_id=persisted_budget.lineage_id,
+            budget_scope_id=persisted_budget.scope_id,
+            parent_fingerprint=None,
+            ancestry_fingerprints={fingerprint},
+        )
+        return work
+
     batch = dispatch_ready(
         frontiers,
         lease_store=lease_store,
@@ -131,6 +146,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         holder="m6-proof-current",
         now=0.0,
         lease_ttl=60.0,
+        work_factory=durable_work_factory,
     )
     new_generation = budget_store.compare_and_swap(
         batch.remaining_budget,
@@ -169,9 +185,18 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     assert completed.reason == (
         "exact subject current and completion evidence verified"
     )
+    durable_complete = recursive_store.compare_and_swap_status(
+        lineage_id=persisted_budget.lineage_id,
+        work_fingerprint_value=work_unit_fingerprint(attempt.work),
+        expected_generation=1,
+        status=completed.status,
+    )
+    assert durable_complete.generation == 2
+    assert durable_complete.work.status is WorkUnitStatus.COMPLETE
 
     budget_store.close()
     lease_store.close()
+    recursive_store.close()
 
     reopened_budget = SqliteBudgetStore(db)
     loaded_budget, loaded_generation = reopened_budget.get(
@@ -191,5 +216,19 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         )
         is None
     )
+    reopened_recursive = SqliteRecursiveWorkStore(db)
+    resumed_work = reopened_recursive.get(
+        persisted_budget.lineage_id,
+        work_unit_fingerprint(attempt.work),
+    )
+    assert resumed_work is not None
+    assert resumed_work.work == attempt.work
+    assert resumed_work.work.status is WorkUnitStatus.COMPLETE
+    assert resumed_work.generation == 2
+    assert resumed_work.ancestry_fingerprints == {
+        work_unit_fingerprint(attempt.work)
+    }
+
     reopened_budget.close()
     reopened_lease.close()
+    reopened_recursive.close()
