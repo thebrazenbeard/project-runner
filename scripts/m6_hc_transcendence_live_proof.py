@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 import os
 from pathlib import Path
@@ -190,7 +191,10 @@ def main() -> int:
         )
         if resumed_work is None:
             raise RuntimeError("durable recursive work disappeared after restart")
-        if resumed_work.work != attempt.work:
+        if resumed_work.work != replace(
+            attempt.work,
+            status=WorkUnitStatus.COMPLETE,
+        ):
             raise RuntimeError("durable recursive work changed across restart")
         if resumed_work.work.status is not WorkUnitStatus.COMPLETE:
             raise RuntimeError("durable recursive work status did not survive restart")
