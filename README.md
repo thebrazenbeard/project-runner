@@ -54,6 +54,8 @@ Every external project record must explicitly declare assignment scope, review s
 
 Detailed `evaluate-change`, `frontier-report`, and `dispatch-report` CLI output is disabled while an external registry is selected, preventing private project IDs, repository subjects, dependency IDs, or collision keys from being emitted into ordinary logs. Inventory/validation remain count-only.
 
+`frontier-summary` is the private-safe visibility surface: it emits only total, READY, non-READY, and per-status counts. It never emits project IDs, subjects, dependency IDs, collision keys, reasons, or input paths, and external-input failures collapse to a generic structural-error message.
+
 ## Authority model
 
 Backend capability answers "can this route technically perform an operation?"
