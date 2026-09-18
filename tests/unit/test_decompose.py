@@ -88,6 +88,9 @@ def test_valid_distinct_child_is_admitted_with_narrowed_caps_and_lineage_budget(
 
     assert result.effective_capabilities == ("analyze", "read")
     assert result.child_budget.lineage_id == "run-1"
+    assert result.child_budget.scope_id == (
+        "work:" + work_unit_fingerprint(result.work)
+    )
     assert result.child_budget.depth == 1
     assert work_unit_fingerprint(result.work) in result.ancestry_fingerprints
 
