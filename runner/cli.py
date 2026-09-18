@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hmac
 import json
 import os
 from pathlib import Path
@@ -51,16 +52,48 @@ def _project_registry_path() -> Path:
     return resolved
 
 
+def _external_project_registry_selected() -> bool:
+    return os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY") is not None
+
+
+def _external_project_registry_expected_sha256() -> str:
+    expected = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY_SHA256", "")
+    if (
+        len(expected) != 64
+        or any(character not in "0123456789abcdef" for character in expected)
+    ):
+        raise ValueError(
+            "external project registry requires an expected lowercase SHA-256"
+        )
+    return expected
+
+
 def _load_project_registry_snapshot():
-    external = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY") is not None
-    return load_project_snapshot(
-        _project_registry_path(),
+    external = _external_project_registry_selected()
+    path = _project_registry_path()
+    expected = (
+        _external_project_registry_expected_sha256()
+        if external
+        else None
+    )
+    snapshot = load_project_snapshot(
+        path,
         require_scope_metadata=external,
     )
+    if expected is not None and not hmac.compare_digest(snapshot.sha256, expected):
+        raise ValueError("external project registry digest mismatch")
+    return snapshot
 
 
 def _load_project_registry():
     return _load_project_registry_snapshot().projects
+
+
+def _require_public_safe_reporting() -> None:
+    if _external_project_registry_selected():
+        raise ValueError(
+            "detailed reports are disabled with an external project registry"
+        )
 
 
 def _load_all():
@@ -96,6 +129,7 @@ def _subject_payload(subject) -> dict[str, str | None]:
 
 
 def _evaluate_change(before: Path, after: Path, dependencies: Path) -> int:
+    _require_public_safe_reporting()
     previous = load_observations(before)
     current = load_observations(after)
     edges = load_dependencies(dependencies)
@@ -174,6 +208,7 @@ def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
 
 
 def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
+    _require_public_safe_reporting()
     frontiers = _derive_frontier_set(before, after, dependencies)
     ordered_frontiers = tuple(sorted(frontiers, key=frontier_fingerprint))
     collision_groups = partition_collision_groups(ordered_frontiers)
@@ -202,6 +237,7 @@ def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
 
 
 def _dispatch_report(before: Path, after: Path, dependencies: Path) -> int:
+    _require_public_safe_reporting()
     frontiers = _derive_frontier_set(before, after, dependencies)
     blocked = tuple(
         sorted(
