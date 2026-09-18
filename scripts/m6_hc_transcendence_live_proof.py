@@ -7,7 +7,8 @@ from pathlib import Path
 import tempfile
 
 from runner.budgets import BudgetEnvelope
-from runner.dispatch import dispatch_ready
+from runner.dispatch import DispatchAttempt
+from runner.durable_dispatch import SqliteDispatchAdmissionStore
 from runner.frontier import derive_frontiers
 from runner.github_backend import (
     GitHubBackend,
@@ -101,61 +102,66 @@ def main() -> int:
         recursive_store = SqliteRecursiveWorkStore(db)
         execution_backend = GitHubReadInspectionBackend(_github_backend(token))
 
-        def durable_work_factory(frontier, depth):
-            work = frontier_to_github_inspection_work(
-                frontier,
-                TRANSCENDENCE_SUBJECT,
-                depth,
-                registry_digest=registry_snapshot.sha256,
-            )
-            fingerprint = work_unit_fingerprint(work)
-            recursive_store.put_initial(
-                work=work,
-                lineage_id=persisted_budget.lineage_id,
-                budget_scope_id=persisted_budget.scope_id,
-                parent_fingerprint=None,
-                ancestry_fingerprints={fingerprint},
-                effective_capabilities={"read", "analyze"},
-            )
-            return work
+        work = frontier_to_github_inspection_work(
+            frontiers[0],
+            TRANSCENDENCE_SUBJECT,
+            persisted_budget.depth,
+            registry_digest=registry_snapshot.sha256,
+        )
+        fingerprint = work_unit_fingerprint(work)
+        recursive_store.put_initial(
+            work=work,
+            lineage_id=persisted_budget.lineage_id,
+            budget_scope_id=persisted_budget.scope_id,
+            parent_fingerprint=None,
+            ancestry_fingerprints={fingerprint},
+            effective_capabilities={"read", "analyze"},
+        )
 
-        batch = dispatch_ready(
-            frontiers,
-            lease_store=lease_store,
-            backend=execution_backend,
-            budget=persisted_budget,
+        dispatch_store = SqliteDispatchAdmissionStore(db)
+        admitted = dispatch_store.admit(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=fingerprint,
+            budget_scope_id=persisted_budget.scope_id,
+            expected_budget_generation=generation,
+            expected_work_generation=1,
             holder="github-actions-m6-live-proof",
             now=0.0,
-            lease_ttl=60.0,
-            work_factory=durable_work_factory,
+            ttl=60.0,
         )
-        if len(batch.attempts) != 1:
-            raise RuntimeError("expected exactly one dispatched live inspection")
+        dispatch_store.close()
+        new_generation = admitted.budget_generation
+        if admitted.budget_after.remaining_active != 0:
+            raise RuntimeError("durable active budget was not reserved before execution")
+        if admitted.budget_after.remaining_backend_jobs != 0:
+            raise RuntimeError("durable backend budget was not reserved before execution")
 
-        new_generation = budget_store.compare_and_swap(
-            batch.remaining_budget,
-            expected_generation=generation,
+        result = execution_backend.execute(admitted.work)
+        attempt = DispatchAttempt(
+            frontier=frontiers[0],
+            work=admitted.work,
+            lease=admitted.lease,
+            result=result,
         )
-        attempt = batch.attempts[0]
         running_work = recursive_store.compare_and_swap_status(
             lineage_id=persisted_budget.lineage_id,
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            expected_generation=1,
+            expected_generation=admitted.work_generation,
             status=WorkUnitStatus.RUNNING,
             lease=attempt.lease,
             now=0.25,
         )
-        if running_work.generation != 2:
+        if running_work.generation != 3:
             raise RuntimeError("durable recursive work did not enter RUNNING")
         verifying_work = recursive_store.compare_and_swap_status(
             lineage_id=persisted_budget.lineage_id,
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            expected_generation=2,
+            expected_generation=3,
             status=WorkUnitStatus.VERIFYING,
             lease=attempt.lease,
             now=0.5,
         )
-        if verifying_work.generation != 3:
+        if verifying_work.generation != 4:
             raise RuntimeError("durable recursive work did not enter VERIFYING")
 
         independent_reader = GitHubCurrentSubjectReader(_github_backend(token))
@@ -185,12 +191,12 @@ def main() -> int:
         durable_work = recursive_store.finalize_terminal_status(
             lineage_id=persisted_budget.lineage_id,
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            expected_generation=3,
+            expected_generation=4,
             status=outcome.status,
             lease=attempt.lease,
             now=1.0,
         )
-        if durable_work.generation != 4:
+        if durable_work.generation != 5:
             raise RuntimeError("durable recursive work generation did not reach terminal state")
 
         budget_store.close()
