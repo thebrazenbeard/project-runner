@@ -114,6 +114,8 @@ def test_recursive_work_survives_restart_with_parent_ancestry_and_scope(tmp_path
         parent_work_fingerprint=root_fingerprint,
         parent_budget_before=_budget(),
         expected_parent_budget_generation=1,
+        parent_capabilities={"read", "analyze"},
+        target_capabilities={"read", "analyze"},
         admission=admitted,
     )
     assert stored_root.generation == 1
@@ -273,6 +275,8 @@ def test_post_restart_ancestry_still_rejects_a_to_b_to_a_cycle(tmp_path: Path):
         parent_work_fingerprint=root_fingerprint,
         parent_budget_before=_budget(),
         expected_parent_budget_generation=1,
+        parent_capabilities={"read", "analyze"},
+        target_capabilities={"read", "analyze"},
         admission=admitted_child,
     )
     admission_store.close()
