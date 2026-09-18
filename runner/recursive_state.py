@@ -56,9 +56,13 @@ class SqliteRecursiveWorkStore:
     def __init__(self, path: str | Path) -> None:
         self.path = str(path)
         self.connection = sqlite3.connect(self.path, timeout=5.0, isolation_level=None)
-        self.connection.execute("PRAGMA journal_mode=WAL")
-        self.connection.executescript(_SCHEMA)
-        _migrate_recursive_capability_schema(self.connection)
+        try:
+            self.connection.execute("PRAGMA journal_mode=WAL")
+            self.connection.executescript(_SCHEMA)
+            _migrate_recursive_capability_schema(self.connection)
+        except BaseException:
+            self.connection.close()
+            raise
 
     def close(self) -> None:
         self.connection.close()
