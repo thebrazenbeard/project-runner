@@ -115,6 +115,7 @@ def main() -> int:
                 budget_scope_id=persisted_budget.scope_id,
                 parent_fingerprint=None,
                 ancestry_fingerprints={fingerprint},
+                effective_capabilities={"read", "analyze"},
             )
             return work
 
