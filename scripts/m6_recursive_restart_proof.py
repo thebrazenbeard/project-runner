@@ -90,6 +90,7 @@ def main() -> int:
             budget_scope_id="root",
             parent_fingerprint=None,
             ancestry_fingerprints={root_fp},
+            effective_capabilities={"read", "analyze"},
         )
         work_store.close()
 
@@ -104,7 +105,6 @@ def main() -> int:
             parent=root,
             child=child,
             parent_budget=root_budget,
-            parent_capabilities={"read", "analyze"},
             target_capabilities={"read", "analyze"},
             ancestry_fingerprints={root_fp},
             child_children=1,
@@ -119,7 +119,6 @@ def main() -> int:
             parent_work_fingerprint=root_fp,
             parent_budget_before=root_budget,
             expected_parent_budget_generation=root_budget_generation,
-            parent_capabilities={"read", "analyze"},
             target_capabilities={"read", "analyze"},
             admission=child_admission,
         )
@@ -150,7 +149,6 @@ def main() -> int:
             parent=durable_child.work,
             child=grandchild,
             parent_budget=durable_child_budget,
-            parent_capabilities={"read", "analyze"},
             target_capabilities={"read", "analyze"},
             ancestry_fingerprints=durable_child.ancestry_fingerprints,
             child_children=0,
@@ -165,7 +163,6 @@ def main() -> int:
             parent_work_fingerprint=child_fp,
             parent_budget_before=durable_child_budget,
             expected_parent_budget_generation=child_budget_generation,
-            parent_capabilities={"read", "analyze"},
             target_capabilities={"read", "analyze"},
             admission=grandchild_admission,
         )
