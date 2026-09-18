@@ -21,11 +21,13 @@ _TERMINAL_STATUSES = frozenset(
     }
 )
 
-_ACTIVE_LEASE_STATUSES = frozenset(
+_LEASE_BOUND_NONTERMINAL_STATUSES = frozenset(
     {
         WorkUnitStatus.CLAIMED,
         WorkUnitStatus.RUNNING,
         WorkUnitStatus.VERIFYING,
+        WorkUnitStatus.FAILED_RETRYABLE,
+        WorkUnitStatus.OUTCOME_UNKNOWN,
     }
 )
 
@@ -372,7 +374,7 @@ class SqliteRecursiveWorkStore:
                         f"{current_status.value} -> {status.value}"
                     )
 
-            if status in _ACTIVE_LEASE_STATUSES:
+            if status in _LEASE_BOUND_NONTERMINAL_STATUSES:
                 _validate_active_lease_state(
                     self.connection,
                     work_fingerprint_value=work_fingerprint_value,
