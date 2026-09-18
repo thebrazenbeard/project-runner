@@ -25,6 +25,9 @@ M5 adds the first real GitHub execution route:
 - ordinary child budget/work initialization is rejected so callers cannot bypass the atomic admission path;
 - each durable work record integrity-binds its effective capability ceiling; child admission derives the parent ceiling from durable state, so a restarted caller cannot widen inherited capabilities;
 - pre-ceiling legacy recursive records are accepted only after their legacy integrity digest verifies, then migrate conservatively to their recorded required-capability set;
+- durable dispatch admission commits budget reservation, lease claim/fencing token, and WorkUnit `CLAIMED` state in one SQLite transaction **before** backend execution;
+- a crash after durable dispatch admission cannot restore the reserved active/backend-job quota or forget the owning lease/work state;
+- retry/unknown redispatch consumes retry quota while reclaiming with a higher fence;
 - the atomic boundary reconstructs the durable parent and re-runs decomposition/capability narrowing rather than trusting a caller-supplied `ChildAdmission`;
 - lease-bound nonterminal work states (`CLAIMED`, `RUNNING`, `VERIFYING`, `FAILED_RETRYABLE`, `OUTCOME_UNKNOWN`) require the exact current holder/fencing token and an unexpired lease at transition time;
 - retryable/unknown outcomes therefore cannot be asserted by a non-owner; after expiry, a reclaimed higher fence may resume them through the allowed lifecycle;
