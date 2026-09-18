@@ -43,3 +43,24 @@ projects:
 """, encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate project id: same"):
         load_projects(path)
+
+
+def test_project_portfolio_axes_are_parsed(tmp_path: Path):
+    path = tmp_path / "projects.yaml"
+    path.write_text("""
+projects:
+  - id: example
+    name: Example
+    visibility: private
+    repositories: [owner/example]
+    capabilities: [read, analyze, propose]
+    assignment_scope: BT2_ASSIGNMENT
+    review_scope: STANDING
+    family_id: example-family
+    scope_note: explicit test membership
+""", encoding="utf-8")
+    project = load_projects(path)[0]
+    assert project.assignment_scope.value == "BT2_ASSIGNMENT"
+    assert project.review_scope.value == "STANDING"
+    assert project.family_id == "example-family"
+    assert project.scope_note == "explicit test membership"
