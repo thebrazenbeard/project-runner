@@ -28,6 +28,9 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: private-family
 """.lstrip(),
         encoding="utf-8",
     )
