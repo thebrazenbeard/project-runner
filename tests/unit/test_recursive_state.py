@@ -165,11 +165,16 @@ def test_recursive_work_status_cas_is_scope_local_and_stale_generation_fails(
         effective_capabilities={"read", "analyze"},
     )
 
+    leases = SqliteLeaseStore(db)
+    lease = leases.claim(fingerprint, holder="runner", now=0.0, ttl=10.0)
+    assert lease is not None
     running = store.compare_and_swap_status(
         lineage_id="lineage-recursive",
         work_fingerprint_value=fingerprint,
         expected_generation=1,
         status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=1.0,
     )
     assert running.generation == 2
     assert running.work.status is WorkUnitStatus.RUNNING
@@ -181,6 +186,7 @@ def test_recursive_work_status_cas_is_scope_local_and_stale_generation_fails(
             expected_generation=1,
             status=WorkUnitStatus.COMPLETE,
         )
+    leases.close()
     store.close()
 
 
@@ -421,11 +427,16 @@ def test_nonpending_recursive_work_cannot_reset_to_pending(tmp_path: Path):
         ancestry_fingerprints={fingerprint},
         effective_capabilities={"read", "analyze"},
     )
+    leases = SqliteLeaseStore(tmp_path / "recursive.db")
+    lease = leases.claim(fingerprint, holder="running-test", now=0.0, ttl=10.0)
+    assert lease is not None
     running = store.compare_and_swap_status(
         lineage_id="lineage-running",
         work_fingerprint_value=fingerprint,
         expected_generation=1,
         status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=1.0,
     )
     assert running.generation == 2
 
@@ -436,6 +447,7 @@ def test_nonpending_recursive_work_cannot_reset_to_pending(tmp_path: Path):
             expected_generation=2,
             status=WorkUnitStatus.PENDING,
         )
+    leases.close()
     store.close()
 
 
@@ -598,17 +610,19 @@ def test_terminal_completion_rejects_stale_reclaimed_fence(tmp_path: Path):
         ancestry_fingerprints={fingerprint},
         effective_capabilities={"read", "analyze"},
     )
+    leases = SqliteLeaseStore(db)
+    stale = leases.claim(fingerprint, holder="A", now=0.0, ttl=10.0)
+    assert stale is not None and stale.fencing_token == 1
     running = store.compare_and_swap_status(
         lineage_id="lineage-fence",
         work_fingerprint_value=fingerprint,
         expected_generation=1,
         status=WorkUnitStatus.RUNNING,
+        lease=stale,
+        now=1.0,
     )
     assert running.generation == 2
 
-    leases = SqliteLeaseStore(db)
-    stale = leases.claim(fingerprint, holder="A", now=0.0, ttl=10.0)
-    assert stale is not None and stale.fencing_token == 1
     current = leases.claim(fingerprint, holder="B", now=11.0, ttl=10.0)
     assert current is not None and current.fencing_token == 2
 
@@ -706,4 +720,87 @@ def test_unfenced_terminal_status_is_rejected(tmp_path: Path):
             expected_generation=1,
             status=WorkUnitStatus.COMPLETE,
         )
+    store.close()
+
+
+def test_active_status_requires_current_unexpired_fence(tmp_path: Path):
+    db = tmp_path / "active-fence.db"
+    work = _work(
+        "root-active-fence",
+        depth=0,
+        parent=None,
+        commit="5" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+
+    store = SqliteRecursiveWorkStore(db)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-active-fence",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+
+    with pytest.raises(ValueError, match="requires a lease fence"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-active-fence",
+            work_fingerprint_value=fingerprint,
+            expected_generation=1,
+            status=WorkUnitStatus.RUNNING,
+            now=1.0,
+        )
+
+    leases = SqliteLeaseStore(db)
+    first = leases.claim(fingerprint, holder="A", now=0.0, ttl=10.0)
+    assert first is not None
+
+    with pytest.raises(ValueError, match="expired"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-active-fence",
+            work_fingerprint_value=fingerprint,
+            expected_generation=1,
+            status=WorkUnitStatus.RUNNING,
+            lease=first,
+            now=10.0,
+        )
+
+    second = leases.claim(fingerprint, holder="B", now=11.0, ttl=10.0)
+    assert second is not None and second.fencing_token == first.fencing_token + 1
+
+    with pytest.raises(ValueError, match="fencing token is stale"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-active-fence",
+            work_fingerprint_value=fingerprint,
+            expected_generation=1,
+            status=WorkUnitStatus.RUNNING,
+            lease=first,
+            now=12.0,
+        )
+
+    running = store.compare_and_swap_status(
+        lineage_id="lineage-active-fence",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=second,
+        now=12.0,
+    )
+    assert running.work.status is WorkUnitStatus.RUNNING
+    assert running.generation == 2
+
+    verifying = store.compare_and_swap_status(
+        lineage_id="lineage-active-fence",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=second,
+        now=13.0,
+    )
+    assert verifying.work.status is WorkUnitStatus.VERIFYING
+    assert verifying.generation == 3
+
+    leases.close()
     store.close()
