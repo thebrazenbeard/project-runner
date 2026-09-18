@@ -29,6 +29,52 @@ _ACTIVE_LEASE_STATUSES = frozenset(
     }
 )
 
+_ALLOWED_STATUS_TRANSITIONS = {
+    WorkUnitStatus.PENDING: frozenset(
+        {WorkUnitStatus.CLAIMED, WorkUnitStatus.RUNNING}
+    ),
+    WorkUnitStatus.CLAIMED: frozenset(
+        {
+            WorkUnitStatus.RUNNING,
+            WorkUnitStatus.FAILED_RETRYABLE,
+            WorkUnitStatus.FAILED_DETERMINISTIC,
+            WorkUnitStatus.OUTCOME_UNKNOWN,
+            WorkUnitStatus.SUPERSEDED,
+        }
+    ),
+    WorkUnitStatus.RUNNING: frozenset(
+        {
+            WorkUnitStatus.VERIFYING,
+            WorkUnitStatus.FAILED_RETRYABLE,
+            WorkUnitStatus.FAILED_DETERMINISTIC,
+            WorkUnitStatus.OUTCOME_UNKNOWN,
+            WorkUnitStatus.SUPERSEDED,
+        }
+    ),
+    WorkUnitStatus.VERIFYING: frozenset(
+        {
+            WorkUnitStatus.COMPLETE,
+            WorkUnitStatus.FAILED_RETRYABLE,
+            WorkUnitStatus.FAILED_DETERMINISTIC,
+            WorkUnitStatus.OUTCOME_UNKNOWN,
+            WorkUnitStatus.SUPERSEDED,
+        }
+    ),
+    WorkUnitStatus.FAILED_RETRYABLE: frozenset(
+        {WorkUnitStatus.CLAIMED, WorkUnitStatus.RUNNING}
+    ),
+    WorkUnitStatus.OUTCOME_UNKNOWN: frozenset(
+        {
+            WorkUnitStatus.CLAIMED,
+            WorkUnitStatus.RUNNING,
+            WorkUnitStatus.VERIFYING,
+        }
+    ),
+    WorkUnitStatus.COMPLETE: frozenset(),
+    WorkUnitStatus.FAILED_DETERMINISTIC: frozenset(),
+    WorkUnitStatus.SUPERSEDED: frozenset(),
+}
+
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS recursive_work_state (
@@ -315,8 +361,16 @@ class SqliteRecursiveWorkStore:
                     raise ValueError("recursive work state disappeared after no-op")
                 return stored
 
-            if current_status is not WorkUnitStatus.PENDING and status is WorkUnitStatus.PENDING:
-                raise ValueError("recursive work state cannot reset to pending")
+            if status is not current_status:
+                allowed = _ALLOWED_STATUS_TRANSITIONS.get(
+                    current_status,
+                    frozenset(),
+                )
+                if status not in allowed:
+                    raise ValueError(
+                        "recursive work lifecycle transition is invalid: "
+                        f"{current_status.value} -> {status.value}"
+                    )
 
             if status in _ACTIVE_LEASE_STATUSES:
                 _validate_active_lease_state(
