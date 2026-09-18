@@ -28,9 +28,11 @@ def verify_attempt(
     now: float,
     current_subject_reader: SubjectReader,
     evidence_verifier: EvidenceVerifier,
+    manage_lease: bool = True,
 ) -> VerificationOutcome:
     if not attempt.result.succeeded:
-        lease_store.release(attempt.lease, now=now)
+        if manage_lease:
+            lease_store.release(attempt.lease, now=now)
         if attempt.result.classification == "PRECONDITION_FAILED":
             return VerificationOutcome(
                 work=attempt.work,
@@ -52,7 +54,8 @@ def verify_attempt(
                 reason="exact current subject could not be established",
             )
         if current.identity() != original.identity():
-            lease_store.release(attempt.lease, now=now)
+            if manage_lease:
+                lease_store.release(attempt.lease, now=now)
             return VerificationOutcome(
                 work=attempt.work,
                 status=WorkUnitStatus.SUPERSEDED,
@@ -66,7 +69,7 @@ def verify_attempt(
             reason="worker/backend claim requires independent completion evidence",
         )
 
-    if not lease_store.complete(attempt.lease, now=now):
+    if manage_lease and not lease_store.complete(attempt.lease, now=now):
         return VerificationOutcome(
             work=attempt.work,
             status=WorkUnitStatus.OUTCOME_UNKNOWN,
