@@ -23,6 +23,8 @@ def frontier_to_github_inspection_work(
     frontier: Frontier,
     target_subject: ExactSubject,
     depth: int = 0,
+    *,
+    registry_digest: str | None = None,
 ) -> WorkUnit:
     if frontier.work_type != "INSPECT":
         raise ValueError("M6 GitHub inspection factory only accepts INSPECT frontiers")
@@ -32,6 +34,15 @@ def frontier_to_github_inspection_work(
     inputs = (frontier.subject,)
     if target_subject.identity() != frontier.subject.identity():
         inputs = inputs + (target_subject,)
+
+    m6_payload: dict[str, str] = {"kind": "github-read-inspection"}
+    if registry_digest is not None:
+        if (
+            len(registry_digest) != 64
+            or any(character not in "0123456789abcdef" for character in registry_digest)
+        ):
+            raise ValueError("project registry digest must be lowercase SHA-256")
+        m6_payload["project_registry_sha256"] = registry_digest
 
     return WorkUnit(
         id=f"m6-read-{frontier.id}",
@@ -54,7 +65,7 @@ def frontier_to_github_inspection_work(
             "completion-evidence-verified",
         ),
         status=WorkUnitStatus.PENDING,
-        payload={"m6": {"kind": "github-read-inspection"}},
+        payload={"m6": m6_payload},
     )
 
 
