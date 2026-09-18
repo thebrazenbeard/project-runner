@@ -16,6 +16,10 @@ def _pin_external_registry(registry, monkeypatch):
         "PROJECT_RUNNER_PROJECT_REGISTRY_SHA256",
         hashlib.sha256(registry.read_bytes()).hexdigest(),
     )
+    monkeypatch.setenv(
+        "PROJECT_RUNNER_PRIVATE_COLLISION_KEY",
+        "11" * 32,
+    )
 
 
 def test_validate_command_returns_zero(capsys):
@@ -311,3 +315,87 @@ projects:
     assert "transcendence" not in collision_key
     assert "secret-owner" not in collision_key
     assert "project:" not in collision_key
+
+
+def test_external_registry_requires_secret_collision_key_for_frontier_derivation(
+    tmp_path,
+    monkeypatch,
+):
+    registry = tmp_path / "private-collision-key.yaml"
+    registry.write_text(
+        """
+projects:
+- id: transcendence
+  name: Private Transcendence
+  visibility: private
+  repositories: [secret-owner/private-transcendence]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: transcendence-family
+  scheduling_state: SCHEDULABLE
+""".lstrip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(
+        "PROJECT_RUNNER_PROJECT_REGISTRY",
+        str(registry.resolve()),
+    )
+    monkeypatch.setenv(
+        "PROJECT_RUNNER_PROJECT_REGISTRY_SHA256",
+        hashlib.sha256(registry.read_bytes()).hexdigest(),
+    )
+    monkeypatch.delenv("PROJECT_RUNNER_PRIVATE_COLLISION_KEY", raising=False)
+
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+    with pytest.raises(
+        ValueError,
+        match="requires a private collision key",
+    ):
+        cli_module._derive_frontier_set(
+            fixtures / "m6-hc-substantive.yaml",
+            fixtures / "m6-hc-current.yaml",
+            fixtures / "m6-hc-transcendence-dependencies.yaml",
+        )
+
+
+def test_private_collision_key_is_secret_keyed_not_registry_digest(
+    tmp_path,
+    monkeypatch,
+):
+    registry = tmp_path / "private-collision-rotation.yaml"
+    registry.write_text(
+        """
+projects:
+- id: transcendence
+  name: Private Transcendence
+  visibility: private
+  repositories: [secret-owner/private-transcendence]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: transcendence-family
+  scheduling_state: SCHEDULABLE
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+
+    first = cli_module._derive_frontier_set(
+        fixtures / "m6-hc-substantive.yaml",
+        fixtures / "m6-hc-current.yaml",
+        fixtures / "m6-hc-transcendence-dependencies.yaml",
+    )
+    monkeypatch.setenv("PROJECT_RUNNER_PRIVATE_COLLISION_KEY", "22" * 32)
+    second = cli_module._derive_frontier_set(
+        fixtures / "m6-hc-substantive.yaml",
+        fixtures / "m6-hc-current.yaml",
+        fixtures / "m6-hc-transcendence-dependencies.yaml",
+    )
+
+    assert first[0].collision_keys != second[0].collision_keys
+    for collision_key in first[0].collision_keys + second[0].collision_keys:
+        assert collision_key.startswith("private:")
+        assert "transcendence" not in collision_key
+        assert "secret-owner" not in collision_key
