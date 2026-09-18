@@ -13,7 +13,8 @@ from runner.m6_github import (
     frontier_to_github_inspection_work,
 )
 from runner.models import CostClass, ExactSubject, Frontier, FrontierStatus
-from runner.work_units import work_unit_fingerprint
+from runner.verify import verify_attempt
+from runner.work_units import WorkUnitStatus, work_unit_fingerprint
 
 
 HC_HEAD = "618245b54fb923c7a204892c6953ab6d1c5dac57"
@@ -219,3 +220,43 @@ def test_registry_digest_rejects_non_sha256_tokens():
             _target(),
             registry_digest="PRIVATE-REGISTRY-NAME",
         )
+
+
+def test_live_read_precondition_drift_is_superseded_not_failed():
+    transport = FakeReadTransport()
+    backend = GitHubReadInspectionBackend(_backend(transport))
+    target = _target()
+    transport.heads[
+        (
+            "thebrazenbeard/transcendence",
+            "architecture/consciousness-backup-v1",
+        )
+    ] = "f" * 40
+    store = InMemoryLeaseStore()
+    batch = dispatch_ready(
+        (_frontier(),),
+        lease_store=store,
+        backend=backend,
+        budget=_budget(),
+        holder="m6-stale-precondition",
+        now=0.0,
+        lease_ttl=30.0,
+        work_factory=lambda frontier, depth: frontier_to_github_inspection_work(
+            frontier,
+            target,
+            depth,
+        ),
+    )
+
+    attempt = batch.attempts[0]
+    assert attempt.result.classification == "PRECONDITION_FAILED"
+    outcome = verify_attempt(
+        attempt,
+        lease_store=store,
+        now=1.0,
+        current_subject_reader=lambda subject: subject,
+        evidence_verifier=lambda work, result: False,
+    )
+
+    assert outcome.status is WorkUnitStatus.SUPERSEDED
+    assert outcome.reason == "backend precondition no longer matches exact subject"
