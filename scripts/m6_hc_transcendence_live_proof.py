@@ -36,7 +36,7 @@ DEPENDENCIES = FIXTURES / "m6-hc-transcendence-dependencies.yaml"
 TRANSCENDENCE_SUBJECT = ExactSubject(
     repository="thebrazenbeard/transcendence",
     ref="architecture/consciousness-backup-v1",
-    commit="04c8acbbc95eccd6b95db9ab02ff920a21acca6b",
+    commit="ca3965c5788cd1bbb52fc527e47e3bcd5eca6e4a",
 )
 
 
