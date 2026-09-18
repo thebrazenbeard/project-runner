@@ -399,13 +399,13 @@ def test_terminal_recursive_work_cannot_reset_or_transition(tmp_path: Path):
         now=0.5,
     )
     assert verifying.generation == 3
-    assert leases.complete(lease, now=1.0)
-    complete = store.compare_and_swap_status(
+    complete = store.finalize_terminal_status(
         lineage_id="lineage-terminal",
         work_fingerprint_value=fingerprint,
         expected_generation=3,
         status=WorkUnitStatus.COMPLETE,
         lease=lease,
+        now=1.0,
     )
     assert complete.generation == 4
 
@@ -667,13 +667,13 @@ def test_terminal_completion_rejects_stale_reclaimed_fence(tmp_path: Path):
     assert unchanged.work.status is WorkUnitStatus.VERIFYING
     assert unchanged.generation == 3
 
-    assert leases.complete(current, now=12.0)
-    completed = store.compare_and_swap_status(
+    completed = store.finalize_terminal_status(
         lineage_id="lineage-fence",
         work_fingerprint_value=fingerprint,
         expected_generation=3,
         status=WorkUnitStatus.COMPLETE,
         lease=current,
+        now=12.0,
     )
     assert completed.work.status is WorkUnitStatus.COMPLETE
     assert completed.generation == 4
@@ -714,14 +714,13 @@ def test_terminal_failure_requires_released_exact_fence(tmp_path: Path):
         now=0.5,
     )
     assert running.generation == 2
-    assert leases.release(lease, now=1.0)
-
-    failed = store.compare_and_swap_status(
+    failed = store.finalize_terminal_status(
         lineage_id="lineage-failure-fence",
         work_fingerprint_value=fingerprint,
         expected_generation=2,
         status=WorkUnitStatus.FAILED_DETERMINISTIC,
         lease=lease,
+        now=1.0,
     )
     assert failed.work.status is WorkUnitStatus.FAILED_DETERMINISTIC
     assert failed.generation == 3
@@ -768,8 +767,7 @@ def test_unfenced_terminal_status_is_rejected(tmp_path: Path):
         lease=lease,
         now=0.5,
     )
-    assert leases.complete(lease, now=1.0)
-    with pytest.raises(ValueError, match="requires a lease fence"):
+    with pytest.raises(ValueError, match="requires atomic finalization"):
         store.compare_and_swap_status(
             lineage_id="lineage-unfenced",
             work_fingerprint_value=fingerprint,
@@ -925,6 +923,86 @@ def test_active_lifecycle_rejects_forward_skip_and_backward_transition(tmp_path:
             lease=lease,
             now=3.0,
         )
+
+    leases.close()
+    store.close()
+
+
+def test_atomic_terminal_finalization_commits_lease_and_work_together(tmp_path: Path):
+    db = tmp_path / "atomic-finalize.db"
+    work = _work(
+        "root-atomic-finalize",
+        depth=0,
+        parent=None,
+        commit="3" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+
+    store = SqliteRecursiveWorkStore(db)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-atomic-finalize",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+    leases = SqliteLeaseStore(db)
+    lease = leases.claim(fingerprint, holder="atomic-finalizer", now=0.0, ttl=10.0)
+    assert lease is not None
+
+    store.compare_and_swap_status(
+        lineage_id="lineage-atomic-finalize",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=lease,
+        now=1.0,
+    )
+    store.compare_and_swap_status(
+        lineage_id="lineage-atomic-finalize",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=lease,
+        now=2.0,
+    )
+
+    with pytest.raises(ValueError, match="requires atomic finalization"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-atomic-finalize",
+            work_fingerprint_value=fingerprint,
+            expected_generation=3,
+            status=WorkUnitStatus.COMPLETE,
+            lease=lease,
+        )
+
+    before = store.get("lineage-atomic-finalize", fingerprint)
+    assert before is not None
+    assert before.work.status is WorkUnitStatus.VERIFYING
+    assert before.generation == 3
+
+    finalized = store.finalize_terminal_status(
+        lineage_id="lineage-atomic-finalize",
+        work_fingerprint_value=fingerprint,
+        expected_generation=3,
+        status=WorkUnitStatus.COMPLETE,
+        lease=lease,
+        now=3.0,
+    )
+    assert finalized.work.status is WorkUnitStatus.COMPLETE
+    assert finalized.generation == 4
+
+    lease_row = leases.connection.execute(
+        """
+        SELECT holder, fencing_token, completed
+        FROM leases
+        WHERE work_fingerprint = ?
+        """,
+        (fingerprint,),
+    ).fetchone()
+    assert lease_row == ("atomic-finalizer", lease.fencing_token, 1)
 
     leases.close()
     store.close()
