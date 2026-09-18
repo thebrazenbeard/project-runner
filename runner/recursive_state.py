@@ -69,6 +69,10 @@ class SqliteRecursiveWorkStore:
         parent_fingerprint: str | None,
         ancestry_fingerprints: Collection[str],
     ) -> StoredRecursiveWork:
+        if parent_fingerprint is not None or work.recursion_depth != 0:
+            raise ValueError(
+                "child recursive work requires atomic recursive admission"
+            )
         if not lineage_id.strip():
             raise ValueError("recursive work lineage id is required")
         if not budget_scope_id.strip():
