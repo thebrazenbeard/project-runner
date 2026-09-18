@@ -23,6 +23,8 @@ M5 adds the first real GitHub execution route:
 - recursive work identity, parent linkage, exact ancestry, budget scope, lifecycle status, and generation survive restart in a digest-verified SQLite record;
 - recursive child admission is one SQLite transaction: parent-budget CAS, child-budget creation, and child-work/ancestry persistence either all commit or all roll back;
 - ordinary child budget/work initialization is rejected so callers cannot bypass the atomic admission path;
+- each durable work record integrity-binds its effective capability ceiling; child admission derives the parent ceiling from durable state, so a restarted caller cannot widen inherited capabilities;
+- pre-ceiling legacy recursive records are accepted only after their legacy integrity digest verifies, then migrate conservatively to their recorded required-capability set;
 - the atomic boundary reconstructs the durable parent and re-runs decomposition/capability narrowing rather than trusting a caller-supplied `ChildAdmission`;
 - durable work status cannot roll terminal states back or reset active work to `PENDING`;
 - stale generations/fences fail closed;
