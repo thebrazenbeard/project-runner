@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+import hashlib
 from enum import Enum
 import json
 from typing import Iterable, Mapping, Protocol
@@ -13,12 +14,14 @@ from .work_units import WorkUnit, work_unit_fingerprint
 
 class GitHubOperation(str, Enum):
     READ_REF = "READ_REF"
+    READ_FILE = "READ_FILE"
     CREATE_BRANCH = "CREATE_BRANCH"
     PUT_FILE = "PUT_FILE"
 
 
 _ROUTE_CAPABILITY = {
     GitHubOperation.READ_REF: "github.read_ref",
+    GitHubOperation.READ_FILE: "github.read_file",
     GitHubOperation.CREATE_BRANCH: "github.create_branch",
     GitHubOperation.PUT_FILE: "github.put_file",
 }
@@ -76,7 +79,7 @@ class TargetAuthorityGrant:
             return False
         if not any(_scope_match(req.ref, item) for item in self.ref_prefixes):
             return False
-        if req.operation is GitHubOperation.PUT_FILE:
+        if req.operation in {GitHubOperation.READ_FILE, GitHubOperation.PUT_FILE}:
             if req.path is None or not self.path_prefixes:
                 return False
             if not any(_path_scope_match(req.path, item) for item in self.path_prefixes):
@@ -239,6 +242,8 @@ class GitHubBackend:
         try:
             if req.operation is GitHubOperation.READ_REF:
                 return self._read_ref(fingerprint, req)
+            if req.operation is GitHubOperation.READ_FILE:
+                return self._read_file(fingerprint, req)
             if req.operation is GitHubOperation.CREATE_BRANCH:
                 return self._create_branch(fingerprint, req)
             if req.operation is GitHubOperation.PUT_FILE:
@@ -257,6 +262,23 @@ class GitHubBackend:
             succeeded=True,
             outputs=(observed,),
             evidence=(f"github:ref:{req.repository}@{req.ref}={observed}", "github:readback-verified"),
+            classification="SUCCEEDED",
+        )
+
+    def _read_file(self, fingerprint: str, req: GitHubRequest) -> BackendResult:
+        if req.path is None:
+            return _failure(fingerprint, "INVALID_REQUEST", "read file requires path")
+        observed = self.transport.read_file(req.repository, req.path, req.ref)
+        if observed is None:
+            return _failure(fingerprint, "NOT_FOUND", "file not found")
+        if req.expected_blob_sha is not None and observed.sha != req.expected_blob_sha:
+            return _failure(fingerprint, "PRECONDITION_FAILED", "blob mismatch")
+        content_digest = hashlib.sha256(observed.content.encode("utf-8")).hexdigest()
+        return BackendResult(
+            work_fingerprint=fingerprint,
+            succeeded=True,
+            outputs=(observed.sha, content_digest),
+            evidence=("github:file-read", "github:readback-verified"),
             classification="SUCCEEDED",
         )
 
