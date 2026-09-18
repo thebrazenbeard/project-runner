@@ -8,6 +8,7 @@ from runner.dispatch import dispatch_ready
 from runner.frontier import derive_frontiers
 from runner.leases import InMemoryLeaseStore
 from runner.models import ExactSubject, FrontierStatus
+from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
 from runner.propagate import derive_invalidations
 from runner.registry import load_dependencies, load_observations
 from runner.verify import verify_attempt
@@ -110,29 +111,45 @@ def test_substantive_frontier_is_superseded_when_hc_main_moves_again():
     assert outcome.reason == "exact subject moved after execution"
 
 
-def test_refreshed_current_hc_frontier_completes_only_after_independent_verification():
+def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_path):
     _, frontiers = _frontiers(SUBSTANTIVE, CURRENT)
-    store = InMemoryLeaseStore()
+    db = tmp_path / "m6-proof.sqlite3"
+    budget_store = SqliteBudgetStore(db)
+    generation = budget_store.put_initial(_budget())
+    persisted_budget, observed_generation = budget_store.get(
+        "m6-hc-transcendence-proof"
+    )
+    assert observed_generation == generation == 1
+
+    lease_store = SqliteLeaseStore(db)
     backend = MockBackend()
     batch = dispatch_ready(
         frontiers,
-        lease_store=store,
+        lease_store=lease_store,
         backend=backend,
-        budget=_budget(),
+        budget=persisted_budget,
         holder="m6-proof-current",
         now=0.0,
         lease_ttl=60.0,
     )
+    new_generation = budget_store.compare_and_swap(
+        batch.remaining_budget,
+        expected_generation=generation,
+    )
+    assert new_generation == 2
+    assert batch.remaining_budget.remaining_active == 0
+    assert batch.remaining_budget.remaining_backend_jobs == 0
 
     assert len(batch.attempts) == 1
     attempt = batch.attempts[0]
     assert attempt.frontier.subject.commit == (
         "618245b54fb923c7a204892c6953ab6d1c5dac57"
     )
+    assert attempt.lease.fencing_token == 1
 
     still_verifying = verify_attempt(
         attempt,
-        lease_store=store,
+        lease_store=lease_store,
         now=1.0,
         current_subject_reader=lambda subject: subject,
         evidence_verifier=lambda work, result: False,
@@ -141,7 +158,7 @@ def test_refreshed_current_hc_frontier_completes_only_after_independent_verifica
 
     completed = verify_attempt(
         attempt,
-        lease_store=store,
+        lease_store=lease_store,
         now=2.0,
         current_subject_reader=lambda subject: subject,
         evidence_verifier=lambda work, result: (
@@ -152,3 +169,27 @@ def test_refreshed_current_hc_frontier_completes_only_after_independent_verifica
     assert completed.reason == (
         "exact subject current and completion evidence verified"
     )
+
+    budget_store.close()
+    lease_store.close()
+
+    reopened_budget = SqliteBudgetStore(db)
+    loaded_budget, loaded_generation = reopened_budget.get(
+        "m6-hc-transcendence-proof"
+    )
+    assert loaded_generation == 2
+    assert loaded_budget.remaining_active == 0
+    assert loaded_budget.remaining_backend_jobs == 0
+
+    reopened_lease = SqliteLeaseStore(db)
+    assert (
+        reopened_lease.claim(
+            attempt.work_fingerprint,
+            holder="m6-proof-after-restart",
+            now=100.0,
+            ttl=60.0,
+        )
+        is None
+    )
+    reopened_budget.close()
+    reopened_lease.close()
