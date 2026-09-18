@@ -15,6 +15,8 @@ from .recursive_state import (
     _TERMINAL_STATUSES,
     _canonical_json,
     _immutable_digest,
+    _migrate_recursive_capability_schema,
+    _normalize_capabilities,
     _work_from_payload,
     _work_payload,
 )
@@ -42,6 +44,7 @@ class SqliteRecursiveAdmissionStore:
         self.connection.executescript(_PERSISTENT_SCHEMA)
         _migrate_budget_scope_schema(self.connection)
         self.connection.executescript(_RECURSIVE_SCHEMA)
+        _migrate_recursive_capability_schema(self.connection)
 
     def close(self) -> None:
         self.connection.close()
@@ -52,7 +55,6 @@ class SqliteRecursiveAdmissionStore:
         parent_work_fingerprint: str,
         parent_budget_before: BudgetEnvelope,
         expected_parent_budget_generation: int,
-        parent_capabilities,
         target_capabilities,
         admission: ChildAdmission,
     ) -> DurableChildAdmission:
@@ -74,7 +76,8 @@ class SqliteRecursiveAdmissionStore:
             parent_work_row = self.connection.execute(
                 """
                 SELECT work_json, budget_scope_id, parent_fingerprint,
-                       ancestry_json, immutable_sha256, status
+                       ancestry_json, effective_capabilities_json,
+                       immutable_sha256, status
                 FROM recursive_work_state
                 WHERE lineage_id = ? AND work_fingerprint = ?
                 """,
@@ -91,6 +94,7 @@ class SqliteRecursiveAdmissionStore:
                 parent_scope_id,
                 durable_parent_fingerprint,
                 parent_ancestry_json,
+                parent_capabilities_json,
                 parent_immutable_sha256,
                 parent_status_raw,
             ) = parent_work_row
@@ -105,6 +109,7 @@ class SqliteRecursiveAdmissionStore:
                     else None
                 ),
                 ancestry_json=str(parent_ancestry_json),
+                effective_capabilities_json=str(parent_capabilities_json),
             )
             if not hmac.compare_digest(
                 str(parent_immutable_sha256),
@@ -122,13 +127,23 @@ class SqliteRecursiveAdmissionStore:
 
             try:
                 parent_ancestry_payload = json.loads(str(parent_ancestry_json))
+                parent_capability_payload = json.loads(str(parent_capabilities_json))
             except json.JSONDecodeError as exc:
-                raise ValueError("durable parent ancestry is structurally invalid") from exc
+                raise ValueError(
+                    "durable parent ancestry/capabilities are structurally invalid"
+                ) from exc
             if not isinstance(parent_ancestry_payload, list) or any(
                 not isinstance(item, str) or not item
                 for item in parent_ancestry_payload
             ):
                 raise ValueError("durable parent ancestry is structurally invalid")
+            if not isinstance(parent_capability_payload, list):
+                raise ValueError(
+                    "durable parent capability ceiling is structurally invalid"
+                )
+            parent_capabilities = _normalize_capabilities(parent_capability_payload)
+            if parent_capability_payload != list(parent_capabilities):
+                raise ValueError("durable parent capability ceiling is not canonical")
             parent_ancestry = frozenset(parent_ancestry_payload)
 
             try:
@@ -251,20 +266,24 @@ class SqliteRecursiveAdmissionStore:
             child_ancestry_json = _canonical_json(
                 sorted(admission.ancestry_fingerprints)
             )
+            child_capabilities_json = _canonical_json(
+                list(recomputed.effective_capabilities)
+            )
             child_immutable_sha256 = _immutable_digest(
                 work_json=child_work_json,
                 lineage_id=child_budget.lineage_id,
                 budget_scope_id=child_budget.scope_id,
                 parent_fingerprint=parent_work_fingerprint,
                 ancestry_json=child_ancestry_json,
+                effective_capabilities_json=child_capabilities_json,
             )
             self.connection.execute(
                 """
                 INSERT INTO recursive_work_state (
                     lineage_id, work_fingerprint, work_json, budget_scope_id,
-                    parent_fingerprint, ancestry_json, immutable_sha256,
-                    status, generation
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    parent_fingerprint, ancestry_json, effective_capabilities_json,
+                    immutable_sha256, status, generation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 """,
                 (
                     child_budget.lineage_id,
@@ -273,6 +292,7 @@ class SqliteRecursiveAdmissionStore:
                     child_budget.scope_id,
                     parent_work_fingerprint,
                     child_ancestry_json,
+                    child_capabilities_json,
                     child_immutable_sha256,
                     child_work.status.value,
                 ),
