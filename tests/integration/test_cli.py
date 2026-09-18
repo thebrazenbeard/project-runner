@@ -7,7 +7,10 @@ from runner.cli import main
 
 
 def _pin_external_registry(registry, monkeypatch):
-    _pin_external_registry(registry, monkeypatch)
+    monkeypatch.setenv(
+        "PROJECT_RUNNER_PROJECT_REGISTRY",
+        str(registry.resolve()),
+    )
     monkeypatch.setenv(
         "PROJECT_RUNNER_PROJECT_REGISTRY_SHA256",
         hashlib.sha256(registry.read_bytes()).hexdigest(),
