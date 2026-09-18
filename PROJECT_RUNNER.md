@@ -12,6 +12,8 @@ External records must explicitly declare scheduling posture. `HELD` records are 
 
 Private collision domains must be derived with separate runtime secret material, not the registry digest or another public/currentness token. `PROJECT_RUNNER_PRIVATE_COLLISION_KEY` remains outside public source/evidence and must be stable across any restart that is expected to preserve private semantic/collision identity.
 
+Blocked private work remains operator-visible through `frontier-summary` aggregate status counts. The private-safe surface must not emit identifiers, subjects, dependency/collision metadata, reasons, or private input paths; malformed/private inputs fail with a generic structural error rather than falling back or echoing sensitive detail.
+
 The three private project identifiers already present on canonical M5 `main` are legacy public baseline metadata. Their prior disclosure does not authorize adding more private identifiers.
 
 ## Evidence and authority
