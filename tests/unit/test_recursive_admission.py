@@ -121,6 +121,8 @@ def test_atomic_child_admission_commits_budget_and_work_together(tmp_path: Path)
         parent_work_fingerprint=root_fingerprint,
         parent_budget_before=_root_budget(),
         expected_parent_budget_generation=1,
+        parent_capabilities={"read", "analyze"},
+        target_capabilities={"read", "analyze"},
         admission=admission,
     )
     store.close()
@@ -163,6 +165,8 @@ def test_stale_parent_generation_rolls_back_without_child_state(tmp_path: Path):
             parent_work_fingerprint=root_fingerprint,
             parent_budget_before=_root_budget(),
             expected_parent_budget_generation=0,
+            parent_capabilities={"read", "analyze"},
+            target_capabilities={"read", "analyze"},
             admission=admission,
         )
     store.close()
@@ -214,6 +218,8 @@ def test_child_budget_collision_rolls_back_parent_transfer(tmp_path: Path):
             parent_work_fingerprint=root_fingerprint,
             parent_budget_before=_root_budget(),
             expected_parent_budget_generation=1,
+            parent_capabilities={"read", "analyze"},
+            target_capabilities={"read", "analyze"},
             admission=admission,
         )
     store.close()
@@ -245,6 +251,8 @@ def test_terminal_parent_cannot_admit_child_and_budget_is_unchanged(tmp_path: Pa
             parent_work_fingerprint=root_fingerprint,
             parent_budget_before=_root_budget(),
             expected_parent_budget_generation=1,
+            parent_capabilities={"read", "analyze"},
+            target_capabilities={"read", "analyze"},
             admission=admission,
         )
     store.close()
@@ -271,6 +279,8 @@ def test_missing_durable_parent_rejects_child_without_budget_transfer(tmp_path: 
             parent_work_fingerprint=root_fingerprint,
             parent_budget_before=_root_budget(),
             expected_parent_budget_generation=1,
+            parent_capabilities={"read", "analyze"},
+            target_capabilities={"read", "analyze"},
             admission=admission,
         )
     store.close()
@@ -304,6 +314,8 @@ def test_tampered_parent_state_rejects_child_without_budget_transfer(tmp_path: P
             parent_work_fingerprint=root_fingerprint,
             parent_budget_before=_root_budget(),
             expected_parent_budget_generation=1,
+            parent_capabilities={"read", "analyze"},
+            target_capabilities={"read", "analyze"},
             admission=admission,
         )
     store.close()
