@@ -43,9 +43,12 @@ For a complete private portfolio, supply a **complete replacement registry** fro
 
     PROJECT_RUNNER_PROJECT_REGISTRY=/absolute/private/path/projects.yaml \
     PROJECT_RUNNER_PROJECT_REGISTRY_SHA256=<lowercase-sha256> \
+    PROJECT_RUNNER_PRIVATE_COLLISION_KEY=<private-64-hex-key> \
     project-runner inventory
 
 The override must be an absolute path and its exact SHA-256 must match before the registry is accepted. Project Runner does not merge a hidden/private layer into the committed seed.
+
+Private frontier derivation requires `PROJECT_RUNNER_PRIVATE_COLLISION_KEY`, a separate stable 256-bit runtime key used only to derive opaque collision domains. The registry digest is a currentness binding, not secret key material. Keep the collision key outside public Git, logs, receipts, and workflow artifacts. Reuse the same key across restarts that must preserve private semantic/collision identity; deliberate key rotation creates a new private collision namespace.
 
 Every external project record must explicitly declare assignment scope, review scope, family, and `scheduling_state`. `HELD` projects contribute no runnable capabilities even if capabilities are listed in the record; only `SCHEDULABLE` records may contribute to ready frontier derivation.
 
