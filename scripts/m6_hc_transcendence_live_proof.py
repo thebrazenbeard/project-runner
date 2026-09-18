@@ -21,10 +21,11 @@ from runner.m6_github import (
 )
 from runner.models import ExactSubject, FrontierStatus
 from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
+from runner.recursive_state import SqliteRecursiveWorkStore
 from runner.propagate import derive_invalidations
 from runner.registry import load_dependencies, load_observations, load_project_snapshot
 from runner.verify import verify_attempt
-from runner.work_units import WorkUnitStatus
+from runner.work_units import WorkUnitStatus, work_unit_fingerprint
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -96,7 +97,26 @@ def main() -> int:
             raise RuntimeError("budget generation changed before dispatch")
 
         lease_store = SqliteLeaseStore(db)
+        recursive_store = SqliteRecursiveWorkStore(db)
         execution_backend = GitHubReadInspectionBackend(_github_backend(token))
+
+        def durable_work_factory(frontier, depth):
+            work = frontier_to_github_inspection_work(
+                frontier,
+                TRANSCENDENCE_SUBJECT,
+                depth,
+                registry_digest=registry_snapshot.sha256,
+            )
+            fingerprint = work_unit_fingerprint(work)
+            recursive_store.put_initial(
+                work=work,
+                lineage_id=persisted_budget.lineage_id,
+                budget_scope_id=persisted_budget.scope_id,
+                parent_fingerprint=None,
+                ancestry_fingerprints={fingerprint},
+            )
+            return work
+
         batch = dispatch_ready(
             frontiers,
             lease_store=lease_store,
@@ -105,12 +125,7 @@ def main() -> int:
             holder="github-actions-m6-live-proof",
             now=0.0,
             lease_ttl=60.0,
-            work_factory=lambda frontier, depth: frontier_to_github_inspection_work(
-                frontier,
-                TRANSCENDENCE_SUBJECT,
-                depth,
-                registry_digest=registry_snapshot.sha256,
-            ),
+            work_factory=durable_work_factory,
         )
         if len(batch.attempts) != 1:
             raise RuntimeError("expected exactly one dispatched live inspection")
@@ -137,15 +152,24 @@ def main() -> int:
                 )
             ),
         )
+        durable_work = recursive_store.compare_and_swap_status(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=work_unit_fingerprint(attempt.work),
+            expected_generation=1,
+            status=outcome.status,
+        )
         if outcome.status is not WorkUnitStatus.COMPLETE:
             raise RuntimeError(
                 "live inspection did not complete: "
                 f"{outcome.status.value} "
                 f"(backend={attempt.result.classification})"
             )
+        if durable_work.generation != 2:
+            raise RuntimeError("durable recursive work generation did not advance")
 
         budget_store.close()
         lease_store.close()
+        recursive_store.close()
 
         reopened_budget = SqliteBudgetStore(db)
         stored_budget, stored_generation = reopened_budget.get(
@@ -159,6 +183,24 @@ def main() -> int:
             raise RuntimeError("durable backend budget was not consumed")
         reopened_budget.close()
 
+        reopened_recursive = SqliteRecursiveWorkStore(db)
+        resumed_work = reopened_recursive.get(
+            persisted_budget.lineage_id,
+            work_unit_fingerprint(attempt.work),
+        )
+        if resumed_work is None:
+            raise RuntimeError("durable recursive work disappeared after restart")
+        if resumed_work.work != attempt.work:
+            raise RuntimeError("durable recursive work changed across restart")
+        if resumed_work.work.status is not WorkUnitStatus.COMPLETE:
+            raise RuntimeError("durable recursive work status did not survive restart")
+        if resumed_work.ancestry_fingerprints != {
+            work_unit_fingerprint(attempt.work)
+        }:
+            raise RuntimeError("durable recursive root ancestry changed across restart")
+        recursive_generation = resumed_work.generation
+        reopened_recursive.close()
+
     print(
         json.dumps(
             {
@@ -167,6 +209,8 @@ def main() -> int:
                 "provider_head": frontiers[0].subject.commit,
                 "consumer_head": TRANSCENDENCE_SUBJECT.commit,
                 "budget_generation": new_generation,
+                "recursive_work_generation": recursive_generation,
+                "recursive_work_status": WorkUnitStatus.COMPLETE.value,
                 "fencing_token": attempt.lease.fencing_token,
                 "route": "github.read_ref",
                 "project_registry_sha256": registry_snapshot.sha256,
