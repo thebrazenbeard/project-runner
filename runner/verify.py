@@ -31,6 +31,12 @@ def verify_attempt(
 ) -> VerificationOutcome:
     if not attempt.result.succeeded:
         lease_store.release(attempt.lease, now=now)
+        if attempt.result.classification == "PRECONDITION_FAILED":
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.SUPERSEDED,
+                reason="backend precondition no longer matches exact subject",
+            )
         return VerificationOutcome(
             work=attempt.work,
             status=WorkUnitStatus.FAILED_DETERMINISTIC,
