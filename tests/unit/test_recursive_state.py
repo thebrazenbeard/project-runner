@@ -5,6 +5,8 @@ import pytest
 from runner.budgets import BudgetEnvelope
 from runner.decompose import admit_child_work
 from runner.models import ExactSubject
+from runner.persistent_state import SqliteBudgetStore
+from runner.recursive_admission import SqliteRecursiveAdmissionStore
 from runner.recursive_state import SqliteRecursiveWorkStore
 from runner.work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
@@ -86,6 +88,8 @@ def test_recursive_work_survives_restart_with_parent_ancestry_and_scope(tmp_path
     )
     root_fingerprint = work_unit_fingerprint(root)
 
+    budget_store = SqliteBudgetStore(db)
+    assert budget_store.put_initial(_budget()) == 1
     store = SqliteRecursiveWorkStore(db)
     stored_root = store.put_initial(
         work=root,
@@ -105,14 +109,19 @@ def test_recursive_work_survives_restart_with_parent_ancestry_and_scope(tmp_path
     admitted = _admit(root, child, budget=_budget())
     child_fingerprint = work_unit_fingerprint(admitted.work)
 
-    stored_child = store.put_initial(
-        work=admitted.work,
-        lineage_id="lineage-recursive",
-        budget_scope_id=admitted.child_budget.scope_id,
-        parent_fingerprint=root_fingerprint,
-        ancestry_fingerprints=admitted.ancestry_fingerprints,
+    admission_store = SqliteRecursiveAdmissionStore(db)
+    committed = admission_store.commit_child(
+        parent_work_fingerprint=root_fingerprint,
+        parent_budget_before=_budget(),
+        expected_parent_budget_generation=1,
+        admission=admitted,
     )
-    assert stored_root.generation == stored_child.generation == 1
+    assert stored_root.generation == 1
+    assert committed.parent_budget_generation == 2
+    assert committed.child_budget_generation == 1
+    assert committed.child_work_generation == 1
+    admission_store.close()
+    budget_store.close()
     store.close()
 
     reopened = SqliteRecursiveWorkStore(db)
@@ -166,7 +175,7 @@ def test_recursive_work_status_cas_is_scope_local_and_stale_generation_fails(
     store.close()
 
 
-def test_recursive_work_rejects_child_until_parent_is_durable(tmp_path: Path):
+def test_recursive_work_child_creation_requires_atomic_admission(tmp_path: Path):
     store = SqliteRecursiveWorkStore(tmp_path / "recursive.db")
     parent = _work(
         "root",
@@ -184,7 +193,7 @@ def test_recursive_work_rejects_child_until_parent_is_durable(tmp_path: Path):
     )
     admitted = _admit(parent, child, budget=_budget())
 
-    with pytest.raises(ValueError, match="parent is not durable"):
+    with pytest.raises(ValueError, match="atomic recursive admission"):
         store.put_initial(
             work=admitted.work,
             lineage_id="lineage-recursive",
@@ -239,6 +248,8 @@ def test_post_restart_ancestry_still_rejects_a_to_b_to_a_cycle(tmp_path: Path):
     )
     root_fingerprint = work_unit_fingerprint(root)
 
+    budget_store = SqliteBudgetStore(db)
+    budget_store.put_initial(_budget())
     store = SqliteRecursiveWorkStore(db)
     store.put_initial(
         work=root,
@@ -257,13 +268,15 @@ def test_post_restart_ancestry_still_rejects_a_to_b_to_a_cycle(tmp_path: Path):
     )
     admitted_child = _admit(root, child, budget=_budget())
     child_fingerprint = work_unit_fingerprint(admitted_child.work)
-    store.put_initial(
-        work=admitted_child.work,
-        lineage_id="lineage-recursive",
-        budget_scope_id=admitted_child.child_budget.scope_id,
-        parent_fingerprint=root_fingerprint,
-        ancestry_fingerprints=admitted_child.ancestry_fingerprints,
+    admission_store = SqliteRecursiveAdmissionStore(db)
+    admission_store.commit_child(
+        parent_work_fingerprint=root_fingerprint,
+        parent_budget_before=_budget(),
+        expected_parent_budget_generation=1,
+        admission=admitted_child,
     )
+    admission_store.close()
+    budget_store.close()
     store.close()
 
     reopened = SqliteRecursiveWorkStore(db)
