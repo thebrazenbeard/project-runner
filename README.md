@@ -21,6 +21,9 @@ M5 adds the first real GitHub execution route:
 - SQLite-backed lineage budgets persist across process/workflow boundaries with generation CAS;
 - SQLite-backed leases persist claim/reclaim/completion state and monotonic fencing tokens;
 - recursive work identity, parent linkage, exact ancestry, budget scope, lifecycle status, and generation survive restart in a digest-verified SQLite record;
+- recursive child admission is one SQLite transaction: parent-budget CAS, child-budget creation, and child-work/ancestry persistence either all commit or all roll back;
+- ordinary child budget/work initialization is rejected so callers cannot bypass the atomic admission path;
+- the atomic boundary reconstructs the durable parent and re-runs decomposition/capability narrowing rather than trusting a caller-supplied `ChildAdmission`;
 - durable work status cannot roll terminal states back or reset active work to `PENDING`;
 - stale generations/fences fail closed;
 - CI exercises the actual GitHub backend against the workflow repository in read-only mode;
