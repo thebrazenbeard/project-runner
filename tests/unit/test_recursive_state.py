@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,12 @@ from runner.decompose import admit_child_work
 from runner.models import ExactSubject
 from runner.persistent_state import SqliteBudgetStore
 from runner.recursive_admission import SqliteRecursiveAdmissionStore
-from runner.recursive_state import SqliteRecursiveWorkStore
+from runner.recursive_state import (
+    SqliteRecursiveWorkStore,
+    _canonical_json,
+    _legacy_immutable_digest,
+    _work_payload,
+)
 from runner.work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
@@ -452,3 +458,113 @@ def test_same_status_update_is_idempotent_without_generation_churn(tmp_path: Pat
     assert same.generation == stored.generation == 1
     assert same.work.status is WorkUnitStatus.PENDING
     store.close()
+
+
+def _write_legacy_recursive_root(db: Path, *, tamper: bool = False):
+    work = _work(
+        "legacy-root",
+        depth=0,
+        parent=None,
+        commit="9" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+    work_json = _canonical_json(_work_payload(work))
+    ancestry_json = _canonical_json([fingerprint])
+    digest = _legacy_immutable_digest(
+        work_json=work_json,
+        lineage_id="legacy-lineage",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_json=ancestry_json,
+    )
+
+    connection = sqlite3.connect(db)
+    connection.executescript(
+        """
+        CREATE TABLE recursive_work_state (
+            lineage_id TEXT NOT NULL,
+            work_fingerprint TEXT NOT NULL,
+            work_json TEXT NOT NULL,
+            budget_scope_id TEXT NOT NULL,
+            parent_fingerprint TEXT,
+            ancestry_json TEXT NOT NULL,
+            immutable_sha256 TEXT NOT NULL,
+            status TEXT NOT NULL,
+            generation INTEGER NOT NULL,
+            PRIMARY KEY (lineage_id, work_fingerprint)
+        );
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO recursive_work_state (
+            lineage_id, work_fingerprint, work_json, budget_scope_id,
+            parent_fingerprint, ancestry_json, immutable_sha256,
+            status, generation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "legacy-lineage",
+            fingerprint,
+            work_json,
+            "root",
+            None,
+            ancestry_json,
+            digest,
+            WorkUnitStatus.PENDING.value,
+            7,
+        ),
+    )
+    if tamper:
+        connection.execute(
+            """
+            UPDATE recursive_work_state
+            SET work_json = replace(work_json, '"INSPECT"', '"TAMPERED"')
+            WHERE lineage_id = ? AND work_fingerprint = ?
+            """,
+            ("legacy-lineage", fingerprint),
+        )
+    connection.commit()
+    connection.close()
+    return work, fingerprint
+
+
+def test_legacy_recursive_state_migrates_to_conservative_capability_ceiling(
+    tmp_path: Path,
+):
+    db = tmp_path / "legacy-recursive.db"
+    work, fingerprint = _write_legacy_recursive_root(db)
+
+    store = SqliteRecursiveWorkStore(db)
+    migrated = store.get("legacy-lineage", fingerprint)
+    assert migrated is not None
+    assert migrated.work == work
+    assert migrated.generation == 7
+    assert migrated.effective_capabilities == tuple(
+        sorted(set(work.required_capabilities))
+    )
+
+    columns = {
+        row[1]
+        for row in store.connection.execute(
+            "PRAGMA table_info(recursive_work_state)"
+        )
+    }
+    assert "effective_capabilities_json" in columns
+    store.close()
+
+
+def test_legacy_recursive_state_tamper_is_rejected_before_capability_migration(
+    tmp_path: Path,
+):
+    db = tmp_path / "tampered-legacy-recursive.db"
+    _write_legacy_recursive_root(db, tamper=True)
+
+    with pytest.raises(ValueError, match="legacy recursive work state digest mismatch"):
+        SqliteRecursiveWorkStore(db)
+
+    # Failure must not leave the database locked.
+    connection = sqlite3.connect(db)
+    connection.execute("SELECT 1").fetchone()
+    connection.close()
