@@ -12,6 +12,7 @@ class BudgetEnvelope:
     remaining_active: int
     remaining_retries: int
     remaining_backend_jobs: int
+    scope_id: str = "root"
 
     def __post_init__(self) -> None:
         numeric = {
@@ -28,11 +29,14 @@ class BudgetEnvelope:
             raise ValueError("budget depth exceeds max depth")
         if not self.lineage_id.strip():
             raise ValueError("lineage id is required")
+        if not self.scope_id.strip():
+            raise ValueError("budget scope id is required")
 
 
 def allocate_child_budget(
     parent: BudgetEnvelope,
     *,
+    child_scope_id: str,
     child_children: int,
     child_active: int,
     child_retries: int,
@@ -40,6 +44,10 @@ def allocate_child_budget(
 ) -> tuple[BudgetEnvelope, BudgetEnvelope]:
     if parent.depth >= parent.max_depth:
         raise ValueError("depth exhausted")
+    if not child_scope_id.strip():
+        raise ValueError("child budget scope id is required")
+    if child_scope_id == parent.scope_id:
+        raise ValueError("child budget scope must differ from parent scope")
 
     requested = {
         "children": child_children,
@@ -75,5 +83,6 @@ def allocate_child_budget(
         remaining_active=child_active,
         remaining_retries=child_retries,
         remaining_backend_jobs=child_backend_jobs,
+        scope_id=child_scope_id,
     )
     return parent_after, child
