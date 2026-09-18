@@ -165,6 +165,25 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     )
     assert attempt.lease.fencing_token == 1
 
+    running_work = recursive_store.compare_and_swap_status(
+        lineage_id=persisted_budget.lineage_id,
+        work_fingerprint_value=work_unit_fingerprint(attempt.work),
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+        lease=attempt.lease,
+        now=0.25,
+    )
+    assert running_work.generation == 2
+    verifying_work = recursive_store.compare_and_swap_status(
+        lineage_id=persisted_budget.lineage_id,
+        work_fingerprint_value=work_unit_fingerprint(attempt.work),
+        expected_generation=2,
+        status=WorkUnitStatus.VERIFYING,
+        lease=attempt.lease,
+        now=0.5,
+    )
+    assert verifying_work.generation == 3
+
     still_verifying = verify_attempt(
         attempt,
         lease_store=lease_store,
@@ -190,11 +209,11 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     durable_complete = recursive_store.compare_and_swap_status(
         lineage_id=persisted_budget.lineage_id,
         work_fingerprint_value=work_unit_fingerprint(attempt.work),
-        expected_generation=1,
+        expected_generation=3,
         status=completed.status,
         lease=attempt.lease,
     )
-    assert durable_complete.generation == 2
+    assert durable_complete.generation == 4
     assert durable_complete.work.status is WorkUnitStatus.COMPLETE
 
     budget_store.close()
@@ -230,7 +249,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         status=WorkUnitStatus.COMPLETE,
     )
     assert resumed_work.work.status is WorkUnitStatus.COMPLETE
-    assert resumed_work.generation == 2
+    assert resumed_work.generation == 4
     assert resumed_work.ancestry_fingerprints == {
         work_unit_fingerprint(attempt.work)
     }
