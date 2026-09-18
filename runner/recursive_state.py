@@ -8,6 +8,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Collection, Mapping
 
+from .leases import Lease
 from .models import ExactSubject
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
@@ -276,6 +277,7 @@ class SqliteRecursiveWorkStore:
         work_fingerprint_value: str,
         expected_generation: int,
         status: WorkUnitStatus,
+        lease: Lease | None = None,
     ) -> StoredRecursiveWork:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
@@ -294,6 +296,14 @@ class SqliteRecursiveWorkStore:
             current_generation = int(row[1])
             if current_generation != expected_generation:
                 raise ValueError("recursive work generation mismatch")
+
+            if status in _TERMINAL_STATUSES:
+                _validate_terminal_lease_state(
+                    self.connection,
+                    work_fingerprint_value=work_fingerprint_value,
+                    lease=lease,
+                    status=status,
+                )
 
             if current_status in _TERMINAL_STATUSES and status is not current_status:
                 raise ValueError("terminal recursive work state cannot transition")
@@ -334,6 +344,53 @@ class SqliteRecursiveWorkStore:
         if stored is None:
             raise ValueError("recursive work state disappeared after update")
         return stored
+
+
+def _validate_terminal_lease_state(
+    connection: sqlite3.Connection,
+    *,
+    work_fingerprint_value: str,
+    lease: Lease | None,
+    status: WorkUnitStatus,
+) -> None:
+    if lease is None:
+        raise ValueError("terminal recursive work status requires a lease fence")
+    if lease.work_fingerprint != work_fingerprint_value:
+        raise ValueError("terminal recursive work lease subject mismatch")
+
+    row = connection.execute(
+        """
+        SELECT holder, fencing_token, expires_at, completed
+        FROM leases
+        WHERE work_fingerprint = ?
+        """,
+        (work_fingerprint_value,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("terminal recursive work lease state not found")
+
+    holder, fencing_token, expires_at, completed = row
+    if int(fencing_token) != lease.fencing_token:
+        raise ValueError("terminal recursive work fencing token is stale")
+
+    if status is WorkUnitStatus.COMPLETE:
+        if holder != lease.holder or not bool(completed):
+            raise ValueError(
+                "terminal recursive work completion is not lease-authorized"
+            )
+        return
+
+    if status in {
+        WorkUnitStatus.FAILED_DETERMINISTIC,
+        WorkUnitStatus.SUPERSEDED,
+    }:
+        if holder is not None or bool(completed) or float(expires_at) != 0.0:
+            raise ValueError(
+                "terminal recursive work failure/supersession lease is not released"
+            )
+        return
+
+    raise ValueError("unsupported terminal recursive work status")
 
 
 def _subject_payload(subject: ExactSubject) -> dict[str, str | None]:
