@@ -21,6 +21,14 @@ _TERMINAL_STATUSES = frozenset(
     }
 )
 
+_ACTIVE_LEASE_STATUSES = frozenset(
+    {
+        WorkUnitStatus.CLAIMED,
+        WorkUnitStatus.RUNNING,
+        WorkUnitStatus.VERIFYING,
+    }
+)
+
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS recursive_work_state (
@@ -278,6 +286,7 @@ class SqliteRecursiveWorkStore:
         expected_generation: int,
         status: WorkUnitStatus,
         lease: Lease | None = None,
+        now: float | None = None,
     ) -> StoredRecursiveWork:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
@@ -308,6 +317,14 @@ class SqliteRecursiveWorkStore:
 
             if current_status is not WorkUnitStatus.PENDING and status is WorkUnitStatus.PENDING:
                 raise ValueError("recursive work state cannot reset to pending")
+
+            if status in _ACTIVE_LEASE_STATUSES:
+                _validate_active_lease_state(
+                    self.connection,
+                    work_fingerprint_value=work_fingerprint_value,
+                    lease=lease,
+                    now=now,
+                )
 
             if status in _TERMINAL_STATUSES:
                 _validate_terminal_lease_state(
@@ -351,6 +368,45 @@ class SqliteRecursiveWorkStore:
         if stored is None:
             raise ValueError("recursive work state disappeared after update")
         return stored
+
+
+def _validate_active_lease_state(
+    connection: sqlite3.Connection,
+    *,
+    work_fingerprint_value: str,
+    lease: Lease | None,
+    now: float | None,
+) -> None:
+    if lease is None:
+        raise ValueError("active recursive work status requires a lease fence")
+    if now is None:
+        raise ValueError("active recursive work status requires current time")
+    if lease.work_fingerprint != work_fingerprint_value:
+        raise ValueError("active recursive work lease subject mismatch")
+
+    try:
+        row = connection.execute(
+            """
+            SELECT holder, fencing_token, expires_at, completed
+            FROM leases
+            WHERE work_fingerprint = ?
+            """,
+            (work_fingerprint_value,),
+        ).fetchone()
+    except sqlite3.OperationalError as exc:
+        raise ValueError(
+            "active recursive work lease state is unavailable"
+        ) from exc
+    if row is None:
+        raise ValueError("active recursive work lease state not found")
+
+    holder, fencing_token, expires_at, completed = row
+    if holder != lease.holder or int(fencing_token) != lease.fencing_token:
+        raise ValueError("active recursive work fencing token is stale")
+    if bool(completed):
+        raise ValueError("active recursive work lease is already completed")
+    if now >= float(expires_at):
+        raise ValueError("active recursive work lease is expired")
 
 
 def _validate_terminal_lease_state(
