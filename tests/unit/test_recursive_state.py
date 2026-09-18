@@ -67,7 +67,6 @@ def _admit(parent: WorkUnit, child: WorkUnit, *, budget: BudgetEnvelope, ancestr
         parent=parent,
         child=child,
         parent_budget=budget,
-        parent_capabilities={"read", "analyze"},
         target_capabilities={"read", "analyze"},
         ancestry_fingerprints=ancestry,
         child_children=2,
@@ -97,6 +96,7 @@ def test_recursive_work_survives_restart_with_parent_ancestry_and_scope(tmp_path
         budget_scope_id="root",
         parent_fingerprint=None,
         ancestry_fingerprints={root_fingerprint},
+        effective_capabilities={"read", "analyze"},
     )
 
     child = _work(
@@ -114,7 +114,6 @@ def test_recursive_work_survives_restart_with_parent_ancestry_and_scope(tmp_path
         parent_work_fingerprint=root_fingerprint,
         parent_budget_before=_budget(),
         expected_parent_budget_generation=1,
-        parent_capabilities={"read", "analyze"},
         target_capabilities={"read", "analyze"},
         admission=admitted,
     )
@@ -156,6 +155,7 @@ def test_recursive_work_status_cas_is_scope_local_and_stale_generation_fails(
         budget_scope_id="root",
         parent_fingerprint=None,
         ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
     )
 
     running = store.compare_and_swap_status(
@@ -202,6 +202,7 @@ def test_recursive_work_child_creation_requires_atomic_admission(tmp_path: Path)
             budget_scope_id=admitted.child_budget.scope_id,
             parent_fingerprint=work_unit_fingerprint(parent),
             ancestry_fingerprints=admitted.ancestry_fingerprints,
+            effective_capabilities={"read", "analyze"},
         )
     store.close()
 
@@ -223,6 +224,7 @@ def test_recursive_work_detects_immutable_state_tampering(tmp_path: Path):
         budget_scope_id="root",
         parent_fingerprint=None,
         ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
     )
 
     store.connection.execute(
@@ -259,6 +261,7 @@ def test_post_restart_ancestry_still_rejects_a_to_b_to_a_cycle(tmp_path: Path):
         budget_scope_id="root",
         parent_fingerprint=None,
         ancestry_fingerprints={root_fingerprint},
+        effective_capabilities={"read", "analyze"},
     )
 
     child = _work(
@@ -275,7 +278,6 @@ def test_post_restart_ancestry_still_rejects_a_to_b_to_a_cycle(tmp_path: Path):
         parent_work_fingerprint=root_fingerprint,
         parent_budget_before=_budget(),
         expected_parent_budget_generation=1,
-        parent_capabilities={"read", "analyze"},
         target_capabilities={"read", "analyze"},
         admission=admitted_child,
     )
@@ -299,7 +301,6 @@ def test_post_restart_ancestry_still_rejects_a_to_b_to_a_cycle(tmp_path: Path):
             parent=resumed_child.work,
             child=root_again,
             parent_budget=admitted_child.child_budget,
-            parent_capabilities={"read", "analyze"},
             target_capabilities={"read", "analyze"},
             ancestry_fingerprints=resumed_child.ancestry_fingerprints,
             child_children=0,
@@ -329,6 +330,7 @@ def test_same_semantic_work_isolated_between_lineages(tmp_path: Path):
             budget_scope_id="root",
             parent_fingerprint=None,
             ancestry_fingerprints={fingerprint},
+            effective_capabilities={"read", "analyze"},
         )
         assert stored.lineage_id == lineage_id
 
@@ -339,6 +341,7 @@ def test_same_semantic_work_isolated_between_lineages(tmp_path: Path):
             budget_scope_id="root",
             parent_fingerprint=None,
             ancestry_fingerprints={fingerprint},
+            effective_capabilities={"read", "analyze"},
         )
     store.close()
 
@@ -359,6 +362,7 @@ def test_terminal_recursive_work_cannot_reset_or_transition(tmp_path: Path):
         budget_scope_id="root",
         parent_fingerprint=None,
         ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
     )
     complete = store.compare_and_swap_status(
         lineage_id="lineage-terminal",
@@ -401,6 +405,7 @@ def test_nonpending_recursive_work_cannot_reset_to_pending(tmp_path: Path):
         budget_scope_id="root",
         parent_fingerprint=None,
         ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
     )
     running = store.compare_and_swap_status(
         lineage_id="lineage-running",
@@ -436,6 +441,7 @@ def test_same_status_update_is_idempotent_without_generation_churn(tmp_path: Pat
         budget_scope_id="root",
         parent_fingerprint=None,
         ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
     )
     same = store.compare_and_swap_status(
         lineage_id="lineage-idempotent",
