@@ -136,6 +136,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
             budget_scope_id=persisted_budget.scope_id,
             parent_fingerprint=None,
             ancestry_fingerprints={fingerprint},
+            effective_capabilities={"read", "analyze"},
         )
         return work
 
