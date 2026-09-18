@@ -1,3 +1,4 @@
+import pytest
 from runner.budgets import BudgetEnvelope
 from runner.dispatch import dispatch_ready
 from runner.github_backend import (
@@ -12,6 +13,7 @@ from runner.m6_github import (
     frontier_to_github_inspection_work,
 )
 from runner.models import CostClass, ExactSubject, Frontier, FrontierStatus
+from runner.work_units import work_unit_fingerprint
 
 
 HC_HEAD = "618245b54fb923c7a204892c6953ab6d1c5dac57"
@@ -192,3 +194,28 @@ def test_independent_subject_reader_uses_separate_authority_gated_read():
             "architecture/consciousness-backup-v1",
         )
     ]
+
+
+def test_registry_digest_is_part_of_m6_work_semantic_identity():
+    first = frontier_to_github_inspection_work(
+        _frontier(),
+        _target(),
+        registry_digest="a" * 64,
+    )
+    second = frontier_to_github_inspection_work(
+        _frontier(),
+        _target(),
+        registry_digest="b" * 64,
+    )
+
+    assert first.payload["m6"]["project_registry_sha256"] == "a" * 64
+    assert work_unit_fingerprint(first) != work_unit_fingerprint(second)
+
+
+def test_registry_digest_rejects_non_sha256_tokens():
+    with pytest.raises(ValueError, match="lowercase SHA-256"):
+        frontier_to_github_inspection_work(
+            _frontier(),
+            _target(),
+            registry_digest="PRIVATE-REGISTRY-NAME",
+        )
