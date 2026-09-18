@@ -98,6 +98,17 @@ class WorkerDefinition:
         )
 
 
+class ProjectAssignmentScope(str, Enum):
+    NONE = "NONE"
+    BT2_ASSIGNMENT = "BT2_ASSIGNMENT"
+    EXTERNAL_BOUNDED = "EXTERNAL_BOUNDED"
+
+
+class ProjectReviewScope(str, Enum):
+    NONE = "NONE"
+    STANDING = "STANDING"
+
+
 @dataclass(frozen=True)
 class ProjectDefinition:
     id: str
@@ -105,6 +116,10 @@ class ProjectDefinition:
     visibility: str
     repositories: tuple[str, ...]
     capabilities: tuple[str, ...]
+    assignment_scope: ProjectAssignmentScope
+    review_scope: ProjectReviewScope
+    family_id: str
+    scope_note: str | None = None
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, object]) -> "ProjectDefinition":
@@ -117,12 +132,25 @@ class ProjectDefinition:
         visibility = str(data["visibility"])
         if visibility not in {"public", "private"}:
             raise ValueError("visibility must be public or private")
+        project_id = str(data["id"])
+        family_id = str(data.get("family_id", project_id)).strip()
+        if not family_id:
+            raise ValueError("family_id must not be empty")
+        scope_note = data.get("scope_note")
         return cls(
-            id=str(data["id"]),
+            id=project_id,
             name=str(data["name"]),
             visibility=visibility,
             repositories=tuple(str(repo) for repo in raw_repositories),
             capabilities=tuple(str(capability) for capability in raw_capabilities),
+            assignment_scope=ProjectAssignmentScope(
+                str(data.get("assignment_scope", ProjectAssignmentScope.NONE.value))
+            ),
+            review_scope=ProjectReviewScope(
+                str(data.get("review_scope", ProjectReviewScope.NONE.value))
+            ),
+            family_id=family_id,
+            scope_note=str(scope_note) if scope_note is not None else None,
         )
 
 
