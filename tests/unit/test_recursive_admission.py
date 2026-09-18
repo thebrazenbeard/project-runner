@@ -7,7 +7,7 @@ import pytest
 from runner.budgets import BudgetEnvelope
 from runner.decompose import admit_child_work
 from runner.models import ExactSubject
-from runner.persistent_state import SqliteBudgetStore
+from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
 from runner.recursive_admission import SqliteRecursiveAdmissionStore
 from runner.recursive_state import SqliteRecursiveWorkStore
 from runner.work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
@@ -234,15 +234,22 @@ def test_terminal_parent_cannot_admit_child_and_budget_is_unchanged(tmp_path: Pa
     db = tmp_path / "state.db"
     _, root_fingerprint, admission = _persist_root(db)
 
+    leases = SqliteLeaseStore(db)
+    lease = leases.claim(root_fingerprint, holder="terminal-parent", now=0.0, ttl=10.0)
+    assert lease is not None
+    assert leases.complete(lease, now=1.0)
+
     works = SqliteRecursiveWorkStore(db)
     complete = works.compare_and_swap_status(
         lineage_id="atomic-lineage",
         work_fingerprint_value=root_fingerprint,
         expected_generation=1,
         status=WorkUnitStatus.COMPLETE,
+        lease=lease,
     )
     assert complete.generation == 2
     works.close()
+    leases.close()
 
     store = SqliteRecursiveAdmissionStore(db)
     with pytest.raises(ValueError, match="terminal"):
