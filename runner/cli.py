@@ -17,7 +17,7 @@ from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .leases import InMemoryLeaseStore
-from .models import FrontierStatus
+from .models import FrontierStatus, ProjectSchedulingState
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
@@ -200,7 +200,14 @@ def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     current = load_observations(after)
     edges = load_dependencies(dependencies)
     projects = _load_project_registry()
-    capability_lookup = {project.id: set(project.capabilities) for project in projects}
+    capability_lookup = {
+        project.id: (
+            set(project.capabilities)
+            if project.scheduling_state is ProjectSchedulingState.SCHEDULABLE
+            else set()
+        )
+        for project in projects
+    }
 
     invalidations = derive_invalidations(previous, current, edges)
     derived = derive_frontiers(invalidations, capability_lookup=capability_lookup)
