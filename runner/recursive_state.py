@@ -381,11 +381,8 @@ class SqliteRecursiveWorkStore:
                 )
 
             if status in _TERMINAL_STATUSES:
-                _validate_terminal_lease_state(
-                    self.connection,
-                    work_fingerprint_value=work_fingerprint_value,
-                    lease=lease,
-                    status=status,
+                raise ValueError(
+                    "terminal recursive work status requires atomic finalization"
                 )
 
             if status is current_status:
@@ -421,6 +418,131 @@ class SqliteRecursiveWorkStore:
         stored = self.get(lineage_id, work_fingerprint_value)
         if stored is None:
             raise ValueError("recursive work state disappeared after update")
+        return stored
+
+
+    def finalize_terminal_status(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        expected_generation: int,
+        status: WorkUnitStatus,
+        lease: Lease,
+        now: float,
+    ) -> StoredRecursiveWork:
+        if status not in _TERMINAL_STATUSES:
+            raise ValueError("atomic finalization requires a terminal status")
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            row = self.connection.execute(
+                """
+                SELECT status, generation
+                FROM recursive_work_state
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (lineage_id, work_fingerprint_value),
+            ).fetchone()
+            if row is None:
+                raise ValueError("recursive work state not found")
+
+            current_status = WorkUnitStatus(str(row[0]))
+            current_generation = int(row[1])
+            if current_generation != expected_generation:
+                raise ValueError("recursive work generation mismatch")
+
+            if current_status in _TERMINAL_STATUSES:
+                if status is not current_status:
+                    raise ValueError("terminal recursive work state cannot transition")
+                self.connection.commit()
+                stored = self.get(lineage_id, work_fingerprint_value)
+                if stored is None:
+                    raise ValueError("recursive work state disappeared after no-op")
+                return stored
+
+            allowed = _ALLOWED_STATUS_TRANSITIONS.get(
+                current_status,
+                frozenset(),
+            )
+            if status not in allowed:
+                raise ValueError(
+                    "recursive work lifecycle transition is invalid: "
+                    f"{current_status.value} -> {status.value}"
+                )
+
+            _validate_active_lease_state(
+                self.connection,
+                work_fingerprint_value=work_fingerprint_value,
+                lease=lease,
+                now=now,
+            )
+
+            if status is WorkUnitStatus.COMPLETE:
+                lease_update = self.connection.execute(
+                    """
+                    UPDATE leases
+                    SET completed = 1
+                    WHERE work_fingerprint = ?
+                      AND holder = ?
+                      AND fencing_token = ?
+                      AND completed = 0
+                    """,
+                    (
+                        work_fingerprint_value,
+                        lease.holder,
+                        lease.fencing_token,
+                    ),
+                )
+            else:
+                lease_update = self.connection.execute(
+                    """
+                    UPDATE leases
+                    SET holder = NULL, expires_at = 0, completed = 0
+                    WHERE work_fingerprint = ?
+                      AND holder = ?
+                      AND fencing_token = ?
+                      AND completed = 0
+                    """,
+                    (
+                        work_fingerprint_value,
+                        lease.holder,
+                        lease.fencing_token,
+                    ),
+                )
+            if lease_update.rowcount != 1:
+                raise ValueError(
+                    "recursive work lease changed during atomic finalization"
+                )
+
+            work_update = self.connection.execute(
+                """
+                UPDATE recursive_work_state
+                SET status = ?, generation = generation + 1
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND generation = ?
+                """,
+                (
+                    status.value,
+                    lineage_id,
+                    work_fingerprint_value,
+                    expected_generation,
+                ),
+            )
+            if work_update.rowcount != 1:
+                raise ValueError(
+                    "recursive work generation changed during atomic finalization"
+                )
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+
+        stored = self.get(lineage_id, work_fingerprint_value)
+        if stored is None:
+            raise ValueError("recursive work state disappeared after finalization")
         return stored
 
 
