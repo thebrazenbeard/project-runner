@@ -399,3 +399,100 @@ projects:
         assert collision_key.startswith("private:")
         assert "transcendence" not in collision_key
         assert "secret-owner" not in collision_key
+
+
+def test_external_registry_frontier_summary_exposes_counts_not_private_identity(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    registry = tmp_path / "private-summary.yaml"
+    registry.write_text(
+        """
+projects:
+- id: transcendence
+  name: Private Transcendence
+  visibility: private
+  repositories: [secret-owner/private-transcendence]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: transcendence-family
+  scheduling_state: HELD
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+
+    assert main(
+        [
+            "frontier-summary",
+            "--before",
+            str(fixtures / "m6-hc-substantive.yaml"),
+            "--after",
+            str(fixtures / "m6-hc-current.yaml"),
+            "--dependencies",
+            str(fixtures / "m6-hc-transcendence-dependencies.yaml"),
+        ]
+    ) == 0
+
+    output = capsys.readouterr().out
+    payload = __import__("json").loads(output)
+    assert payload == {
+        "blocked": 1,
+        "ready": 0,
+        "statuses": {"WAITING_AUTHORITY": 1},
+        "total": 1,
+    }
+    assert "transcendence" not in output
+    assert "secret-owner" not in output
+    assert "private-summary" not in output
+    assert "collision" not in output
+
+
+def test_external_registry_frontier_summary_redacts_input_failure(
+    tmp_path,
+    monkeypatch,
+):
+    registry = tmp_path / "private-summary.yaml"
+    registry.write_text(
+        """
+projects:
+- id: private-example
+  name: Private Example
+  visibility: private
+  repositories: [secret-owner/private-example]
+  capabilities: [read]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: private-family
+  scheduling_state: SCHEDULABLE
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+    secret_before = tmp_path / "do-not-leak-private-before.yaml"
+    secret_after = tmp_path / "do-not-leak-private-after.yaml"
+    secret_dependencies = tmp_path / "do-not-leak-private-dependencies.yaml"
+
+    with pytest.raises(
+        ValueError,
+        match="external frontier summary is unavailable or structurally invalid",
+    ) as exc:
+        main(
+            [
+                "frontier-summary",
+                "--before",
+                str(secret_before),
+                "--after",
+                str(secret_after),
+                "--dependencies",
+                str(secret_dependencies),
+            ]
+        )
+
+    message = str(exc.value)
+    assert "do-not-leak" not in message
+    assert "private-example" not in message
+    assert "secret-owner" not in message
