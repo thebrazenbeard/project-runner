@@ -47,6 +47,7 @@ projects:
   assignment_scope: EXTERNAL_BOUNDED
   review_scope: STANDING
   family_id: private-family
+  scheduling_state: SCHEDULABLE
 """.lstrip(),
         encoding="utf-8",
     )
@@ -169,6 +170,7 @@ projects:
   assignment_scope: EXTERNAL_BOUNDED
   review_scope: STANDING
   family_id: private-beta
+  scheduling_state: SCHEDULABLE
 """.lstrip(),
         encoding="utf-8",
     )
