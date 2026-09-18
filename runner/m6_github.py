@@ -212,11 +212,12 @@ def _github_file_read_work(
 
 
 def _mutation_failure_status(classification: str) -> WorkUnitStatus:
+    if classification == "PRECONDITION_FAILED":
+        return WorkUnitStatus.SUPERSEDED
     if classification in {
         "AUTHORITY_DENIED",
         "INVALID_REQUEST",
         "NOT_FOUND",
-        "PRECONDITION_FAILED",
         "ROUTE_UNAVAILABLE",
         "UNSUPPORTED_OPERATION",
     }:
@@ -286,16 +287,21 @@ def verify_github_mutation_attempt(
 
     if not attempt.result.succeeded:
         status = _mutation_failure_status(attempt.result.classification)
-        if status is WorkUnitStatus.FAILED_DETERMINISTIC:
+        if status in {
+            WorkUnitStatus.FAILED_DETERMINISTIC,
+            WorkUnitStatus.SUPERSEDED,
+        }:
             lease_store.release(attempt.lease, now=now)
+        if status is WorkUnitStatus.SUPERSEDED:
+            reason = "mutation precondition moved before execution"
+        elif status is WorkUnitStatus.FAILED_DETERMINISTIC:
+            reason = "mutation was rejected before a supported effect"
+        else:
+            reason = "mutation outcome requires reconciliation"
         return VerificationOutcome(
             work=attempt.work,
             status=status,
-            reason=(
-                "mutation was rejected before a supported effect"
-                if status is WorkUnitStatus.FAILED_DETERMINISTIC
-                else "mutation outcome requires reconciliation"
-            ),
+            reason=reason,
         )
 
     if request.operation is GitHubOperation.CREATE_BRANCH:
