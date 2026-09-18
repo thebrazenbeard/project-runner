@@ -297,6 +297,18 @@ class SqliteRecursiveWorkStore:
             if current_generation != expected_generation:
                 raise ValueError("recursive work generation mismatch")
 
+            if current_status in _TERMINAL_STATUSES:
+                if status is not current_status:
+                    raise ValueError("terminal recursive work state cannot transition")
+                self.connection.commit()
+                stored = self.get(lineage_id, work_fingerprint_value)
+                if stored is None:
+                    raise ValueError("recursive work state disappeared after no-op")
+                return stored
+
+            if current_status is not WorkUnitStatus.PENDING and status is WorkUnitStatus.PENDING:
+                raise ValueError("recursive work state cannot reset to pending")
+
             if status in _TERMINAL_STATUSES:
                 _validate_terminal_lease_state(
                     self.connection,
@@ -304,11 +316,6 @@ class SqliteRecursiveWorkStore:
                     lease=lease,
                     status=status,
                 )
-
-            if current_status in _TERMINAL_STATUSES and status is not current_status:
-                raise ValueError("terminal recursive work state cannot transition")
-            if current_status is not WorkUnitStatus.PENDING and status is WorkUnitStatus.PENDING:
-                raise ValueError("recursive work state cannot reset to pending")
 
             if status is current_status:
                 self.connection.commit()
