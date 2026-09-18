@@ -6,7 +6,9 @@ This document states Project Runner operational invariants. It does not grant au
 
 Everything committed here must be safe for public disclosure. Do not commit credentials, private source payloads, private relational/autobiographical material, confidential mechanisms, or private project contents.
 
-Portfolio relevance does not imply publication authority. The committed project registry is a public-safe seed, not the complete private portfolio. Additional private project identifiers belong in a complete external registry selected explicitly with an absolute `PROJECT_RUNNER_PROJECT_REGISTRY` path. The runtime treats that file as a replacement registry rather than silently merging it into public source.
+Portfolio relevance does not imply publication authority. The committed project registry is a public-safe seed, not the complete private portfolio. Additional private project identifiers belong in a complete external registry selected explicitly with an absolute `PROJECT_RUNNER_PROJECT_REGISTRY` path and an exact `PROJECT_RUNNER_PROJECT_REGISTRY_SHA256` byte binding. The runtime treats that file as a replacement registry rather than silently merging it into public source.
+
+External records must explicitly declare scheduling posture. `HELD` records are observable portfolio state but are not schedulable and contribute no runnable capabilities. Detailed CLI reports that would expose project IDs, repositories, dependency IDs, subjects, or collision keys are disabled while an external registry is selected.
 
 The three private project identifiers already present on canonical M5 `main` are legacy public baseline metadata. Their prior disclosure does not authorize adding more private identifiers.
 
