@@ -12,7 +12,7 @@ from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
 from runner.propagate import derive_invalidations
 from runner.registry import load_dependencies, load_observations
 from runner.verify import verify_attempt
-from runner.work_units import WorkUnitStatus
+from runner.work_units import WorkUnitStatus, work_unit_fingerprint
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -184,7 +184,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     reopened_lease = SqliteLeaseStore(db)
     assert (
         reopened_lease.claim(
-            attempt.work_fingerprint,
+            work_unit_fingerprint(attempt.work),
             holder="m6-proof-after-restart",
             now=100.0,
             ttl=60.0,
