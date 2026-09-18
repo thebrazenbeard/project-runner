@@ -192,6 +192,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         work_fingerprint_value=work_unit_fingerprint(attempt.work),
         expected_generation=1,
         status=completed.status,
+        lease=attempt.lease,
     )
     assert durable_complete.generation == 2
     assert durable_complete.work.status is WorkUnitStatus.COMPLETE
