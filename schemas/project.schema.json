@@ -76,6 +76,12 @@
               "null"
             ],
             "minLength": 1
+          },
+          "scheduling_state": {
+            "enum": [
+              "SCHEDULABLE",
+              "HELD"
+            ]
           }
         }
       }
