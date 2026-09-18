@@ -12,6 +12,15 @@ from .models import ExactSubject
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
+_TERMINAL_STATUSES = frozenset(
+    {
+        WorkUnitStatus.COMPLETE,
+        WorkUnitStatus.FAILED_DETERMINISTIC,
+        WorkUnitStatus.SUPERSEDED,
+    }
+)
+
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS recursive_work_state (
     lineage_id TEXT NOT NULL,
@@ -236,6 +245,34 @@ class SqliteRecursiveWorkStore:
     ) -> StoredRecursiveWork:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
+            row = self.connection.execute(
+                """
+                SELECT status, generation
+                FROM recursive_work_state
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (lineage_id, work_fingerprint_value),
+            ).fetchone()
+            if row is None:
+                raise ValueError("recursive work state not found")
+
+            current_status = WorkUnitStatus(str(row[0]))
+            current_generation = int(row[1])
+            if current_generation != expected_generation:
+                raise ValueError("recursive work generation mismatch")
+
+            if current_status in _TERMINAL_STATUSES and status is not current_status:
+                raise ValueError("terminal recursive work state cannot transition")
+            if current_status is not WorkUnitStatus.PENDING and status is WorkUnitStatus.PENDING:
+                raise ValueError("recursive work state cannot reset to pending")
+
+            if status is current_status:
+                self.connection.commit()
+                stored = self.get(lineage_id, work_fingerprint_value)
+                if stored is None:
+                    raise ValueError("recursive work state disappeared after no-op")
+                return stored
+
             cursor = self.connection.execute(
                 """
                 UPDATE recursive_work_state
@@ -252,7 +289,7 @@ class SqliteRecursiveWorkStore:
                 ),
             )
             if cursor.rowcount != 1:
-                raise ValueError("recursive work generation mismatch")
+                raise ValueError("recursive work generation changed during status update")
         except BaseException:
             self.connection.rollback()
             raise
