@@ -39,11 +39,17 @@ The M5 CI route has only `contents: read`; it proves live GitHub connectivity wi
 
 The committed `registry/projects.yaml` is a public-safe seed. It may name repositories that were already part of Project Runner's historical public baseline, but it must not expand the public repository with additional private project identifiers merely because those projects are relevant to orchestration.
 
-For a complete private portfolio, supply a **complete replacement registry** from outside this checkout:
+For a complete private portfolio, supply a **complete replacement registry** from outside this checkout and pin the exact expected bytes:
 
-    PROJECT_RUNNER_PROJECT_REGISTRY=/absolute/private/path/projects.yaml project-runner inventory
+    PROJECT_RUNNER_PROJECT_REGISTRY=/absolute/private/path/projects.yaml \
+    PROJECT_RUNNER_PROJECT_REGISTRY_SHA256=<lowercase-sha256> \
+    project-runner inventory
 
-The override must be an absolute path. Project Runner does not merge a hidden/private layer into the committed seed, which keeps the provenance boundary explicit and prevents a local private inventory from being accidentally written back as public source.
+The override must be an absolute path and its exact SHA-256 must match before the registry is accepted. Project Runner does not merge a hidden/private layer into the committed seed.
+
+Every external project record must explicitly declare assignment scope, review scope, family, and `scheduling_state`. `HELD` projects contribute no runnable capabilities even if capabilities are listed in the record; only `SCHEDULABLE` records may contribute to ready frontier derivation.
+
+Detailed `evaluate-change`, `frontier-report`, and `dispatch-report` CLI output is disabled while an external registry is selected, preventing private project IDs, repository subjects, dependency IDs, or collision keys from being emitted into ordinary logs. Inventory/validation remain count-only.
 
 ## Authority model
 
