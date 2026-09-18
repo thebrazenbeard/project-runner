@@ -19,7 +19,7 @@ from .leases import InMemoryLeaseStore
 from .models import FrontierStatus
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
-from .registry import load_dependencies, load_observations, load_projects, load_workers
+from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
 from .verify import verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
@@ -51,12 +51,16 @@ def _project_registry_path() -> Path:
     return resolved
 
 
-def _load_project_registry():
+def _load_project_registry_snapshot():
     external = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY") is not None
-    return load_projects(
+    return load_project_snapshot(
         _project_registry_path(),
         require_scope_metadata=external,
     )
+
+
+def _load_project_registry():
+    return _load_project_registry_snapshot().projects
 
 
 def _load_all():
