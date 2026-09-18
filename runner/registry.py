@@ -57,14 +57,14 @@ def _project_snapshot_from_bytes(
     assert isinstance(payload, dict)
 
     if require_scope_metadata:
-        required_scope_fields = {"assignment_scope", "review_scope", "family_id"}
+        required_scope_fields = {"assignment_scope", "review_scope", "family_id", "scheduling_state"}
         if any(
             not required_scope_fields.issubset(item)
             for item in payload["projects"]
         ):
             raise ValueError(
                 "external project registry requires explicit "
-                "assignment_scope, review_scope, and family_id"
+                "assignment_scope, review_scope, family_id, and scheduling_state"
             )
 
     projects = (
@@ -93,7 +93,7 @@ def load_project_snapshot(
         if require_scope_metadata:
             safe_scope_error = (
                 "external project registry requires explicit "
-                "assignment_scope, review_scope, and family_id"
+                "assignment_scope, review_scope, family_id, and scheduling_state"
             )
             if isinstance(exc, ValueError) and str(exc) == safe_scope_error:
                 raise ValueError(safe_scope_error) from None
