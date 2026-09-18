@@ -18,7 +18,7 @@ from runner.work_units import WorkUnitStatus, work_unit_fingerprint
 
 
 HC_HEAD = "618245b54fb923c7a204892c6953ab6d1c5dac57"
-TRANSCENDENCE_HEAD = "04c8acbbc95eccd6b95db9ab02ff920a21acca6b"
+TRANSCENDENCE_HEAD = "ca3965c5788cd1bbb52fc527e47e3bcd5eca6e4a"
 
 
 class FakeReadTransport:
