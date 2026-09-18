@@ -37,12 +37,41 @@ def load_workers(path: Path) -> tuple[WorkerDefinition, ...]:
     return _reject_duplicate_ids(workers, "worker")
 
 
-def load_projects(path: Path) -> tuple[ProjectDefinition, ...]:
-    payload = _load_yaml(path)
-    validate_document("project", payload)
-    assert isinstance(payload, dict)
-    projects = (ProjectDefinition.from_mapping(item) for item in payload["projects"])
-    return _reject_duplicate_ids(projects, "project")
+def load_projects(
+    path: Path,
+    *,
+    require_scope_metadata: bool = False,
+) -> tuple[ProjectDefinition, ...]:
+    try:
+        payload = _load_yaml(path)
+        validate_document("project", payload)
+        assert isinstance(payload, dict)
+
+        if require_scope_metadata:
+            required_scope_fields = {"assignment_scope", "review_scope", "family_id"}
+            if any(
+                not required_scope_fields.issubset(item)
+                for item in payload["projects"]
+            ):
+                raise ValueError(
+                    "external project registry requires explicit "
+                    "assignment_scope, review_scope, and family_id"
+                )
+
+        projects = (ProjectDefinition.from_mapping(item) for item in payload["projects"])
+        return _reject_duplicate_ids(projects, "project")
+    except Exception as exc:
+        if require_scope_metadata:
+            safe_scope_error = (
+                "external project registry requires explicit "
+                "assignment_scope, review_scope, and family_id"
+            )
+            if isinstance(exc, ValueError) and str(exc) == safe_scope_error:
+                raise ValueError(safe_scope_error) from None
+            raise ValueError(
+                "external project registry is unavailable or structurally invalid"
+            ) from None
+        raise
 
 
 def load_dependencies(path: Path) -> tuple[DependencyEdge, ...]:
