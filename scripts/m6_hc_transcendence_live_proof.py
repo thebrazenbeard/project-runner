@@ -159,6 +159,7 @@ def main() -> int:
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
             expected_generation=1,
             status=outcome.status,
+            lease=attempt.lease,
         )
         if outcome.status is not WorkUnitStatus.COMPLETE:
             raise RuntimeError(
