@@ -22,7 +22,7 @@ from runner.m6_github import (
 from runner.models import ExactSubject, FrontierStatus
 from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
 from runner.propagate import derive_invalidations
-from runner.registry import load_dependencies, load_observations
+from runner.registry import load_dependencies, load_observations, load_project_snapshot
 from runner.verify import verify_attempt
 from runner.work_units import WorkUnitStatus
 
@@ -75,6 +75,7 @@ def main() -> int:
     previous = load_observations(SUBSTANTIVE)
     current = load_observations(CURRENT)
     dependencies = load_dependencies(DEPENDENCIES)
+    registry_snapshot = load_project_snapshot(ROOT / "registry" / "projects.yaml")
     invalidations = derive_invalidations(previous, current, dependencies)
     frontiers = derive_frontiers(
         invalidations,
@@ -108,6 +109,7 @@ def main() -> int:
                 frontier,
                 TRANSCENDENCE_SUBJECT,
                 depth,
+                registry_digest=registry_snapshot.sha256,
             ),
         )
         if len(batch.attempts) != 1:
@@ -170,6 +172,7 @@ def main() -> int:
                 "budget_generation": new_generation,
                 "fencing_token": attempt.lease.fencing_token,
                 "route": "github.read_ref",
+                "project_registry_sha256": registry_snapshot.sha256,
                 "subjects_verified": 2,
             },
             sort_keys=True,
