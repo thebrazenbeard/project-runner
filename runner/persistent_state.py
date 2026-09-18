@@ -109,6 +109,10 @@ def _migrate_budget_scope_schema(connection: sqlite3.Connection) -> None:
 
 class SqliteBudgetStore(_SqliteStore):
     def put_initial(self, budget: BudgetEnvelope) -> int:
+        if budget.scope_id != "root":
+            raise ValueError(
+                "child budget scopes require atomic recursive admission"
+            )
         with self._write_transaction():
             try:
                 self.connection.execute(
