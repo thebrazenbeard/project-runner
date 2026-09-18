@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 import hashlib
+import hmac
 import json
 from pathlib import Path
 import sqlite3
@@ -174,7 +175,7 @@ class SqliteRecursiveWorkStore:
             ),
             ancestry_json=str(ancestry_json),
         )
-        if not hashlib.compare_digest(str(immutable_sha256), expected_digest):
+        if not hmac.compare_digest(str(immutable_sha256), expected_digest):
             raise ValueError("recursive work state digest mismatch")
 
         try:
