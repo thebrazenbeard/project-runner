@@ -458,7 +458,7 @@ def test_nonpending_recursive_work_cannot_reset_to_pending(tmp_path: Path):
     )
     assert running.generation == 2
 
-    with pytest.raises(ValueError, match="reset to pending"):
+    with pytest.raises(ValueError, match="RUNNING -> PENDING"):
         store.compare_and_swap_status(
             lineage_id="lineage-running",
             work_fingerprint_value=fingerprint,
