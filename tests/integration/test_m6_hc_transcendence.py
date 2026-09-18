@@ -5,7 +5,8 @@ from runner.backends import MockBackend
 from runner.budgets import BudgetEnvelope
 from runner.collisions import partition_collision_groups
 from runner.dedup import deduplicate_frontiers
-from runner.dispatch import dispatch_ready, frontier_to_work_unit
+from runner.dispatch import DispatchAttempt, dispatch_ready, frontier_to_work_unit
+from runner.durable_dispatch import SqliteDispatchAdmissionStore
 from runner.frontier import derive_frontiers
 from runner.leases import InMemoryLeaseStore
 from runner.models import ExactSubject, FrontierStatus
@@ -127,39 +128,41 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     recursive_store = SqliteRecursiveWorkStore(db)
     backend = MockBackend()
 
-    def durable_work_factory(frontier, depth):
-        work = frontier_to_work_unit(frontier, depth=depth)
-        fingerprint = work_unit_fingerprint(work)
-        recursive_store.put_initial(
-            work=work,
-            lineage_id=persisted_budget.lineage_id,
-            budget_scope_id=persisted_budget.scope_id,
-            parent_fingerprint=None,
-            ancestry_fingerprints={fingerprint},
-            effective_capabilities={"read", "analyze"},
-        )
-        return work
+    work = frontier_to_work_unit(frontiers[0], depth=persisted_budget.depth)
+    fingerprint = work_unit_fingerprint(work)
+    recursive_store.put_initial(
+        work=work,
+        lineage_id=persisted_budget.lineage_id,
+        budget_scope_id=persisted_budget.scope_id,
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
 
-    batch = dispatch_ready(
-        frontiers,
-        lease_store=lease_store,
-        backend=backend,
-        budget=persisted_budget,
+    dispatch_store = SqliteDispatchAdmissionStore(db)
+    admitted = dispatch_store.admit(
+        lineage_id=persisted_budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        budget_scope_id=persisted_budget.scope_id,
+        expected_budget_generation=generation,
+        expected_work_generation=1,
         holder="m6-proof-current",
         now=0.0,
-        lease_ttl=60.0,
-        work_factory=durable_work_factory,
+        ttl=60.0,
     )
-    new_generation = budget_store.compare_and_swap(
-        batch.remaining_budget,
-        expected_generation=generation,
-    )
+    dispatch_store.close()
+    new_generation = admitted.budget_generation
     assert new_generation == 2
-    assert batch.remaining_budget.remaining_active == 0
-    assert batch.remaining_budget.remaining_backend_jobs == 0
+    assert admitted.budget_after.remaining_active == 0
+    assert admitted.budget_after.remaining_backend_jobs == 0
 
-    assert len(batch.attempts) == 1
-    attempt = batch.attempts[0]
+    result = backend.execute(admitted.work)
+    attempt = DispatchAttempt(
+        frontier=frontiers[0],
+        work=admitted.work,
+        lease=admitted.lease,
+        result=result,
+    )
     assert attempt.frontier.subject.commit == (
         "618245b54fb923c7a204892c6953ab6d1c5dac57"
     )
@@ -168,21 +171,21 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     running_work = recursive_store.compare_and_swap_status(
         lineage_id=persisted_budget.lineage_id,
         work_fingerprint_value=work_unit_fingerprint(attempt.work),
-        expected_generation=1,
+        expected_generation=admitted.work_generation,
         status=WorkUnitStatus.RUNNING,
         lease=attempt.lease,
         now=0.25,
     )
-    assert running_work.generation == 2
+    assert running_work.generation == 3
     verifying_work = recursive_store.compare_and_swap_status(
         lineage_id=persisted_budget.lineage_id,
         work_fingerprint_value=work_unit_fingerprint(attempt.work),
-        expected_generation=2,
+        expected_generation=3,
         status=WorkUnitStatus.VERIFYING,
         lease=attempt.lease,
         now=0.5,
     )
-    assert verifying_work.generation == 3
+    assert verifying_work.generation == 4
 
     still_verifying = verify_attempt(
         attempt,
@@ -211,12 +214,12 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     durable_complete = recursive_store.finalize_terminal_status(
         lineage_id=persisted_budget.lineage_id,
         work_fingerprint_value=work_unit_fingerprint(attempt.work),
-        expected_generation=3,
+        expected_generation=4,
         status=completed.status,
         lease=attempt.lease,
         now=2.0,
     )
-    assert durable_complete.generation == 4
+    assert durable_complete.generation == 5
     assert durable_complete.work.status is WorkUnitStatus.COMPLETE
 
     budget_store.close()
@@ -252,7 +255,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         status=WorkUnitStatus.COMPLETE,
     )
     assert resumed_work.work.status is WorkUnitStatus.COMPLETE
-    assert resumed_work.generation == 4
+    assert resumed_work.generation == 5
     assert resumed_work.ancestry_fingerprints == {
         work_unit_fingerprint(attempt.work)
     }
