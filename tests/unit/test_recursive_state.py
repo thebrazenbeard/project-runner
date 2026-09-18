@@ -6,7 +6,7 @@ import pytest
 from runner.budgets import BudgetEnvelope
 from runner.decompose import admit_child_work
 from runner.models import ExactSubject
-from runner.persistent_state import SqliteBudgetStore
+from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
 from runner.recursive_admission import SqliteRecursiveAdmissionStore
 from runner.recursive_state import (
     SqliteRecursiveWorkStore,
@@ -372,11 +372,16 @@ def test_terminal_recursive_work_cannot_reset_or_transition(tmp_path: Path):
         ancestry_fingerprints={fingerprint},
         effective_capabilities={"read", "analyze"},
     )
+    leases = SqliteLeaseStore(tmp_path / "recursive.db")
+    lease = leases.claim(fingerprint, holder="terminal-test", now=0.0, ttl=10.0)
+    assert lease is not None
+    assert leases.complete(lease, now=1.0)
     complete = store.compare_and_swap_status(
         lineage_id="lineage-terminal",
         work_fingerprint_value=fingerprint,
         expected_generation=1,
         status=WorkUnitStatus.COMPLETE,
+        lease=lease,
     )
     assert complete.generation == 2
 
@@ -394,6 +399,7 @@ def test_terminal_recursive_work_cannot_reset_or_transition(tmp_path: Path):
             expected_generation=2,
             status=WorkUnitStatus.SUPERSEDED,
         )
+    leases.close()
     store.close()
 
 
@@ -570,3 +576,134 @@ def test_legacy_recursive_state_tamper_is_rejected_before_capability_migration(
     connection = sqlite3.connect(db)
     connection.execute("SELECT 1").fetchone()
     connection.close()
+
+
+def test_terminal_completion_rejects_stale_reclaimed_fence(tmp_path: Path):
+    db = tmp_path / "recursive.db"
+    work = _work(
+        "root-fence",
+        depth=0,
+        parent=None,
+        commit="7" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+
+    store = SqliteRecursiveWorkStore(db)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-fence",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+    running = store.compare_and_swap_status(
+        lineage_id="lineage-fence",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+    )
+    assert running.generation == 2
+
+    leases = SqliteLeaseStore(db)
+    stale = leases.claim(fingerprint, holder="A", now=0.0, ttl=10.0)
+    assert stale is not None and stale.fencing_token == 1
+    current = leases.claim(fingerprint, holder="B", now=11.0, ttl=10.0)
+    assert current is not None and current.fencing_token == 2
+
+    with pytest.raises(ValueError, match="fencing token is stale"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-fence",
+            work_fingerprint_value=fingerprint,
+            expected_generation=2,
+            status=WorkUnitStatus.COMPLETE,
+            lease=stale,
+        )
+
+    unchanged = store.get("lineage-fence", fingerprint)
+    assert unchanged is not None
+    assert unchanged.work.status is WorkUnitStatus.RUNNING
+    assert unchanged.generation == 2
+
+    assert leases.complete(current, now=12.0)
+    completed = store.compare_and_swap_status(
+        lineage_id="lineage-fence",
+        work_fingerprint_value=fingerprint,
+        expected_generation=2,
+        status=WorkUnitStatus.COMPLETE,
+        lease=current,
+    )
+    assert completed.work.status is WorkUnitStatus.COMPLETE
+    assert completed.generation == 3
+    leases.close()
+    store.close()
+
+
+def test_terminal_failure_requires_released_exact_fence(tmp_path: Path):
+    db = tmp_path / "recursive.db"
+    work = _work(
+        "root-failure-fence",
+        depth=0,
+        parent=None,
+        commit="8" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+
+    store = SqliteRecursiveWorkStore(db)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-failure-fence",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+
+    leases = SqliteLeaseStore(db)
+    lease = leases.claim(fingerprint, holder="worker", now=0.0, ttl=10.0)
+    assert lease is not None
+    assert leases.release(lease, now=1.0)
+
+    failed = store.compare_and_swap_status(
+        lineage_id="lineage-failure-fence",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.FAILED_DETERMINISTIC,
+        lease=lease,
+    )
+    assert failed.work.status is WorkUnitStatus.FAILED_DETERMINISTIC
+    assert failed.generation == 2
+    leases.close()
+    store.close()
+
+
+def test_unfenced_terminal_status_is_rejected(tmp_path: Path):
+    db = tmp_path / "recursive.db"
+    work = _work(
+        "root-unfenced",
+        depth=0,
+        parent=None,
+        commit="6" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+
+    store = SqliteRecursiveWorkStore(db)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-unfenced",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+    with pytest.raises(ValueError, match="requires a lease fence"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-unfenced",
+            work_fingerprint_value=fingerprint,
+            expected_generation=1,
+            status=WorkUnitStatus.COMPLETE,
+        )
+    store.close()
