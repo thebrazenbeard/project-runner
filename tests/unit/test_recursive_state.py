@@ -324,3 +324,108 @@ def test_same_semantic_work_isolated_between_lineages(tmp_path: Path):
             ancestry_fingerprints={fingerprint},
         )
     store.close()
+
+
+def test_terminal_recursive_work_cannot_reset_or_transition(tmp_path: Path):
+    store = SqliteRecursiveWorkStore(tmp_path / "recursive.db")
+    work = _work(
+        "root",
+        depth=0,
+        parent=None,
+        commit="a" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-terminal",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+    )
+    complete = store.compare_and_swap_status(
+        lineage_id="lineage-terminal",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.COMPLETE,
+    )
+    assert complete.generation == 2
+
+    with pytest.raises(ValueError, match="terminal"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-terminal",
+            work_fingerprint_value=fingerprint,
+            expected_generation=2,
+            status=WorkUnitStatus.PENDING,
+        )
+    with pytest.raises(ValueError, match="terminal"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-terminal",
+            work_fingerprint_value=fingerprint,
+            expected_generation=2,
+            status=WorkUnitStatus.SUPERSEDED,
+        )
+    store.close()
+
+
+def test_nonpending_recursive_work_cannot_reset_to_pending(tmp_path: Path):
+    store = SqliteRecursiveWorkStore(tmp_path / "recursive.db")
+    work = _work(
+        "root",
+        depth=0,
+        parent=None,
+        commit="a" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+    store.put_initial(
+        work=work,
+        lineage_id="lineage-running",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+    )
+    running = store.compare_and_swap_status(
+        lineage_id="lineage-running",
+        work_fingerprint_value=fingerprint,
+        expected_generation=1,
+        status=WorkUnitStatus.RUNNING,
+    )
+    assert running.generation == 2
+
+    with pytest.raises(ValueError, match="reset to pending"):
+        store.compare_and_swap_status(
+            lineage_id="lineage-running",
+            work_fingerprint_value=fingerprint,
+            expected_generation=2,
+            status=WorkUnitStatus.PENDING,
+        )
+    store.close()
+
+
+def test_same_status_update_is_idempotent_without_generation_churn(tmp_path: Path):
+    store = SqliteRecursiveWorkStore(tmp_path / "recursive.db")
+    work = _work(
+        "root",
+        depth=0,
+        parent=None,
+        commit="a" * 40,
+        operation="INSPECT",
+    )
+    fingerprint = work_unit_fingerprint(work)
+    stored = store.put_initial(
+        work=work,
+        lineage_id="lineage-idempotent",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+    )
+    same = store.compare_and_swap_status(
+        lineage_id="lineage-idempotent",
+        work_fingerprint_value=fingerprint,
+        expected_generation=stored.generation,
+        status=WorkUnitStatus.PENDING,
+    )
+    assert same.generation == stored.generation == 1
+    assert same.work.status is WorkUnitStatus.PENDING
+    store.close()
