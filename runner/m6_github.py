@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import hashlib
 
 from .backends import BackendResult
-from .github_backend import GitHubBackend
+from .dispatch import DispatchAttempt
+from .github_backend import GitHubBackend, GitHubOperation, GitHubRequest
+from .leases import LeaseStore
 from .models import ExactSubject, Frontier
+from .verify import VerificationOutcome
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
@@ -156,3 +160,230 @@ class GitHubCurrentSubjectReader:
         if not observed:
             return None
         return replace(subject, commit=observed)
+
+
+def _github_file_read_work(
+    *,
+    repository: str,
+    ref: str,
+    path: str,
+    expected_blob_sha: str,
+) -> WorkUnit:
+    subject = ExactSubject(repository=repository, ref=ref)
+    return WorkUnit(
+        id="m6-internal-github-file-read",
+        root_frontier_id="m6-internal-github-file-read",
+        parent_work_id=None,
+        inputs=(subject,),
+        operation="GITHUB",
+        required_capabilities=("github.read_file",),
+        collision_keys=(),
+        recursion_depth=0,
+        budget_allocation={
+            "children": 0,
+            "active": 0,
+            "retries": 0,
+            "backend_jobs": 0,
+        },
+        expected_outputs=("github-file-state",),
+        completion_criteria=("github-readback-verified",),
+        status=WorkUnitStatus.RUNNING,
+        payload={
+            "github": {
+                "operation": "READ_FILE",
+                "repository": repository,
+                "ref": ref,
+                "path": path,
+                "expected_blob_sha": expected_blob_sha,
+            }
+        },
+    )
+
+
+def _mutation_failure_status(classification: str) -> WorkUnitStatus:
+    if classification in {
+        "AUTHORITY_DENIED",
+        "INVALID_REQUEST",
+        "NOT_FOUND",
+        "PRECONDITION_FAILED",
+        "ROUTE_UNAVAILABLE",
+        "UNSUPPORTED_OPERATION",
+    }:
+        return WorkUnitStatus.FAILED_DETERMINISTIC
+    return WorkUnitStatus.OUTCOME_UNKNOWN
+
+
+def _matching_precondition_input(work: WorkUnit, request: GitHubRequest) -> bool:
+    if request.expected_head is None:
+        return False
+    if request.operation is GitHubOperation.CREATE_BRANCH:
+        if request.source_ref is None:
+            return False
+        return any(
+            subject.repository == request.repository
+            and subject.ref == request.source_ref
+            and subject.commit == request.expected_head
+            for subject in work.inputs
+        )
+    return any(
+        subject.repository == request.repository
+        and subject.ref == request.ref
+        and subject.commit == request.expected_head
+        for subject in work.inputs
+    )
+
+
+def verify_github_mutation_attempt(
+    attempt: DispatchAttempt,
+    *,
+    lease_store: LeaseStore,
+    now: float,
+    verification_backend: GitHubBackend,
+) -> VerificationOutcome:
+    """Verify mutation postconditions without requiring the old target head to survive."""
+
+    try:
+        raw = attempt.work.payload.get("github")
+        if not isinstance(raw, dict):
+            raise ValueError("missing github request")
+        request = GitHubRequest.from_mapping(raw)
+    except (KeyError, TypeError, ValueError):
+        lease_store.release(attempt.lease, now=now)
+        return VerificationOutcome(
+            work=attempt.work,
+            status=WorkUnitStatus.FAILED_DETERMINISTIC,
+            reason="mutation request is structurally invalid",
+        )
+
+    if request.operation not in {
+        GitHubOperation.CREATE_BRANCH,
+        GitHubOperation.PUT_FILE,
+    }:
+        lease_store.release(attempt.lease, now=now)
+        return VerificationOutcome(
+            work=attempt.work,
+            status=WorkUnitStatus.FAILED_DETERMINISTIC,
+            reason="mutation verifier received unsupported operation",
+        )
+
+    if not _matching_precondition_input(attempt.work, request):
+        return VerificationOutcome(
+            work=attempt.work,
+            status=WorkUnitStatus.OUTCOME_UNKNOWN,
+            reason="mutation precondition is not bound to an exact work input",
+        )
+
+    if not attempt.result.succeeded:
+        status = _mutation_failure_status(attempt.result.classification)
+        if status is WorkUnitStatus.FAILED_DETERMINISTIC:
+            lease_store.release(attempt.lease, now=now)
+        return VerificationOutcome(
+            work=attempt.work,
+            status=status,
+            reason=(
+                "mutation was rejected before a supported effect"
+                if status is WorkUnitStatus.FAILED_DETERMINISTIC
+                else "mutation outcome requires reconciliation"
+            ),
+        )
+
+    if request.operation is GitHubOperation.CREATE_BRANCH:
+        if request.expected_head is None or len(attempt.result.outputs) != 1:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="branch creation result is incomplete",
+            )
+        target = ExactSubject(
+            repository=request.repository,
+            ref=request.ref,
+            commit=request.expected_head,
+        )
+        readback = verification_backend.execute(
+            _github_read_work(target, expected=False)
+        )
+        if not readback.succeeded or len(readback.outputs) != 1:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="independent branch readback is unavailable",
+            )
+        if readback.outputs[0] != attempt.result.outputs[0]:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.SUPERSEDED,
+                reason="created branch moved after execution",
+            )
+    else:
+        if (
+            request.path is None
+            or request.content is None
+            or len(attempt.result.outputs) != 2
+        ):
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="file mutation result is incomplete",
+            )
+        new_commit, new_blob = attempt.result.outputs
+        target = ExactSubject(
+            repository=request.repository,
+            ref=request.ref,
+            commit=new_commit,
+        )
+        ref_readback = verification_backend.execute(
+            _github_read_work(target, expected=False)
+        )
+        if not ref_readback.succeeded or len(ref_readback.outputs) != 1:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="independent head readback is unavailable",
+            )
+        if ref_readback.outputs[0] != new_commit:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.SUPERSEDED,
+                reason="mutated branch moved after execution",
+            )
+
+        file_readback = verification_backend.execute(
+            _github_file_read_work(
+                repository=request.repository,
+                ref=request.ref,
+                path=request.path,
+                expected_blob_sha=new_blob,
+            )
+        )
+        if not file_readback.succeeded or len(file_readback.outputs) != 2:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="independent file readback is unavailable",
+            )
+        observed_blob, observed_content_digest = file_readback.outputs
+        expected_content_digest = hashlib.sha256(
+            request.content.encode("utf-8")
+        ).hexdigest()
+        if (
+            observed_blob != new_blob
+            or observed_content_digest != expected_content_digest
+        ):
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="independent file postcondition does not match",
+            )
+
+    if not lease_store.complete(attempt.lease, now=now):
+        return VerificationOutcome(
+            work=attempt.work,
+            status=WorkUnitStatus.OUTCOME_UNKNOWN,
+            reason="lease/fence no longer authorizes mutation completion",
+        )
+
+    return VerificationOutcome(
+        work=attempt.work,
+        status=WorkUnitStatus.COMPLETE,
+        reason="mutation postcondition independently verified",
+    )
