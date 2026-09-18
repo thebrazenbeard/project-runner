@@ -1,3 +1,4 @@
+from dataclasses import replace
 import sqlite3
 from pathlib import Path
 
@@ -325,3 +326,76 @@ def test_tampered_parent_state_rejects_child_without_budget_transfer(tmp_path: P
     assert parent_budget == _root_budget()
     assert parent_generation == 1
     budgets.close()
+
+
+def test_forged_child_depth_is_recomputed_and_rolled_back(tmp_path: Path):
+    db = tmp_path / "state.db"
+    _, root_fingerprint, admission = _persist_root(db)
+    forged_work = replace(admission.work, recursion_depth=2)
+    forged = replace(admission, work=forged_work)
+
+    store = SqliteRecursiveAdmissionStore(db)
+    with pytest.raises(ValueError, match="child depth"):
+        store.commit_child(
+            parent_work_fingerprint=root_fingerprint,
+            parent_budget_before=_root_budget(),
+            expected_parent_budget_generation=1,
+            parent_capabilities={"read", "analyze"},
+            target_capabilities={"read", "analyze"},
+            admission=forged,
+        )
+    store.close()
+
+    budgets = SqliteBudgetStore(db)
+    parent_budget, parent_generation = budgets.get("atomic-lineage", "root")
+    assert parent_budget == _root_budget()
+    assert parent_generation == 1
+    with pytest.raises(KeyError):
+        budgets.get("atomic-lineage", admission.child_budget.scope_id)
+    budgets.close()
+
+
+def test_forged_child_capability_is_recomputed_and_rolled_back(tmp_path: Path):
+    db = tmp_path / "state.db"
+    _, root_fingerprint, admission = _persist_root(db)
+    forged_work = replace(
+        admission.work,
+        required_capabilities=("privileged_effect",),
+    )
+    forged_fingerprint = work_unit_fingerprint(forged_work)
+    forged_budget = replace(
+        admission.child_budget,
+        scope_id="work:" + forged_fingerprint,
+    )
+    forged = replace(
+        admission,
+        work=forged_work,
+        child_budget=forged_budget,
+        ancestry_fingerprints=frozenset(
+            {root_fingerprint, forged_fingerprint}
+        ),
+    )
+
+    store = SqliteRecursiveAdmissionStore(db)
+    with pytest.raises(ValueError, match="capability"):
+        store.commit_child(
+            parent_work_fingerprint=root_fingerprint,
+            parent_budget_before=_root_budget(),
+            expected_parent_budget_generation=1,
+            parent_capabilities={"read", "analyze"},
+            target_capabilities={"read", "analyze"},
+            admission=forged,
+        )
+    store.close()
+
+    budgets = SqliteBudgetStore(db)
+    parent_budget, parent_generation = budgets.get("atomic-lineage", "root")
+    assert parent_budget == _root_budget()
+    assert parent_generation == 1
+    with pytest.raises(KeyError):
+        budgets.get("atomic-lineage", forged_budget.scope_id)
+    budgets.close()
+
+    works = SqliteRecursiveWorkStore(db)
+    assert works.get("atomic-lineage", forged_fingerprint) is None
+    works.close()
