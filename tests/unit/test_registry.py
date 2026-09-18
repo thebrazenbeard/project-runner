@@ -78,6 +78,7 @@ def test_project_registry_snapshot_binds_exact_bytes(tmp_path: Path):
     assignment_scope: EXTERNAL_BOUNDED
     review_scope: STANDING
     family_id: example-family
+    scheduling_state: SCHEDULABLE
 """
     path.write_bytes(first)
 
