@@ -43,6 +43,12 @@ M5 includes a SQLite lineage budget ledger with generation compare-and-swap. A w
 
 M5 includes a SQLite lease store. Claim/reclaim state survives process restarts. Expired work can be reclaimed with a strictly higher fencing token. Older holders cannot complete or release the reclaimed work.
 
+### Durable dispatch admission
+
+M6 reserves execution state before backend work begins. One SQLite transaction re-reads the exact durable WorkUnit and budget generation, verifies the WorkUnit integrity/capability ceiling and dispatch-admissible lifecycle state, claims or reclaims the lease with a monotonic fencing token, consumes active/backend-job quota (and retry quota when redispatching retryable/unknown work), advances the budget generation, and moves the WorkUnit to `CLAIMED`.
+
+The backend is invoked only after that transaction commits. A crash after durable admission therefore cannot execute work while leaving durable quota unconsumed or the lease/WorkUnit ownership forgotten. Stale budget/work generations, active-lease collisions, exhausted quota, completed work, or integrity/currentness mismatch roll the transaction back without partial reservation.
+
 ### Persistent recursive work lineage
 
 M6 persists each recursive work subject under `(lineage_id, semantic work fingerprint)` together with its exact immutable work payload, parent semantic fingerprint, exact ancestry set, budget scope, lifecycle status, and generation.
