@@ -226,6 +226,14 @@ def main() -> int:
         if final_grandchild.work.recursion_depth != 2:
             raise RuntimeError("grandchild depth changed")
 
+        expected_capabilities = ("analyze", "read")
+        if final_root.effective_capabilities != expected_capabilities:
+            raise RuntimeError("root capability ceiling changed across restart")
+        if final_child.effective_capabilities != expected_capabilities:
+            raise RuntimeError("child capability ceiling changed across restart")
+        if final_grandchild.effective_capabilities != expected_capabilities:
+            raise RuntimeError("grandchild capability ceiling changed across restart")
+
     print(
         json.dumps(
             {
@@ -239,6 +247,9 @@ def main() -> int:
                 "root_ancestry_size": len(final_root.ancestry_fingerprints),
                 "child_ancestry_size": len(final_child.ancestry_fingerprints),
                 "grandchild_ancestry_size": len(final_grandchild.ancestry_fingerprints),
+                "root_capability_ceiling": list(final_root.effective_capabilities),
+                "child_capability_ceiling": list(final_child.effective_capabilities),
+                "grandchild_capability_ceiling": list(final_grandchild.effective_capabilities),
                 "atomic_child_commits": 2,
                 "max_depth": final_grandchild_budget.max_depth,
             },
