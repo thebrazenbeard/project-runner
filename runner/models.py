@@ -53,6 +53,7 @@ class WorkerDefinition:
     locators: Mapping[str, str]
     roles: tuple[str, ...]
     routes: Mapping[InvocationRoute, RouteState]
+    reconstruction: Mapping[str, str] | None
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, object]) -> "WorkerDefinition":
@@ -60,12 +61,33 @@ class WorkerDefinition:
         lifecycle = WorkerLifecycle(str(data["lifecycle"]))
         raw_locators = data.get("locators", {})
         raw_routes = data.get("routes", {})
+        raw_reconstruction = data.get("reconstruction")
         if not isinstance(raw_locators, Mapping):
             raise ValueError("locators must be a mapping")
         if not isinstance(raw_routes, Mapping):
             raise ValueError("routes must be a mapping")
 
         locators = {str(k): str(v) for k, v in raw_locators.items()}
+
+        reconstruction = None
+        if raw_reconstruction is not None:
+            if not isinstance(raw_reconstruction, Mapping):
+                raise ValueError("reconstruction must be a mapping")
+            if set(raw_reconstruction) != {"repository", "path", "commit"}:
+                raise ValueError(
+                    "reconstruction requires exactly repository, path, and commit"
+                )
+            reconstruction = {
+                key: str(raw_reconstruction[key]).strip()
+                for key in ("repository", "path", "commit")
+            }
+            if "/" not in reconstruction["repository"]:
+                raise ValueError("reconstruction repository must be owner/repo")
+            if not reconstruction["path"]:
+                raise ValueError("reconstruction path is required")
+            if re.fullmatch(r"[0-9a-f]{40}", reconstruction["commit"]) is None:
+                raise ValueError("reconstruction commit must be exact 40-hex Git commit")
+
         if worker_type is WorkerType.CHATGPT_CUSTOM_GPT:
             gpt_id = locators.get("gpt_id")
             if gpt_id is None or _GPT_ID_RE.fullmatch(gpt_id) is None:
@@ -82,6 +104,14 @@ class WorkerDefinition:
             raise ValueError("CONNECTED worker requires a connected or verified route")
         if lifecycle is WorkerLifecycle.EXECUTABLE and RouteState.VERIFIED not in route_states:
             raise ValueError("EXECUTABLE worker requires at least one VERIFIED route")
+        if lifecycle in {
+            WorkerLifecycle.PROFILED,
+            WorkerLifecycle.CONNECTED,
+            WorkerLifecycle.EXECUTABLE,
+        } and reconstruction is None:
+            raise ValueError(
+                f"{lifecycle.value} worker requires durable reconstruction evidence"
+            )
 
         raw_roles = data.get("roles", [])
         if not isinstance(raw_roles, list):
@@ -95,6 +125,7 @@ class WorkerDefinition:
             locators=locators,
             roles=tuple(str(role) for role in raw_roles),
             routes=routes,
+            reconstruction=reconstruction,
         )
 
 
