@@ -274,6 +274,131 @@ def test_m6_self_mutation_branch_and_file_write_are_independently_verified(
     )
 
 
+class MoveAfterVerificationHeadReadTransport(MutationTransport):
+    def __init__(self):
+        super().__init__()
+        self.move_after_next_proof_ref_read = False
+
+    def read_ref(self, repository, ref):
+        observed = super().read_ref(repository, ref)
+        if self.move_after_next_proof_ref_read and ref == PROOF_BRANCH:
+            self.move_after_next_proof_ref_read = False
+            self.refs[(repository, ref)] = "f" * 40
+        return observed
+
+
+def test_m6_put_file_is_superseded_if_branch_moves_between_postcondition_reads(
+    tmp_path: Path,
+):
+    transport = MoveAfterVerificationHeadReadTransport()
+    executor = _execution_backend(transport)
+    verifier = _verification_backend(transport)
+    lease_store = SqliteLeaseStore(tmp_path / "proof.sqlite3")
+    transport.create_branch(REPOSITORY, PROOF_BRANCH, SOURCE_HEAD)
+
+    target_before = ExactSubject(
+        repository=REPOSITORY,
+        ref=PROOF_BRANCH,
+        commit=SOURCE_HEAD,
+    )
+    work = _work(
+        target_before,
+        {
+            "operation": "PUT_FILE",
+            "repository": REPOSITORY,
+            "ref": PROOF_BRANCH,
+            "path": "README.md",
+            "content": MUTATED,
+            "message": "test: M6 self-mutation",
+            "expected_head": SOURCE_HEAD,
+            "expected_blob_sha": _blob(ORIGINAL),
+        },
+    )
+    lease = lease_store.claim(
+        work_unit_fingerprint(work),
+        holder="m6-self-proof-postread-race",
+        now=0.0,
+        ttl=60.0,
+    )
+    assert lease is not None
+
+    result = executor.execute(work)
+    assert result.succeeded
+    transport.move_after_next_proof_ref_read = True
+
+    outcome = verify_github_mutation_attempt(
+        _attempt(work, result, lease),
+        lease_store=lease_store,
+        now=1.0,
+        verification_backend=verifier,
+    )
+
+    assert outcome.status is WorkUnitStatus.SUPERSEDED
+    assert outcome.reason == "mutated branch moved during independent verification"
+
+
+class FailFinalVerificationRefReadTransport(MutationTransport):
+    def __init__(self):
+        super().__init__()
+        self.fail_verification_reads = False
+        self.verification_ref_reads = 0
+
+    def read_ref(self, repository, ref):
+        if self.fail_verification_reads and ref == PROOF_BRANCH:
+            self.verification_ref_reads += 1
+            if self.verification_ref_reads == 2:
+                raise RuntimeError("simulated final ref read failure")
+        return super().read_ref(repository, ref)
+
+
+def test_m6_put_file_final_ref_read_failure_stays_outcome_unknown(tmp_path: Path):
+    transport = FailFinalVerificationRefReadTransport()
+    executor = _execution_backend(transport)
+    verifier = _verification_backend(transport)
+    lease_store = SqliteLeaseStore(tmp_path / "proof.sqlite3")
+    transport.create_branch(REPOSITORY, PROOF_BRANCH, SOURCE_HEAD)
+
+    target_before = ExactSubject(
+        repository=REPOSITORY,
+        ref=PROOF_BRANCH,
+        commit=SOURCE_HEAD,
+    )
+    work = _work(
+        target_before,
+        {
+            "operation": "PUT_FILE",
+            "repository": REPOSITORY,
+            "ref": PROOF_BRANCH,
+            "path": "README.md",
+            "content": MUTATED,
+            "message": "test: M6 self-mutation",
+            "expected_head": SOURCE_HEAD,
+            "expected_blob_sha": _blob(ORIGINAL),
+        },
+    )
+    lease = lease_store.claim(
+        work_unit_fingerprint(work),
+        holder="m6-self-proof-final-ref-unavailable",
+        now=0.0,
+        ttl=60.0,
+    )
+    assert lease is not None
+
+    result = executor.execute(work)
+    assert result.succeeded
+    transport.fail_verification_reads = True
+
+    outcome = verify_github_mutation_attempt(
+        _attempt(work, result, lease),
+        lease_store=lease_store,
+        now=1.0,
+        verification_backend=verifier,
+    )
+
+    assert outcome.status is WorkUnitStatus.OUTCOME_UNKNOWN
+    assert outcome.reason == "final independent branch readback is unavailable"
+
+
 def test_m6_self_mutation_is_superseded_if_branch_moves_after_write(tmp_path: Path):
     transport = MutationTransport()
     executor = _execution_backend(transport)
