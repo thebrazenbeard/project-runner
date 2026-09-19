@@ -16,10 +16,12 @@ from .persistent_state import _SCHEMA as _PERSISTENT_SCHEMA
 from .persistent_state import _migrate_budget_scope_schema
 from .recursive_state import (
     _ALLOWED_STATUS_TRANSITIONS,
+    _TERMINAL_STATUSES,
     _SCHEMA as _RECURSIVE_SCHEMA,
     _immutable_digest,
     _migrate_recursive_capability_schema,
     _normalize_capabilities,
+    _validate_active_lease_state,
     _work_from_payload,
 )
 from .verify import EvidenceVerifier, SubjectReader, VerificationOutcome, verify_attempt
@@ -719,6 +721,203 @@ class SqliteDispatchAdmissionStore:
             self.connection.commit()
         return sequence
 
+    def finalize_terminal_verification(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+        expected_work_generation: int,
+        lease: Lease,
+        status: WorkUnitStatus,
+        reason: str,
+        verified_at: float,
+    ) -> int:
+        """Atomically finalize recursive work, its lease, and terminal evidence."""
+        if status not in _TERMINAL_STATUSES:
+            raise ValueError("atomic verification finalization requires terminal status")
+        if not reason.strip():
+            raise ValueError("execution verification reason is required")
+        if lease.fencing_token != fencing_token:
+            raise ValueError("execution verification fencing token mismatch")
+
+        verification_sha256 = _verification_digest(
+            status=status,
+            reason=reason,
+            verified_at=verified_at,
+        )
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+
+            attempt = self._attempt_row(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            if attempt[5] is None or attempt[6] is None:
+                raise ValueError(
+                    "execution result must be recorded before terminal finalization"
+                )
+
+            work_row = self.connection.execute(
+                """
+                SELECT status, generation
+                FROM recursive_work_state
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (lineage_id, work_fingerprint_value),
+            ).fetchone()
+            if work_row is None:
+                raise ValueError("recursive work state not found")
+
+            current_status = WorkUnitStatus(str(work_row[0]))
+            current_generation = int(work_row[1])
+            if current_generation != expected_work_generation:
+                raise ValueError("recursive work generation mismatch")
+            if current_status in _TERMINAL_STATUSES:
+                raise ValueError(
+                    "terminal recursive work state already finalized"
+                )
+
+            allowed = _ALLOWED_STATUS_TRANSITIONS.get(
+                current_status,
+                frozenset(),
+            )
+            if status not in allowed:
+                raise ValueError(
+                    "recursive work lifecycle transition is invalid: "
+                    f"{current_status.value} -> {status.value}"
+                )
+
+            _validate_active_lease_state(
+                self.connection,
+                work_fingerprint_value=work_fingerprint_value,
+                lease=lease,
+                now=verified_at,
+            )
+
+            latest = self.connection.execute(
+                """
+                SELECT sequence, status, reason, verified_at, verification_sha256
+                FROM execution_verifications
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND fencing_token = ?
+                ORDER BY sequence DESC
+                LIMIT 1
+                """,
+                (lineage_id, work_fingerprint_value, fencing_token),
+            ).fetchone()
+            if latest is None:
+                sequence = 1
+            else:
+                (
+                    latest_sequence,
+                    latest_status,
+                    latest_reason,
+                    latest_verified_at,
+                    latest_sha256,
+                ) = latest
+                latest_status_value = WorkUnitStatus(str(latest_status))
+                latest_expected = _verification_digest(
+                    status=latest_status_value,
+                    reason=str(latest_reason),
+                    verified_at=float(latest_verified_at),
+                )
+                if not hmac.compare_digest(str(latest_sha256), latest_expected):
+                    raise ValueError(
+                        "execution verification journal digest mismatch"
+                    )
+                if latest_status_value is not WorkUnitStatus.OUTCOME_UNKNOWN:
+                    raise ValueError(
+                        "execution attempt already has terminal verification"
+                    )
+                sequence = int(latest_sequence) + 1
+
+            if status is WorkUnitStatus.COMPLETE:
+                lease_update = self.connection.execute(
+                    """
+                    UPDATE leases
+                    SET completed = 1
+                    WHERE work_fingerprint = ?
+                      AND holder = ?
+                      AND fencing_token = ?
+                      AND completed = 0
+                    """,
+                    (
+                        work_fingerprint_value,
+                        lease.holder,
+                        lease.fencing_token,
+                    ),
+                )
+            else:
+                lease_update = self.connection.execute(
+                    """
+                    UPDATE leases
+                    SET holder = NULL, expires_at = 0, completed = 0
+                    WHERE work_fingerprint = ?
+                      AND holder = ?
+                      AND fencing_token = ?
+                      AND completed = 0
+                    """,
+                    (
+                        work_fingerprint_value,
+                        lease.holder,
+                        lease.fencing_token,
+                    ),
+                )
+            if lease_update.rowcount != 1:
+                raise ValueError(
+                    "recursive work lease changed during atomic verification finalization"
+                )
+
+            work_update = self.connection.execute(
+                """
+                UPDATE recursive_work_state
+                SET status = ?, generation = generation + 1
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND generation = ?
+                """,
+                (
+                    status.value,
+                    lineage_id,
+                    work_fingerprint_value,
+                    expected_work_generation,
+                ),
+            )
+            if work_update.rowcount != 1:
+                raise ValueError(
+                    "recursive work generation changed during atomic verification finalization"
+                )
+
+            self.connection.execute(
+                """
+                INSERT INTO execution_verifications (
+                    lineage_id, work_fingerprint, fencing_token, sequence,
+                    status, reason, verified_at, verification_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    lineage_id,
+                    work_fingerprint_value,
+                    fencing_token,
+                    sequence,
+                    status.value,
+                    reason,
+                    verified_at,
+                    verification_sha256,
+                ),
+            )
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+
+        return expected_work_generation + 1
+
     def unresolved_attempts(self) -> tuple[DurableExecutionJournalEntry, ...]:
         rows = self.connection.execute(
             """
@@ -847,19 +1046,21 @@ def execute_admitted(
     )
 
 
-def verify_and_record(
+def verify_observed_attempt(
     attempt: DispatchAttempt,
     *,
-    lineage_id: str,
-    journal: SqliteDispatchAdmissionStore,
     lease_store: LeaseStore,
     now: float,
     current_subject_reader: SubjectReader,
     evidence_verifier: EvidenceVerifier,
     manage_lease: bool = True,
 ) -> VerificationOutcome:
-    """Verify an observed attempt and append durable verification evidence."""
-    outcome = verify_attempt(
+    """Verify an observed result without promoting durable terminal state.
+
+    Terminal work state, lease state, and terminal verification evidence must be
+    committed together by finalize_terminal_verification().
+    """
+    return verify_attempt(
         attempt,
         lease_store=lease_store,
         now=now,
@@ -867,13 +1068,3 @@ def verify_and_record(
         evidence_verifier=evidence_verifier,
         manage_lease=manage_lease,
     )
-    if outcome.status is not WorkUnitStatus.VERIFYING:
-        journal.record_verification(
-            lineage_id=lineage_id,
-            work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            fencing_token=attempt.lease.fencing_token,
-            status=outcome.status,
-            reason=outcome.reason,
-            verified_at=now,
-        )
-    return outcome

@@ -1,6 +1,8 @@
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from runner.backends import MockBackend
 from runner.budgets import BudgetEnvelope
 from runner.collisions import partition_collision_groups
@@ -9,7 +11,7 @@ from runner.dispatch import dispatch_ready, frontier_to_work_unit
 from runner.durable_dispatch import (
     SqliteDispatchAdmissionStore,
     execute_admitted,
-    verify_and_record,
+    verify_observed_attempt,
 )
 from runner.frontier import derive_frontiers
 from runner.leases import InMemoryLeaseStore
@@ -194,10 +196,8 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     )
     assert verifying_work.generation == 4
 
-    still_verifying = verify_and_record(
+    still_verifying = verify_observed_attempt(
         attempt,
-        lineage_id=persisted_budget.lineage_id,
-        journal=dispatch_store,
         lease_store=lease_store,
         now=1.0,
         current_subject_reader=lambda subject: subject,
@@ -207,10 +207,8 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     assert still_verifying.status is WorkUnitStatus.VERIFYING
     assert dispatch_store.unresolved_attempts()[0].phase == "RESULT_RECORDED"
 
-    completed = verify_and_record(
+    completed = verify_observed_attempt(
         attempt,
-        lineage_id=persisted_budget.lineage_id,
-        journal=dispatch_store,
         lease_store=lease_store,
         now=2.0,
         current_subject_reader=lambda subject: subject,
@@ -223,22 +221,53 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     assert completed.reason == (
         "exact subject current and completion evidence verified"
     )
+    assert dispatch_store.unresolved_attempts()[0].phase == "RESULT_RECORDED"
+
+    # A failed terminal CAS must roll back both work/lease mutation and journal PASS.
+    with pytest.raises(ValueError, match="generation mismatch"):
+        dispatch_store.finalize_terminal_verification(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=fingerprint,
+            fencing_token=attempt.lease.fencing_token,
+            expected_work_generation=999,
+            lease=attempt.lease,
+            status=completed.status,
+            reason=completed.reason,
+            verified_at=2.0,
+        )
+    unchanged = recursive_store.get(
+        persisted_budget.lineage_id,
+        fingerprint,
+    )
+    assert unchanged is not None
+    assert unchanged.generation == 4
+    assert unchanged.work.status is WorkUnitStatus.VERIFYING
+    assert dispatch_store.unresolved_attempts()[0].phase == "RESULT_RECORDED"
+
+    terminal_generation = dispatch_store.finalize_terminal_verification(
+        lineage_id=persisted_budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        fencing_token=attempt.lease.fencing_token,
+        expected_work_generation=4,
+        lease=attempt.lease,
+        status=completed.status,
+        reason=completed.reason,
+        verified_at=2.0,
+    )
+    assert terminal_generation == 5
+    durable_complete = recursive_store.get(
+        persisted_budget.lineage_id,
+        fingerprint,
+    )
+    assert durable_complete is not None
+    assert durable_complete.generation == 5
+    assert durable_complete.work.status is WorkUnitStatus.COMPLETE
     assert dispatch_store.unresolved_attempts() == ()
     assert dispatch_store.load_result(
         lineage_id=persisted_budget.lineage_id,
         work_fingerprint_value=fingerprint,
         fencing_token=attempt.lease.fencing_token,
     ) == attempt.result
-    durable_complete = recursive_store.finalize_terminal_status(
-        lineage_id=persisted_budget.lineage_id,
-        work_fingerprint_value=work_unit_fingerprint(attempt.work),
-        expected_generation=4,
-        status=completed.status,
-        lease=attempt.lease,
-        now=2.0,
-    )
-    assert durable_complete.generation == 5
-    assert durable_complete.work.status is WorkUnitStatus.COMPLETE
 
     dispatch_store.close()
     budget_store.close()

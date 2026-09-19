@@ -10,7 +10,7 @@ from runner.budgets import BudgetEnvelope
 from runner.durable_dispatch import (
     SqliteDispatchAdmissionStore,
     execute_admitted,
-    verify_and_record,
+    verify_observed_attempt,
 )
 from runner.frontier import derive_frontiers
 from runner.github_backend import (
@@ -172,10 +172,8 @@ def main() -> int:
             raise RuntimeError("durable recursive work did not enter VERIFYING")
 
         independent_reader = GitHubCurrentSubjectReader(_github_backend(token))
-        outcome = verify_and_record(
+        outcome = verify_observed_attempt(
             attempt,
-            lineage_id=persisted_budget.lineage_id,
-            journal=dispatch_store,
             lease_store=lease_store,
             now=1.0,
             current_subject_reader=independent_reader.read,
@@ -197,8 +195,8 @@ def main() -> int:
                 f"{outcome.status.value} "
                 f"(backend={attempt.result.classification})"
             )
-        if dispatch_store.unresolved_attempts():
-            raise RuntimeError("terminal verification did not close execution journal")
+        if dispatch_store.unresolved_attempts()[0].phase != "RESULT_RECORDED":
+            raise RuntimeError("terminal state was promoted before atomic finalization")
         if dispatch_store.load_result(
             lineage_id=persisted_budget.lineage_id,
             work_fingerprint_value=fingerprint,
@@ -206,16 +204,28 @@ def main() -> int:
         ) != attempt.result:
             raise RuntimeError("durable execution result changed before finalization")
 
-        durable_work = recursive_store.finalize_terminal_status(
+        terminal_generation = dispatch_store.finalize_terminal_verification(
             lineage_id=persisted_budget.lineage_id,
-            work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            expected_generation=4,
-            status=outcome.status,
+            work_fingerprint_value=fingerprint,
+            fencing_token=attempt.lease.fencing_token,
+            expected_work_generation=4,
             lease=attempt.lease,
-            now=1.0,
+            status=outcome.status,
+            reason=outcome.reason,
+            verified_at=1.0,
         )
-        if durable_work.generation != 5:
-            raise RuntimeError("durable recursive work generation did not reach terminal state")
+        if terminal_generation != 5:
+            raise RuntimeError("atomic terminal generation did not reach five")
+        durable_work = recursive_store.get(
+            persisted_budget.lineage_id,
+            fingerprint,
+        )
+        if durable_work is None or durable_work.generation != 5:
+            raise RuntimeError("durable recursive work did not atomically finalize")
+        if durable_work.work.status is not WorkUnitStatus.COMPLETE:
+            raise RuntimeError("atomic terminal work status is not COMPLETE")
+        if dispatch_store.unresolved_attempts():
+            raise RuntimeError("terminal verification did not close execution journal")
 
         dispatch_store.close()
         budget_store.close()
