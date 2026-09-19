@@ -65,10 +65,8 @@ class MutationTransport:
             assert current is not None
             assert current.sha == expected_blob_sha
         blob_sha = _blob(content)
-        self.files[(repository, path, branch)] = GitHubFileState(
-            sha=blob_sha,
-            content=content,
-        )
+        state = GitHubFileState(sha=blob_sha, content=content)
+        self.files[(repository, path, branch)] = state
         commit_sha = hashlib.sha1(
             (
                 self.refs[(repository, branch)]
@@ -77,6 +75,7 @@ class MutationTransport:
                 + message
             ).encode()
         ).hexdigest()
+        self.files[(repository, path, commit_sha)] = state
         self.refs[(repository, branch)] = commit_sha
         return commit_sha
 
@@ -346,7 +345,7 @@ class FailFinalVerificationRefReadTransport(MutationTransport):
     def read_ref(self, repository, ref):
         if self.fail_verification_reads and ref == PROOF_BRANCH:
             self.verification_ref_reads += 1
-            if self.verification_ref_reads == 2:
+            if self.verification_ref_reads == 3:
                 raise RuntimeError("simulated final ref read failure")
         return super().read_ref(repository, ref)
 
@@ -541,3 +540,41 @@ def test_mutation_precondition_drift_is_superseded(tmp_path: Path):
 
     assert outcome.status is WorkUnitStatus.SUPERSEDED
     assert outcome.reason == "mutation precondition moved before execution"
+
+
+class RecordVerificationFileRefTransport(MutationTransport):
+    def __init__(self):
+        super().__init__()
+        self.record_verification_reads = False
+        self.verification_file_refs = []
+
+    def read_file(self, repository, path, ref):
+        if self.record_verification_reads and path == "README.md":
+            self.verification_file_refs.append(ref)
+        return super().read_file(repository, path, ref)
+
+
+def test_m6_put_file_independent_file_proof_reads_exact_returned_commit(tmp_path: Path):
+    transport = RecordVerificationFileRefTransport()
+    executor = _execution_backend(transport)
+    verifier = _verification_backend(transport)
+    lease_store = SqliteLeaseStore(tmp_path / "proof.sqlite3")
+    transport.create_branch(REPOSITORY, PROOF_BRANCH, SOURCE_HEAD)
+    target_before = ExactSubject(repository=REPOSITORY, ref=PROOF_BRANCH, commit=SOURCE_HEAD)
+    work = _work(target_before, {
+        "operation": "PUT_FILE", "repository": REPOSITORY, "ref": PROOF_BRANCH,
+        "path": "README.md", "content": MUTATED, "message": "test: immutable proof",
+        "expected_head": SOURCE_HEAD, "expected_blob_sha": _blob(ORIGINAL),
+    })
+    lease = lease_store.claim(work_unit_fingerprint(work), holder="m6-exact-commit-proof", now=0.0, ttl=60.0)
+    assert lease is not None
+    result = executor.execute(work)
+    assert result.succeeded
+    new_commit, _new_blob = result.outputs
+    transport.record_verification_reads = True
+    outcome = verify_github_mutation_attempt(
+        _attempt(work, result, lease), lease_store=lease_store, now=1.0,
+        verification_backend=verifier,
+    )
+    assert outcome.status is WorkUnitStatus.COMPLETE
+    assert transport.verification_file_refs == [new_commit]

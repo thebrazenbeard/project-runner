@@ -268,7 +268,13 @@ class GitHubBackend:
     def _read_file(self, fingerprint: str, req: GitHubRequest) -> BackendResult:
         if req.path is None:
             return _failure(fingerprint, "INVALID_REQUEST", "read file requires path")
-        observed = self.transport.read_file(req.repository, req.path, req.ref)
+        read_ref = req.ref
+        if req.expected_head is not None:
+            observed_head = self.transport.read_ref(req.repository, req.ref)
+            if observed_head != req.expected_head:
+                return _failure(fingerprint, "PRECONDITION_FAILED", "exact ref precondition failed")
+            read_ref = req.expected_head
+        observed = self.transport.read_file(req.repository, req.path, read_ref)
         if observed is None:
             return _failure(fingerprint, "NOT_FOUND", "file not found")
         if req.expected_blob_sha is not None and observed.sha != req.expected_blob_sha:
