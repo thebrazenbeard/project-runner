@@ -33,3 +33,4 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
 
     assert len(workers) == 12
     assert all(w.lifecycle.value == "REGISTERED" for w in workers)
+    assert all(w.reconstruction is None for w in workers)
