@@ -31,6 +31,7 @@ _TERMINAL_RECOVERY_STATUSES = frozenset(
 
 class RecoveryAction(str, Enum):
     RECONCILE_EFFECT = "RECONCILE_EFFECT"
+    RECONSTRUCT_CONFIRMED_EFFECT = "RECONSTRUCT_CONFIRMED_EFFECT"
     REVERIFY_RECORDED_RESULT = "REVERIFY_RECORDED_RESULT"
     REVERIFY_OUTCOME_UNKNOWN = "REVERIFY_OUTCOME_UNKNOWN"
 
@@ -103,6 +104,9 @@ def load_recovery_snapshots(
             if entry.phase == "ADMITTED":
                 result = None
                 action = RecoveryAction.RECONCILE_EFFECT
+            elif entry.phase == "EFFECT_CONFIRMED":
+                result = None
+                action = RecoveryAction.RECONSTRUCT_CONFIRMED_EFFECT
             elif entry.phase == "RESULT_RECORDED":
                 result = journal.load_result(
                     lineage_id=entry.lineage_id,
@@ -152,6 +156,11 @@ def reverify_recovery_snapshot(
 ) -> RecoveryVerification:
     """Re-verify durable evidence without executing a backend or mutating lease state."""
     if snapshot.result is None:
+        if snapshot.action is RecoveryAction.RECONSTRUCT_CONFIRMED_EFFECT:
+            raise ValueError(
+                "confirmed-effect recovery requires durable result reconstruction; "
+                "backend re-execution is forbidden"
+            )
         raise ValueError(
             "ADMITTED recovery requires effect reconciliation before retry; "
             "backend re-execution is forbidden"
