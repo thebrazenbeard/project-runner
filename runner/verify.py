@@ -7,7 +7,7 @@ from .backends import BackendResult
 from .dispatch import DispatchAttempt
 from .leases import Lease, LeaseStore
 from .models import ExactSubject
-from .work_units import WorkUnit, WorkUnitStatus
+from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
 @dataclass(frozen=True)
