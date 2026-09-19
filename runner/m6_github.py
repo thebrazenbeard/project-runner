@@ -179,6 +179,7 @@ def _github_file_read_work(
     ref: str,
     path: str,
     expected_blob_sha: str,
+    expected_head: str | None = None,
 ) -> WorkUnit:
     subject = ExactSubject(repository=repository, ref=ref)
     return WorkUnit(
@@ -206,6 +207,7 @@ def _github_file_read_work(
                 "ref": ref,
                 "path": path,
                 "expected_blob_sha": expected_blob_sha,
+                **({"expected_head": expected_head} if expected_head is not None else {}),
             }
         },
     )
@@ -370,9 +372,16 @@ def verify_github_mutation_attempt(
                 ref=request.ref,
                 path=request.path,
                 expected_blob_sha=new_blob,
+                expected_head=new_commit,
             )
         )
         if not file_readback.succeeded or len(file_readback.outputs) != 2:
+            if file_readback.classification == "PRECONDITION_FAILED":
+                return VerificationOutcome(
+                    work=attempt.work,
+                    status=WorkUnitStatus.SUPERSEDED,
+                    reason="mutated branch moved during independent verification",
+                )
             return VerificationOutcome(
                 work=attempt.work,
                 status=WorkUnitStatus.OUTCOME_UNKNOWN,
@@ -390,6 +399,22 @@ def verify_github_mutation_attempt(
                 work=attempt.work,
                 status=WorkUnitStatus.OUTCOME_UNKNOWN,
                 reason="independent file postcondition does not match",
+            )
+
+        final_ref_readback = verification_backend.execute(
+            _github_read_work(target, expected=False)
+        )
+        if not final_ref_readback.succeeded or len(final_ref_readback.outputs) != 1:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="final independent branch readback is unavailable",
+            )
+        if final_ref_readback.outputs[0] != new_commit:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.SUPERSEDED,
+                reason="mutated branch moved during independent verification",
             )
 
     if not lease_store.complete(attempt.lease, now=now):
