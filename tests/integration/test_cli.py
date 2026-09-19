@@ -273,7 +273,7 @@ projects:
 
     assert len(frontiers) == 1
     assert frontiers[0].project == "transcendence"
-    assert frontiers[0].status.value == "WAITING_AUTHORITY"
+    assert frontiers[0].status.value == "WAITING_SCHEDULING"
 
 
 def test_external_registry_obscures_collision_keys(tmp_path, monkeypatch):
@@ -443,7 +443,7 @@ projects:
     assert payload == {
         "blocked": 1,
         "ready": 0,
-        "statuses": {"WAITING_AUTHORITY": 1},
+        "statuses": {"WAITING_SCHEDULING": 1},
         "total": 1,
     }
     assert "transcendence" not in output
@@ -497,3 +497,38 @@ projects:
     assert "do-not-leak" not in message
     assert "private-example" not in message
     assert "secret-owner" not in message
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["HELD", "ARCHIVED", "DORMANT", "SENSITIVE_HELD", "DECISION_HELD"],
+)
+def test_external_non_schedulable_states_never_become_ready(
+    state,
+    tmp_path,
+    monkeypatch,
+):
+    registry = tmp_path / "private-held-state.yaml"
+    registry.write_text(
+        f"""projects:
+- id: transcendence
+  name: Held Project
+  visibility: private
+  repositories: [secret-owner/private-project]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: held-family
+  scheduling_state: {state}
+""",
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+    frontiers = cli_module._derive_frontier_set(
+        fixtures / "m6-hc-substantive.yaml",
+        fixtures / "m6-hc-current.yaml",
+        fixtures / "m6-hc-transcendence-dependencies.yaml",
+    )
+    assert len(frontiers) == 1
+    assert frontiers[0].status.value == "WAITING_SCHEDULING"

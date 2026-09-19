@@ -224,16 +224,20 @@ def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     snapshot = _load_project_registry_snapshot()
     projects = snapshot.projects
     capability_lookup = {
-        project.id: (
-            set(project.capabilities)
-            if project.scheduling_state is ProjectSchedulingState.SCHEDULABLE
-            else set()
-        )
+        project.id: set(project.capabilities)
+        for project in projects
+    }
+    scheduling_lookup = {
+        project.id: project.scheduling_state.schedulable
         for project in projects
     }
 
     invalidations = derive_invalidations(previous, current, edges)
-    derived = derive_frontiers(invalidations, capability_lookup=capability_lookup)
+    derived = derive_frontiers(
+        invalidations,
+        capability_lookup=capability_lookup,
+        scheduling_lookup=scheduling_lookup,
+    )
     if _external_project_registry_selected():
         private_collision_key = _external_private_collision_key()
         derived = tuple(

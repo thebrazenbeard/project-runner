@@ -80,7 +80,11 @@
           "scheduling_state": {
             "enum": [
               "SCHEDULABLE",
-              "HELD"
+              "HELD",
+              "ARCHIVED",
+              "DORMANT",
+              "SENSITIVE_HELD",
+              "DECISION_HELD"
             ]
           }
         }

@@ -112,6 +112,14 @@ class ProjectReviewScope(str, Enum):
 class ProjectSchedulingState(str, Enum):
     SCHEDULABLE = "SCHEDULABLE"
     HELD = "HELD"
+    ARCHIVED = "ARCHIVED"
+    DORMANT = "DORMANT"
+    SENSITIVE_HELD = "SENSITIVE_HELD"
+    DECISION_HELD = "DECISION_HELD"
+
+    @property
+    def schedulable(self) -> bool:
+        return self is ProjectSchedulingState.SCHEDULABLE
 
 
 @dataclass(frozen=True)
@@ -282,6 +290,7 @@ class FrontierStatus(str, Enum):
     READY = "READY"
     WAITING_DEPENDENCY = "WAITING_DEPENDENCY"
     WAITING_AUTHORITY = "WAITING_AUTHORITY"
+    WAITING_SCHEDULING = "WAITING_SCHEDULING"
     RUNNING = "RUNNING"
     VERIFYING = "VERIFYING"
     COMPLETE = "COMPLETE"

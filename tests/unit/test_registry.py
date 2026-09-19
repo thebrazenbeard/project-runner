@@ -115,3 +115,28 @@ def test_external_scope_metadata_requires_explicit_scheduling_state(tmp_path: Pa
 
     with pytest.raises(ValueError, match="scheduling_state"):
         load_project_snapshot(path, require_scope_metadata=True)
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["HELD", "ARCHIVED", "DORMANT", "SENSITIVE_HELD", "DECISION_HELD"],
+)
+def test_non_schedulable_project_states_remain_explicit(tmp_path: Path, state: str):
+    path = tmp_path / "projects.yaml"
+    path.write_text(
+        f"""projects:
+  - id: example
+    name: Example
+    visibility: private
+    repositories: [owner/example]
+    capabilities: [read, analyze]
+    assignment_scope: EXTERNAL_BOUNDED
+    review_scope: STANDING
+    family_id: example-family
+    scheduling_state: {state}
+""",
+        encoding="utf-8",
+    )
+    project = load_project_snapshot(path, require_scope_metadata=True).projects[0]
+    assert project.scheduling_state.value == state
+    assert project.scheduling_state.schedulable is False

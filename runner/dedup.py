@@ -18,7 +18,8 @@ _BLOCKING_PRECEDENCE = {
     FrontierStatus.FAILED_DETERMINISTIC: 3,
     FrontierStatus.WAITING_DEPENDENCY: 4,
     FrontierStatus.WAITING_AUTHORITY: 5,
-    FrontierStatus.OUTCOME_UNKNOWN: 6,
+    FrontierStatus.WAITING_SCHEDULING: 6,
+    FrontierStatus.OUTCOME_UNKNOWN: 7,
 }
 
 
