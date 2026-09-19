@@ -59,3 +59,10 @@ Core invariants:
 - public repository state remains public-safe.
 
 See `docs/superpowers/plans/2026-09-17-m5-github-backend.md`.
+
+
+## Runtime / chat independence
+
+Project Runner is an execution role, not a permanent ChatGPT identity. A temporary ChatGPT, Work, API, CLI, or subagent terminal may instantiate it, but the role must be recoverable from GitHub, Bus state, target-repository evidence, and durable checkpoints without opening the former conversation.
+
+See `docs/PROJECT_RUNNER_PORTFOLIO_EXECUTION_ROLE_V1.md`.
