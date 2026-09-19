@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 import sqlite3
@@ -27,7 +28,7 @@ class SQLiteLineageBudgetStore:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with _connect(self.path) as conn:
+        with closing(_connect(self.path)) as conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS lineage_budget (
@@ -48,7 +49,7 @@ class SQLiteLineageBudgetStore:
             raise ValueError(
                 "lineage-wide budget store accepts only the root budget scope"
             )
-        with _connect(self.path) as conn:
+        with closing(_connect(self.path)) as conn:
             try:
                 conn.execute(
                     """
@@ -73,7 +74,7 @@ class SQLiteLineageBudgetStore:
         return StoredBudget(envelope=envelope, generation=0)
 
     def get(self, lineage_id: str) -> StoredBudget | None:
-        with _connect(self.path) as conn:
+        with closing(_connect(self.path)) as conn:
             row = conn.execute(
                 """
                 SELECT max_depth, depth, remaining_children, remaining_active,
@@ -185,7 +186,7 @@ class SQLiteLeaseStore:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with _connect(self.path) as conn:
+        with closing(_connect(self.path)) as conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS lease_counter (
@@ -281,7 +282,7 @@ class SQLiteLeaseStore:
         if ttl <= 0:
             raise ValueError("lease ttl must be positive")
         new_expiry = now + ttl
-        with _connect(self.path) as conn:
+        with closing(_connect(self.path)) as conn:
             cursor = conn.execute(
                 """
                 UPDATE lease_state
@@ -305,7 +306,7 @@ class SQLiteLeaseStore:
         return Lease(lease.work_fingerprint, lease.holder, lease.fencing_token, new_expiry)
 
     def release(self, lease: Lease, *, now: float) -> bool:
-        with _connect(self.path) as conn:
+        with closing(_connect(self.path)) as conn:
             cursor = conn.execute(
                 """
                 DELETE FROM lease_state
@@ -320,7 +321,7 @@ class SQLiteLeaseStore:
             return cursor.rowcount == 1
 
     def complete(self, lease: Lease, *, now: float) -> bool:
-        with _connect(self.path) as conn:
+        with closing(_connect(self.path)) as conn:
             cursor = conn.execute(
                 """
                 UPDATE lease_state

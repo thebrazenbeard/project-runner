@@ -1,10 +1,12 @@
 import tempfile
+import sqlite3
 from pathlib import Path
 
 import pytest
 
 from runner.budgets import BudgetEnvelope
 from runner.leases import Lease
+import runner.sqlite_state as sqlite_state
 from runner.sqlite_state import SQLiteLeaseStore, SQLiteLineageBudgetStore
 
 
@@ -18,6 +20,62 @@ def _budget():
         remaining_retries=2,
         remaining_backend_jobs=3,
     )
+
+
+
+
+def test_context_managed_sqlite_operations_close_every_connection(monkeypatch):
+    opened = []
+    original_connect = sqlite_state._connect
+
+    class TrackedConnection:
+        def __init__(self, conn):
+            self._conn = conn
+            self.closed = False
+
+        def __getattr__(self, name):
+            return getattr(self._conn, name)
+
+        def close(self):
+            if not self.closed:
+                self.closed = True
+                self._conn.close()
+
+    def tracked_connect(path):
+        wrapped = TrackedConnection(original_connect(path))
+        opened.append(wrapped)
+        return wrapped
+
+    monkeypatch.setattr(sqlite_state, "_connect", tracked_connect)
+
+    with tempfile.TemporaryDirectory() as td:
+        db = Path(td) / "state.sqlite3"
+        budgets = SQLiteLineageBudgetStore(db)
+        budgets.create(_budget())
+        assert budgets.get("lineage-1") is not None
+        budgets.reserve(
+            "lineage-1",
+            expected_generation=0,
+            depth=0,
+            children=0,
+            active=0,
+            retries=0,
+            backend_jobs=0,
+        )
+
+        leases = SQLiteLeaseStore(db)
+        lease = leases.claim("fp", holder="a", now=1.0, ttl=10.0)
+        assert lease is not None
+        renewed = leases.heartbeat(lease, now=2.0, ttl=10.0)
+        assert renewed is not None
+        assert leases.release(renewed, now=3.0) is True
+
+        completed = leases.claim("done", holder="a", now=1.0, ttl=10.0)
+        assert completed is not None
+        assert leases.complete(completed, now=2.0) is True
+
+        assert opened
+        assert all(conn.closed for conn in opened)
 
 
 def test_budget_state_survives_reopen_and_cas_prevents_stale_reset():
