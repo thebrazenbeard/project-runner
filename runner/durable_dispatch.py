@@ -960,6 +960,256 @@ class SqliteDispatchAdmissionStore:
 
         return expected_work_generation + 1
 
+
+    def reconcile_admitted(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+        expected_work_generation: int,
+        lease: Lease,
+        outcome: str,
+        reason: str,
+        evidence: tuple[str, ...],
+        reconciler: str,
+        observed_at: float,
+    ) -> int:
+        """Reconcile an ADMITTED attempt without executing the backend.
+
+        Only NO_EFFECT_CONFIRMED may atomically release the exact fence and move
+        work to FAILED_RETRYABLE. INDETERMINATE and EFFECT_CONFIRMED remain
+        non-retryable. A prior INDETERMINATE observation may be refined, but a
+        conclusive reconciliation cannot be changed.
+        """
+        if outcome not in _RECONCILIATION_OUTCOMES:
+            raise ValueError("unsupported execution reconciliation outcome")
+        if not reason.strip():
+            raise ValueError("execution reconciliation reason is required")
+        if not reconciler.strip():
+            raise ValueError("execution reconciler identity is required")
+        normalized_evidence = tuple(str(item).strip() for item in evidence)
+        if not normalized_evidence or any(not item for item in normalized_evidence):
+            raise ValueError("execution reconciliation evidence is required")
+        if lease.fencing_token != fencing_token:
+            raise ValueError("execution reconciliation fencing token mismatch")
+
+        reconciliation_sha256 = _reconciliation_digest(
+            outcome=outcome,
+            reason=reason,
+            evidence=normalized_evidence,
+            reconciler=reconciler,
+            observed_at=observed_at,
+        )
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            attempt = self._attempt_row(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            if attempt[5] is not None or attempt[6] is not None:
+                raise ValueError(
+                    "ADMITTED reconciliation is invalid after result recording"
+                )
+
+            latest = self.connection.execute(
+                """
+                SELECT sequence, outcome, reason, evidence_json, reconciler,
+                       observed_at, reconciliation_sha256
+                FROM execution_reconciliations
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND fencing_token = ?
+                ORDER BY sequence DESC
+                LIMIT 1
+                """,
+                (lineage_id, work_fingerprint_value, fencing_token),
+            ).fetchone()
+            sequence = 1
+            if latest is not None:
+                (
+                    latest_sequence,
+                    latest_outcome,
+                    latest_reason,
+                    latest_evidence_json,
+                    latest_reconciler,
+                    latest_observed_at,
+                    latest_sha256,
+                ) = latest
+                try:
+                    latest_evidence_data = json.loads(str(latest_evidence_json))
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        "execution reconciliation evidence is invalid JSON"
+                    ) from exc
+                if not isinstance(latest_evidence_data, list):
+                    raise ValueError(
+                        "execution reconciliation evidence is structurally invalid"
+                    )
+                latest_evidence = tuple(str(item) for item in latest_evidence_data)
+                latest_expected = _reconciliation_digest(
+                    outcome=str(latest_outcome),
+                    reason=str(latest_reason),
+                    evidence=latest_evidence,
+                    reconciler=str(latest_reconciler),
+                    observed_at=float(latest_observed_at),
+                )
+                if not hmac.compare_digest(str(latest_sha256), latest_expected):
+                    raise ValueError("execution reconciliation journal digest mismatch")
+                if (
+                    str(latest_outcome) == outcome
+                    and str(latest_reason) == reason
+                    and latest_evidence == normalized_evidence
+                    and str(latest_reconciler) == reconciler
+                    and float(latest_observed_at) == observed_at
+                    and hmac.compare_digest(
+                        str(latest_sha256), reconciliation_sha256
+                    )
+                ):
+                    current = self.connection.execute(
+                        """
+                        SELECT generation
+                        FROM recursive_work_state
+                        WHERE lineage_id = ? AND work_fingerprint = ?
+                        """,
+                        (lineage_id, work_fingerprint_value),
+                    ).fetchone()
+                    self.connection.rollback()
+                    if current is None:
+                        raise ValueError("recursive work state not found")
+                    return int(current[0])
+                if str(latest_outcome) != "INDETERMINATE":
+                    raise ValueError(
+                        "conclusive execution reconciliation cannot be changed"
+                    )
+                sequence = int(latest_sequence) + 1
+
+            work_row = self.connection.execute(
+                """
+                SELECT status, generation
+                FROM recursive_work_state
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (lineage_id, work_fingerprint_value),
+            ).fetchone()
+            if work_row is None:
+                raise ValueError("recursive work state not found")
+            current_status = WorkUnitStatus(str(work_row[0]))
+            current_generation = int(work_row[1])
+            if current_generation != expected_work_generation:
+                raise ValueError("recursive work generation mismatch")
+            if current_status not in {
+                WorkUnitStatus.CLAIMED,
+                WorkUnitStatus.RUNNING,
+            }:
+                raise ValueError(
+                    "ADMITTED reconciliation requires claimed or running work"
+                )
+
+            lease_row = self.connection.execute(
+                """
+                SELECT holder, fencing_token, completed
+                FROM leases
+                WHERE work_fingerprint = ?
+                """,
+                (work_fingerprint_value,),
+            ).fetchone()
+            if lease_row is None:
+                raise ValueError("execution reconciliation lease state not found")
+            if (
+                lease_row[0] != lease.holder
+                or int(lease_row[1]) != fencing_token
+                or bool(lease_row[2])
+            ):
+                raise ValueError(
+                    "execution reconciliation fence is no longer current"
+                )
+
+            evidence_json = _canonical_json(list(normalized_evidence))
+            self.connection.execute(
+                """
+                INSERT INTO execution_reconciliations (
+                    lineage_id, work_fingerprint, fencing_token, sequence,
+                    outcome, reason, evidence_json, reconciler,
+                    observed_at, reconciliation_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    lineage_id,
+                    work_fingerprint_value,
+                    fencing_token,
+                    sequence,
+                    outcome,
+                    reason,
+                    evidence_json,
+                    reconciler,
+                    observed_at,
+                    reconciliation_sha256,
+                ),
+            )
+
+            if outcome != "NO_EFFECT_CONFIRMED":
+                self.connection.commit()
+                return current_generation
+
+            allowed = _ALLOWED_STATUS_TRANSITIONS.get(
+                current_status,
+                frozenset(),
+            )
+            if WorkUnitStatus.FAILED_RETRYABLE not in allowed:
+                raise ValueError(
+                    "reconciled no-effect work cannot enter retryable state"
+                )
+
+            lease_update = self.connection.execute(
+                """
+                UPDATE leases
+                SET holder = NULL, expires_at = 0, completed = 0
+                WHERE work_fingerprint = ?
+                  AND holder = ?
+                  AND fencing_token = ?
+                  AND completed = 0
+                """,
+                (
+                    work_fingerprint_value,
+                    lease.holder,
+                    fencing_token,
+                ),
+            )
+            if lease_update.rowcount != 1:
+                raise ValueError(
+                    "execution reconciliation lease changed during finalization"
+                )
+
+            work_update = self.connection.execute(
+                """
+                UPDATE recursive_work_state
+                SET status = ?, generation = generation + 1
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND generation = ?
+                """,
+                (
+                    WorkUnitStatus.FAILED_RETRYABLE.value,
+                    lineage_id,
+                    work_fingerprint_value,
+                    expected_work_generation,
+                ),
+            )
+            if work_update.rowcount != 1:
+                raise ValueError(
+                    "recursive work generation changed during reconciliation"
+                )
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+
+        return expected_work_generation + 1
+
     def unresolved_attempts(self) -> tuple[DurableExecutionJournalEntry, ...]:
         rows = self.connection.execute(
             """
