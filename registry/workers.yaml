@@ -1,4 +1,4 @@
-﻿workers:
+workers:
 - id: 3dg3
   name: 3dg3
   worker_type: CHATGPT_CUSTOM_GPT
@@ -72,7 +72,7 @@
     DIRECT_EXTERNAL_DISPATCH: UNVERIFIED
     PLUGIN_TOOL_CALL: UNVERIFIED
 - id: tam-truth-alignment-mechanism
-  name: TAM â€” Truth Alignment Mechanism
+  name: TAM — Truth Alignment Mechanism
   worker_type: CHATGPT_CUSTOM_GPT
   lifecycle: REGISTERED
   locators:
