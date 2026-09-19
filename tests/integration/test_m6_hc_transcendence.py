@@ -196,6 +196,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
 
     still_verifying = verify_and_record(
         attempt,
+        lineage_id=persisted_budget.lineage_id,
         journal=dispatch_store,
         lease_store=lease_store,
         now=1.0,
@@ -208,6 +209,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
 
     completed = verify_and_record(
         attempt,
+        lineage_id=persisted_budget.lineage_id,
         journal=dispatch_store,
         lease_store=lease_store,
         now=2.0,

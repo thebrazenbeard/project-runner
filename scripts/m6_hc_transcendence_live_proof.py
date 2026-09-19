@@ -174,6 +174,7 @@ def main() -> int:
         independent_reader = GitHubCurrentSubjectReader(_github_backend(token))
         outcome = verify_and_record(
             attempt,
+            lineage_id=persisted_budget.lineage_id,
             journal=dispatch_store,
             lease_store=lease_store,
             now=1.0,

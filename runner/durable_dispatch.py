@@ -850,6 +850,7 @@ def execute_admitted(
 def verify_and_record(
     attempt: DispatchAttempt,
     *,
+    lineage_id: str,
     journal: SqliteDispatchAdmissionStore,
     lease_store: LeaseStore,
     now: float,
@@ -867,12 +868,6 @@ def verify_and_record(
         manage_lease=manage_lease,
     )
     if outcome.status is not WorkUnitStatus.VERIFYING:
-        lineage_id = _lineage_for_attempt(journal, attempt)
-        journal._attempt_row(
-            lineage_id=lineage_id,
-            work_fingerprint_value=work_unit_fingerprint(attempt.work),
-            fencing_token=attempt.lease.fencing_token,
-        )
         journal.record_verification(
             lineage_id=lineage_id,
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
@@ -882,22 +877,3 @@ def verify_and_record(
             verified_at=now,
         )
     return outcome
-
-
-def _lineage_for_attempt(
-    journal: SqliteDispatchAdmissionStore,
-    attempt: DispatchAttempt,
-) -> str:
-    row = journal.connection.execute(
-        """
-        SELECT lineage_id
-        FROM execution_attempts
-        WHERE work_fingerprint = ? AND fencing_token = ?
-        """,
-        (work_unit_fingerprint(attempt.work), attempt.lease.fencing_token),
-    ).fetchone()
-    if row is None:
-        raise KeyError(
-            (work_unit_fingerprint(attempt.work), attempt.lease.fencing_token)
-        )
-    return str(row[0])
