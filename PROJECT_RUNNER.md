@@ -16,6 +16,12 @@ Blocked private work remains operator-visible through `frontier-summary` aggrega
 
 The three private project identifiers already present on canonical M5 `main` are legacy public baseline metadata. Their prior disclosure does not authorize adding more private identifiers.
 
+## Runtime and worker reconstruction
+
+Project Runner requires no permanent Project Runner chat. ChatGPT, Work, API, CLI, subagent, and model sessions are execution terminals only; current portfolio state and worker scope must be reconstructed from durable GitHub/Bus/registry/evidence state. See `docs/PROJECT_RUNNER_WORKER_RECONSTRUCTION_V1.md`.
+
+Custom GPT IDs and other endpoint locators are locators only. A route marked `UNVERIFIED` is not an executable path, authority grant, or current worker state. Conversation URLs must never be the sole recovery locator.
+
 ## Evidence and authority
 
 Observations, registry entries, workflow results, reviews, frontiers, priority decisions, work units, backend results, leases, and receipts are evidence or coordination state. None grants authority by itself.

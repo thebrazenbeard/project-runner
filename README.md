@@ -95,3 +95,7 @@ Core invariants:
 - public repository state remains public-safe.
 
 See `docs/superpowers/plans/2026-09-17-m5-github-backend.md`.
+
+## Worker recovery
+
+Project Runner and its dispatched workers do not require permanent ChatGPT conversations. Fresh runtimes reconstruct from durable repository/Bus/currentness/authority evidence; chat URLs and Custom GPT share links are locators or provenance only. See `docs/PROJECT_RUNNER_WORKER_RECONSTRUCTION_V1.md`.
