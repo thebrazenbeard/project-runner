@@ -1271,8 +1271,66 @@ class SqliteDispatchAdmissionStore:
                 if not hmac.compare_digest(str(latest[3]), latest_expected):
                     raise ValueError("execution verification journal digest mismatch")
 
+            latest_reconciliation = self.connection.execute(
+                """
+                SELECT outcome, reason, evidence_json, reconciler,
+                       observed_at, reconciliation_sha256
+                FROM execution_reconciliations
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND fencing_token = ?
+                ORDER BY sequence DESC
+                LIMIT 1
+                """,
+                (lineage_id, work_fingerprint_value, fencing_token),
+            ).fetchone()
+            last_reconciliation_outcome = None
+            last_reconciliation_reason = None
+            if latest_reconciliation is not None:
+                (
+                    raw_outcome,
+                    raw_reconciliation_reason,
+                    raw_evidence_json,
+                    raw_reconciler,
+                    raw_observed_at,
+                    raw_reconciliation_sha256,
+                ) = latest_reconciliation
+                try:
+                    evidence_data = json.loads(str(raw_evidence_json))
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        "execution reconciliation evidence is invalid JSON"
+                    ) from exc
+                if not isinstance(evidence_data, list):
+                    raise ValueError(
+                        "execution reconciliation evidence is structurally invalid"
+                    )
+                reconciliation_evidence = tuple(str(item) for item in evidence_data)
+                reconciliation_expected = _reconciliation_digest(
+                    outcome=str(raw_outcome),
+                    reason=str(raw_reconciliation_reason),
+                    evidence=reconciliation_evidence,
+                    reconciler=str(raw_reconciler),
+                    observed_at=float(raw_observed_at),
+                )
+                if not hmac.compare_digest(
+                    str(raw_reconciliation_sha256),
+                    reconciliation_expected,
+                ):
+                    raise ValueError(
+                        "execution reconciliation journal digest mismatch"
+                    )
+                last_reconciliation_outcome = str(raw_outcome)
+                last_reconciliation_reason = str(raw_reconciliation_reason)
+
             if result_json is None and result_sha256 is None:
-                phase = "ADMITTED"
+                if last_reconciliation_outcome == "NO_EFFECT_CONFIRMED":
+                    continue
+                phase = (
+                    "EFFECT_CONFIRMED"
+                    if last_reconciliation_outcome == "EFFECT_CONFIRMED"
+                    else "ADMITTED"
+                )
             elif result_json is None or result_sha256 is None:
                 raise ValueError("execution result journal is incomplete")
             elif last_status is None:
@@ -1302,6 +1360,8 @@ class SqliteDispatchAdmissionStore:
                     ),
                     last_verification_status=last_status,
                     last_verification_reason=last_reason,
+                    last_reconciliation_outcome=last_reconciliation_outcome,
+                    last_reconciliation_reason=last_reconciliation_reason,
                 )
             )
         return tuple(unresolved)
