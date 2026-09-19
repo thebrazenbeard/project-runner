@@ -7,9 +7,11 @@ import json
 from pathlib import Path
 import sqlite3
 
-from .backends import BackendResult
+from .backends import BackendResult, ExecutionBackend
 from .budgets import BudgetEnvelope
-from .leases import Lease
+from .dispatch import DispatchAttempt
+from .leases import Lease, LeaseStore
+from .models import Frontier
 from .persistent_state import _SCHEMA as _PERSISTENT_SCHEMA
 from .persistent_state import _migrate_budget_scope_schema
 from .recursive_state import (
@@ -20,6 +22,7 @@ from .recursive_state import (
     _normalize_capabilities,
     _work_from_payload,
 )
+from .verify import EvidenceVerifier, SubjectReader, VerificationOutcome, verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
@@ -811,3 +814,90 @@ class SqliteDispatchAdmissionStore:
                 )
             )
         return tuple(unresolved)
+
+
+def execute_admitted(
+    *,
+    frontier: Frontier,
+    admission: DurableDispatchAdmission,
+    backend: ExecutionBackend,
+    journal: SqliteDispatchAdmissionStore,
+    recorded_at: float,
+) -> DispatchAttempt:
+    """Execute one durably admitted work unit and persist its observed result.
+
+    The admission row already exists before backend execution. If the process dies
+    after a downstream effect but before record_result(), restart sees phase
+    ADMITTED and must reconcile rather than blindly re-execute. Once the result is
+    recorded, restart can re-verify without executing the backend again.
+    """
+    result = backend.execute(admission.work)
+    journal.record_result(
+        lineage_id=admission.budget_after.lineage_id,
+        work_fingerprint_value=work_unit_fingerprint(admission.work),
+        fencing_token=admission.lease.fencing_token,
+        result=result,
+        recorded_at=recorded_at,
+    )
+    return DispatchAttempt(
+        frontier=frontier,
+        work=admission.work,
+        lease=admission.lease,
+        result=result,
+    )
+
+
+def verify_and_record(
+    attempt: DispatchAttempt,
+    *,
+    journal: SqliteDispatchAdmissionStore,
+    lease_store: LeaseStore,
+    now: float,
+    current_subject_reader: SubjectReader,
+    evidence_verifier: EvidenceVerifier,
+    manage_lease: bool = True,
+) -> VerificationOutcome:
+    """Verify an observed attempt and append durable verification evidence."""
+    outcome = verify_attempt(
+        attempt,
+        lease_store=lease_store,
+        now=now,
+        current_subject_reader=current_subject_reader,
+        evidence_verifier=evidence_verifier,
+        manage_lease=manage_lease,
+    )
+    if outcome.status is not WorkUnitStatus.VERIFYING:
+        lineage_id = _lineage_for_attempt(journal, attempt)
+        journal._attempt_row(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_unit_fingerprint(attempt.work),
+            fencing_token=attempt.lease.fencing_token,
+        )
+        journal.record_verification(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_unit_fingerprint(attempt.work),
+            fencing_token=attempt.lease.fencing_token,
+            status=outcome.status,
+            reason=outcome.reason,
+            verified_at=now,
+        )
+    return outcome
+
+
+def _lineage_for_attempt(
+    journal: SqliteDispatchAdmissionStore,
+    attempt: DispatchAttempt,
+) -> str:
+    row = journal.connection.execute(
+        """
+        SELECT lineage_id
+        FROM execution_attempts
+        WHERE work_fingerprint = ? AND fencing_token = ?
+        """,
+        (work_unit_fingerprint(attempt.work), attempt.lease.fencing_token),
+    ).fetchone()
+    if row is None:
+        raise KeyError(
+            (work_unit_fingerprint(attempt.work), attempt.lease.fencing_token)
+        )
+    return str(row[0])

@@ -5,8 +5,12 @@ from runner.backends import MockBackend
 from runner.budgets import BudgetEnvelope
 from runner.collisions import partition_collision_groups
 from runner.dedup import deduplicate_frontiers
-from runner.dispatch import DispatchAttempt, dispatch_ready, frontier_to_work_unit
-from runner.durable_dispatch import SqliteDispatchAdmissionStore
+from runner.dispatch import dispatch_ready, frontier_to_work_unit
+from runner.durable_dispatch import (
+    SqliteDispatchAdmissionStore,
+    execute_admitted,
+    verify_and_record,
+)
 from runner.frontier import derive_frontiers
 from runner.leases import InMemoryLeaseStore
 from runner.models import ExactSubject, FrontierStatus
@@ -150,19 +154,22 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         now=0.0,
         ttl=60.0,
     )
-    dispatch_store.close()
     new_generation = admitted.budget_generation
     assert new_generation == 2
     assert admitted.budget_after.remaining_active == 0
     assert admitted.budget_after.remaining_backend_jobs == 0
+    assert dispatch_store.unresolved_attempts()[0].phase == "ADMITTED"
 
-    result = backend.execute(admitted.work)
-    attempt = DispatchAttempt(
+    attempt = execute_admitted(
         frontier=frontiers[0],
-        work=admitted.work,
-        lease=admitted.lease,
-        result=result,
+        admission=admitted,
+        backend=backend,
+        journal=dispatch_store,
+        recorded_at=0.1,
     )
+    unresolved_after_result = dispatch_store.unresolved_attempts()
+    assert len(unresolved_after_result) == 1
+    assert unresolved_after_result[0].phase == "RESULT_RECORDED"
     assert attempt.frontier.subject.commit == (
         "618245b54fb923c7a204892c6953ab6d1c5dac57"
     )
@@ -187,8 +194,9 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     )
     assert verifying_work.generation == 4
 
-    still_verifying = verify_attempt(
+    still_verifying = verify_and_record(
         attempt,
+        journal=dispatch_store,
         lease_store=lease_store,
         now=1.0,
         current_subject_reader=lambda subject: subject,
@@ -196,9 +204,11 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         manage_lease=False,
     )
     assert still_verifying.status is WorkUnitStatus.VERIFYING
+    assert dispatch_store.unresolved_attempts()[0].phase == "RESULT_RECORDED"
 
-    completed = verify_attempt(
+    completed = verify_and_record(
         attempt,
+        journal=dispatch_store,
         lease_store=lease_store,
         now=2.0,
         current_subject_reader=lambda subject: subject,
@@ -211,6 +221,12 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     assert completed.reason == (
         "exact subject current and completion evidence verified"
     )
+    assert dispatch_store.unresolved_attempts() == ()
+    assert dispatch_store.load_result(
+        lineage_id=persisted_budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        fencing_token=attempt.lease.fencing_token,
+    ) == attempt.result
     durable_complete = recursive_store.finalize_terminal_status(
         lineage_id=persisted_budget.lineage_id,
         work_fingerprint_value=work_unit_fingerprint(attempt.work),
@@ -222,6 +238,7 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     assert durable_complete.generation == 5
     assert durable_complete.work.status is WorkUnitStatus.COMPLETE
 
+    dispatch_store.close()
     budget_store.close()
     lease_store.close()
     recursive_store.close()
@@ -244,6 +261,15 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
         )
         is None
     )
+    reopened_journal = SqliteDispatchAdmissionStore(db)
+    assert reopened_journal.unresolved_attempts() == ()
+    assert reopened_journal.load_result(
+        lineage_id=persisted_budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        fencing_token=attempt.lease.fencing_token,
+    ) == attempt.result
+    reopened_journal.close()
+
     reopened_recursive = SqliteRecursiveWorkStore(db)
     resumed_work = reopened_recursive.get(
         persisted_budget.lineage_id,

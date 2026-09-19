@@ -7,8 +7,11 @@ from pathlib import Path
 import tempfile
 
 from runner.budgets import BudgetEnvelope
-from runner.dispatch import DispatchAttempt
-from runner.durable_dispatch import SqliteDispatchAdmissionStore
+from runner.durable_dispatch import (
+    SqliteDispatchAdmissionStore,
+    execute_admitted,
+    verify_and_record,
+)
 from runner.frontier import derive_frontiers
 from runner.github_backend import (
     GitHubBackend,
@@ -26,7 +29,6 @@ from runner.persistent_state import SqliteBudgetStore, SqliteLeaseStore
 from runner.recursive_state import SqliteRecursiveWorkStore
 from runner.propagate import derive_invalidations
 from runner.registry import load_dependencies, load_observations, load_project_snapshot
-from runner.verify import verify_attempt
 from runner.work_units import WorkUnitStatus, work_unit_fingerprint
 
 
@@ -129,20 +131,25 @@ def main() -> int:
             now=0.0,
             ttl=60.0,
         )
-        dispatch_store.close()
         new_generation = admitted.budget_generation
         if admitted.budget_after.remaining_active != 0:
             raise RuntimeError("durable active budget was not reserved before execution")
         if admitted.budget_after.remaining_backend_jobs != 0:
             raise RuntimeError("durable backend budget was not reserved before execution")
+        admitted_entries = dispatch_store.unresolved_attempts()
+        if len(admitted_entries) != 1 or admitted_entries[0].phase != "ADMITTED":
+            raise RuntimeError("durable execution journal did not record admission")
 
-        result = execution_backend.execute(admitted.work)
-        attempt = DispatchAttempt(
+        attempt = execute_admitted(
             frontier=frontiers[0],
-            work=admitted.work,
-            lease=admitted.lease,
-            result=result,
+            admission=admitted,
+            backend=execution_backend,
+            journal=dispatch_store,
+            recorded_at=0.1,
         )
+        result_entries = dispatch_store.unresolved_attempts()
+        if len(result_entries) != 1 or result_entries[0].phase != "RESULT_RECORDED":
+            raise RuntimeError("durable execution result did not survive journal write")
         running_work = recursive_store.compare_and_swap_status(
             lineage_id=persisted_budget.lineage_id,
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
@@ -165,8 +172,9 @@ def main() -> int:
             raise RuntimeError("durable recursive work did not enter VERIFYING")
 
         independent_reader = GitHubCurrentSubjectReader(_github_backend(token))
-        outcome = verify_attempt(
+        outcome = verify_and_record(
             attempt,
+            journal=dispatch_store,
             lease_store=lease_store,
             now=1.0,
             current_subject_reader=independent_reader.read,
@@ -188,6 +196,15 @@ def main() -> int:
                 f"{outcome.status.value} "
                 f"(backend={attempt.result.classification})"
             )
+        if dispatch_store.unresolved_attempts():
+            raise RuntimeError("terminal verification did not close execution journal")
+        if dispatch_store.load_result(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=fingerprint,
+            fencing_token=attempt.lease.fencing_token,
+        ) != attempt.result:
+            raise RuntimeError("durable execution result changed before finalization")
+
         durable_work = recursive_store.finalize_terminal_status(
             lineage_id=persisted_budget.lineage_id,
             work_fingerprint_value=work_unit_fingerprint(attempt.work),
@@ -199,6 +216,7 @@ def main() -> int:
         if durable_work.generation != 5:
             raise RuntimeError("durable recursive work generation did not reach terminal state")
 
+        dispatch_store.close()
         budget_store.close()
         lease_store.close()
         recursive_store.close()
@@ -214,6 +232,17 @@ def main() -> int:
         if stored_budget.remaining_backend_jobs != 0:
             raise RuntimeError("durable backend budget was not consumed")
         reopened_budget.close()
+
+        reopened_journal = SqliteDispatchAdmissionStore(db)
+        if reopened_journal.unresolved_attempts():
+            raise RuntimeError("execution journal reopened with unresolved terminal work")
+        if reopened_journal.load_result(
+            lineage_id=persisted_budget.lineage_id,
+            work_fingerprint_value=fingerprint,
+            fencing_token=attempt.lease.fencing_token,
+        ) != attempt.result:
+            raise RuntimeError("execution result changed across restart")
+        reopened_journal.close()
 
         reopened_recursive = SqliteRecursiveWorkStore(db)
         resumed_work = reopened_recursive.get(
@@ -247,6 +276,7 @@ def main() -> int:
                 "recursive_work_generation": recursive_generation,
                 "recursive_work_status": WorkUnitStatus.COMPLETE.value,
                 "fencing_token": attempt.lease.fencing_token,
+                "execution_journal": "COMPLETE",
                 "route": "github.read_ref",
                 "project_registry_sha256": registry_snapshot.sha256,
                 "subjects_verified": 2,
