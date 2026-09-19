@@ -415,3 +415,69 @@ def test_reconciliation_after_result_recording_is_rejected(tmp_path: Path):
             observed_at=12.0,
         )
     journal.close()
+
+
+def test_late_result_cannot_reopen_no_effect_reconciled_attempt(tmp_path: Path):
+    db = tmp_path / "recovery.db"
+    _, fingerprint, budget, admitted = _seed_attempt(db)
+
+    journal = SqliteDispatchAdmissionStore(db)
+    next_generation = journal.reconcile_admitted(
+        lineage_id=budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        fencing_token=admitted.lease.fencing_token,
+        expected_work_generation=admitted.work_generation,
+        lease=admitted.lease,
+        outcome="NO_EFFECT_CONFIRMED",
+        reason="provider confirms no effect",
+        evidence=("provider-ledger:ABSENT",),
+        reconciler="provider-reconciler",
+        observed_at=50.0,
+    )
+    assert next_generation == admitted.work_generation + 1
+
+    with pytest.raises(ValueError, match="no-effect reconciliation"):
+        journal.record_result(
+            lineage_id=budget.lineage_id,
+            work_fingerprint_value=fingerprint,
+            fencing_token=admitted.lease.fencing_token,
+            result=_result(fingerprint),
+            recorded_at=51.0,
+        )
+    journal.close()
+
+
+def test_late_result_may_resolve_indeterminate_reconciliation(tmp_path: Path):
+    db = tmp_path / "recovery.db"
+    _, fingerprint, budget, admitted = _seed_attempt(db)
+
+    journal = SqliteDispatchAdmissionStore(db)
+    generation = journal.reconcile_admitted(
+        lineage_id=budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        fencing_token=admitted.lease.fencing_token,
+        expected_work_generation=admitted.work_generation,
+        lease=admitted.lease,
+        outcome="INDETERMINATE",
+        reason="provider read timed out",
+        evidence=("provider-read:timeout",),
+        reconciler="provider-reconciler",
+        observed_at=50.0,
+    )
+    assert generation == admitted.work_generation
+
+    result = _result(fingerprint)
+    journal.record_result(
+        lineage_id=budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        fencing_token=admitted.lease.fencing_token,
+        result=result,
+        recorded_at=51.0,
+    )
+    assert journal.load_result(
+        lineage_id=budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        fencing_token=admitted.lease.fencing_token,
+    ) == result
+    assert journal.unresolved_attempts()[0].phase == "RESULT_RECORDED"
+    journal.close()

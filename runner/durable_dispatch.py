@@ -585,6 +585,25 @@ class SqliteDispatchAdmissionStore:
             )
             existing_json = row[5]
             existing_sha256 = row[6]
+            latest_reconciliation = self.connection.execute(
+                """
+                SELECT outcome
+                FROM execution_reconciliations
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND fencing_token = ?
+                ORDER BY sequence DESC
+                LIMIT 1
+                """,
+                (lineage_id, work_fingerprint_value, fencing_token),
+            ).fetchone()
+            if (
+                latest_reconciliation is not None
+                and str(latest_reconciliation[0]) == "NO_EFFECT_CONFIRMED"
+            ):
+                raise ValueError(
+                    "execution result cannot follow conclusive no-effect reconciliation"
+                )
             if existing_json is not None or existing_sha256 is not None:
                 if (
                     existing_json == payload
