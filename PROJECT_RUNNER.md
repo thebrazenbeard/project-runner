@@ -6,6 +6,12 @@ This document states Project Runner operational invariants. It does not grant au
 
 Everything committed here must be safe for public disclosure. Do not commit credentials, private source payloads, private relational/autobiographical material, confidential mechanisms, or private project contents.
 
+## Runtime and worker reconstruction
+
+Project Runner requires no permanent Project Runner chat. ChatGPT, Work, API, CLI, subagent, and model sessions are execution terminals only; current portfolio state and worker scope must be reconstructed from durable GitHub/Bus/registry/evidence state. See `docs/PROJECT_RUNNER_WORKER_RECONSTRUCTION_V1.md`.
+
+Custom GPT IDs/share URLs in `registry/workers.yaml` are locators only. A route marked `UNVERIFIED` is not an executable path, authority grant, or current worker state. Conversation URLs must never be the sole recovery locator.
+
 ## Evidence and authority
 
 Observations, registry entries, workflow results, reviews, frontiers, priority decisions, work units, backend results, leases, and receipts are evidence or coordination state. None grants authority by itself.
