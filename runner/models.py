@@ -42,7 +42,7 @@ class InvocationRoute(str, Enum):
 
 
 _GPT_ID_RE = re.compile(r"^g-[A-Za-z0-9]+$")
-_REPOSITORY_RE = re.compile(r"^[^/\\s]+/[^/\\s]+$")
+_REPOSITORY_RE = re.compile(r"^[^/\s]+/[^/\s]+$")
 
 
 @dataclass(frozen=True)
