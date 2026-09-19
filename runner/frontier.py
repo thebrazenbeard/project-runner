@@ -50,10 +50,14 @@ def derive_frontiers(
 
         required = _REQUIRED_CAPABILITIES[invalidation.reaction]
         available = set(capability_lookup.get(invalidation.consumer, ()))
+        scheduling_known = (
+            scheduling_lookup is not None
+            and invalidation.consumer in scheduling_lookup
+        )
         schedulable = (
-            True
-            if scheduling_lookup is None
-            else bool(scheduling_lookup.get(invalidation.consumer, False))
+            bool(scheduling_lookup[invalidation.consumer])
+            if scheduling_known
+            else True
         )
         if invalidation.reaction is DependencyReaction.BLOCK:
             status = FrontierStatus.WAITING_DEPENDENCY

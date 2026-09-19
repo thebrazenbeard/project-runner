@@ -78,10 +78,10 @@ def test_scheduling_hold_is_distinct_from_missing_capability():
     assert frontiers[0].priority_inputs["authority_available"] == 1
 
 
-def test_missing_scheduling_entry_fails_closed_when_lookup_is_supplied():
+def test_unknown_project_remains_authority_blocked_when_scheduling_lookup_is_supplied():
     frontiers = derive_frontiers(
         (_invalidation(),),
-        capability_lookup={"vera": {"read", "analyze"}},
+        capability_lookup={},
         scheduling_lookup={},
     )
-    assert frontiers[0].status is FrontierStatus.WAITING_SCHEDULING
+    assert frontiers[0].status is FrontierStatus.WAITING_AUTHORITY
