@@ -201,3 +201,79 @@ def test_read_ref_requires_both_route_and_target_read_authority():
     result = backend.execute(work)
     assert result.succeeded is True
     assert result.outputs == ("a" * 40,)
+
+
+def test_backend_evidence_redacts_target_identity_on_success_and_denial():
+    transport = FakeGitHubTransport()
+    denied = GitHubBackend(
+        transport=transport,
+        route_capabilities={"github.create_branch"},
+        grants=(),
+    ).execute(_work({
+        "operation": "CREATE_BRANCH",
+        "repository": "thebrazenbeard/project-runner",
+        "ref": "m5/test",
+        "source_ref": "main",
+        "expected_head": "a" * 40,
+    }))
+    denied_text = " ".join(denied.evidence)
+    assert "thebrazenbeard" not in denied_text
+    assert "project-runner" not in denied_text
+    assert "m5/test" not in denied_text
+
+    allowed = GitHubBackend(
+        transport=transport,
+        route_capabilities={"github.create_branch"},
+        grants=(_grant(GitHubOperation.CREATE_BRANCH),),
+    ).execute(_work({
+        "operation": "CREATE_BRANCH",
+        "repository": "thebrazenbeard/project-runner",
+        "ref": "m5/test",
+        "source_ref": "main",
+        "expected_head": "a" * 40,
+    }))
+    allowed_text = " ".join(allowed.evidence)
+    assert allowed.succeeded
+    assert allowed.evidence == (
+        "github:create-branch",
+        "github:readback-verified",
+    )
+    assert "thebrazenbeard" not in allowed_text
+    assert "project-runner" not in allowed_text
+    assert "m5/test" not in allowed_text
+
+
+def test_put_file_evidence_redacts_repository_path_ref_and_commit():
+    transport = FakeGitHubTransport()
+    backend = GitHubBackend(
+        transport=transport,
+        route_capabilities={"github.put_file"},
+        grants=(
+            _grant(
+                GitHubOperation.PUT_FILE,
+                refs=("main",),
+                paths=("docs/",),
+            ),
+        ),
+    )
+    result = backend.execute(_work({
+        "operation": "PUT_FILE",
+        "repository": "thebrazenbeard/project-runner",
+        "ref": "main",
+        "path": "docs/private-looking.txt",
+        "content": "hello",
+        "message": "test",
+        "expected_head": "a" * 40,
+    }))
+
+    assert result.succeeded
+    assert result.evidence == (
+        "github:put-file",
+        "github:readback-verified",
+    )
+    evidence_text = " ".join(result.evidence)
+    assert "thebrazenbeard" not in evidence_text
+    assert "project-runner" not in evidence_text
+    assert "private-looking" not in evidence_text
+    assert result.outputs[0] not in evidence_text
+    assert result.outputs[1] not in evidence_text

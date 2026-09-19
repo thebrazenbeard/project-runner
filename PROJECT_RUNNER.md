@@ -6,6 +6,16 @@ This document states Project Runner operational invariants. It does not grant au
 
 Everything committed here must be safe for public disclosure. Do not commit credentials, private source payloads, private relational/autobiographical material, confidential mechanisms, or private project contents.
 
+Portfolio relevance does not imply publication authority. The committed project registry is a public-safe seed, not the complete private portfolio. Additional private project identifiers belong in a complete external registry selected explicitly with an absolute `PROJECT_RUNNER_PROJECT_REGISTRY` path and an exact `PROJECT_RUNNER_PROJECT_REGISTRY_SHA256` byte binding. The runtime treats that file as a replacement registry rather than silently merging it into public source.
+
+External records must explicitly declare scheduling posture. `HELD` records are observable portfolio state but are not schedulable and contribute no runnable capabilities. Detailed CLI reports that would expose project IDs, repositories, dependency IDs, subjects, or collision keys are disabled while an external registry is selected.
+
+Private collision domains must be derived with separate runtime secret material, not the registry digest or another public/currentness token. `PROJECT_RUNNER_PRIVATE_COLLISION_KEY` remains outside public source/evidence and must be stable across any restart that is expected to preserve private semantic/collision identity.
+
+Blocked private work remains operator-visible through `frontier-summary` aggregate status counts. The private-safe surface must not emit identifiers, subjects, dependency/collision metadata, reasons, or private input paths; malformed/private inputs fail with a generic structural error rather than falling back or echoing sensitive detail.
+
+The three private project identifiers already present on canonical M5 `main` are legacy public baseline metadata. Their prior disclosure does not authorize adding more private identifiers.
+
 ## Evidence and authority
 
 Observations, registry entries, workflow results, reviews, frontiers, priority decisions, work units, backend results, leases, and receipts are evidence or coordination state. None grants authority by itself.
@@ -32,6 +42,28 @@ M5 includes a SQLite lineage budget ledger with generation compare-and-swap. A w
 ### Persistent leases and fencing
 
 M5 includes a SQLite lease store. Claim/reclaim state survives process restarts. Expired work can be reclaimed with a strictly higher fencing token. Older holders cannot complete or release the reclaimed work.
+
+### Durable dispatch admission
+
+M6 reserves execution state before backend work begins. One SQLite transaction re-reads the exact durable WorkUnit and budget generation, verifies the WorkUnit integrity/capability ceiling and dispatch-admissible lifecycle state, claims or reclaims the lease with a monotonic fencing token, consumes active/backend-job quota (and retry quota when redispatching retryable/unknown work), advances the budget generation, and moves the WorkUnit to `CLAIMED`.
+
+The backend is invoked only after that transaction commits. A crash after durable admission therefore cannot execute work while leaving durable quota unconsumed or the lease/WorkUnit ownership forgotten. Stale budget/work generations, active-lease collisions, exhausted quota, completed work, or integrity/currentness mismatch roll the transaction back without partial reservation.
+
+### Persistent recursive work lineage
+
+M6 persists each recursive work subject under `(lineage_id, semantic work fingerprint)` together with its exact immutable work payload, parent semantic fingerprint, exact ancestry set, budget scope, lifecycle status, and generation.
+
+Immutable recursive state is digest-verified on read. A child may be persisted only after its parent is already durable, its ancestry must equal the durable parent ancestry plus the child's own semantic fingerprint, and its budget scope must be `work:<fingerprint>`. Root work uses the `root` scope.
+
+Lifecycle updates use generation compare-and-swap and an explicit transition map. Entering any lease-bound nonterminal state—`CLAIMED`, `RUNNING`, `VERIFYING`, `FAILED_RETRYABLE`, or `OUTCOME_UNKNOWN`—requires the exact current lease holder/fencing token and an unexpired lease in the same SQLite transaction. Generation knowledge alone cannot make a caller the execution owner. Retryable and unknown outcomes remain recoverable: when the owning lease expires, a valid reclaimed higher fence may resume them through the allowed lifecycle. Lease ownership still does not permit lifecycle skips or backward transitions.
+
+Durable terminalization is a separate atomic operation. The durable M6 path asks verification to propose an outcome without mutating the lease, then `finalize_terminal_status` rechecks the exact active fence and commits the lease-finalization effect plus WorkUnit terminal status/generation in one SQLite transaction. `COMPLETE` marks that exact lease row completed; `FAILED_DETERMINISTIC` and `SUPERSEDED` release that exact fence. Direct terminal status CAS is rejected. This removes the prior crash window where a lease could be durably completed while the WorkUnit remained stranded in `VERIFYING`. Reclaimed/stale fences cannot terminalize work. `COMPLETE`, `FAILED_DETERMINISTIC`, and `SUPERSEDED` remain immutable terminal states; active work cannot reset to `PENDING`; same-status updates are idempotent.
+
+Recursive child admission is transactional across all durable state it creates or consumes. Every durable work record integrity-binds its effective capability ceiling. The admission transaction re-reads the exact durable parent work, verifies its immutable digest and nonterminal status, re-reads that durable parent capability ceiling and the exact parent budget generation, and re-runs `admit_child_work` using the durable parent ceiling plus the current target capability ceiling. The caller cannot supply or widen the parent ceiling at commit time. The caller-supplied admission must exactly equal that recomputed result. Only then may the same transaction decrement the parent budget and insert the child budget plus child work/ancestry/capability record. Any collision, stale generation, forged depth/capability, missing/tampered parent, or other failure rolls the whole transaction back.
+
+A pre-capability-ceiling recursive record is migration-eligible only if its legacy immutable digest verifies first. Its migrated effective ceiling is the conservative set of capabilities that the frozen work record itself required; migration never infers or manufactures a broader historical ceiling.
+
+Ordinary initial-state APIs accept root scope only. Child budget/work creation outside the atomic recursive-admission path is rejected.
 
 ### GitHub operations
 

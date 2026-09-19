@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+import hashlib
 from pathlib import Path
 from typing import Iterable, TypeVar
 
@@ -10,6 +12,13 @@ from .schema import validate_document
 
 
 T = TypeVar("T")
+
+
+@dataclass(frozen=True)
+class ProjectRegistrySnapshot:
+    projects: tuple[ProjectDefinition, ...]
+    sha256: str
+    byte_length: int
 
 
 def _load_yaml(path: Path) -> object:
@@ -37,12 +46,72 @@ def load_workers(path: Path) -> tuple[WorkerDefinition, ...]:
     return _reject_duplicate_ids(workers, "worker")
 
 
-def load_projects(path: Path) -> tuple[ProjectDefinition, ...]:
-    payload = _load_yaml(path)
+def _project_snapshot_from_bytes(
+    raw: bytes,
+    *,
+    require_scope_metadata: bool,
+) -> ProjectRegistrySnapshot:
+    text = raw.decode("utf-8", "strict")
+    payload = yaml.safe_load(text)
     validate_document("project", payload)
     assert isinstance(payload, dict)
-    projects = (ProjectDefinition.from_mapping(item) for item in payload["projects"])
-    return _reject_duplicate_ids(projects, "project")
+
+    if require_scope_metadata:
+        required_scope_fields = {"assignment_scope", "review_scope", "family_id", "scheduling_state"}
+        if any(
+            not required_scope_fields.issubset(item)
+            for item in payload["projects"]
+        ):
+            raise ValueError(
+                "external project registry requires explicit "
+                "assignment_scope, review_scope, family_id, and scheduling_state"
+            )
+
+    projects = (
+        ProjectDefinition.from_mapping(item)
+        for item in payload["projects"]
+    )
+    return ProjectRegistrySnapshot(
+        projects=_reject_duplicate_ids(projects, "project"),
+        sha256=hashlib.sha256(raw).hexdigest(),
+        byte_length=len(raw),
+    )
+
+
+def load_project_snapshot(
+    path: Path,
+    *,
+    require_scope_metadata: bool = False,
+) -> ProjectRegistrySnapshot:
+    try:
+        raw = path.read_bytes()
+        return _project_snapshot_from_bytes(
+            raw,
+            require_scope_metadata=require_scope_metadata,
+        )
+    except Exception as exc:
+        if require_scope_metadata:
+            safe_scope_error = (
+                "external project registry requires explicit "
+                "assignment_scope, review_scope, family_id, and scheduling_state"
+            )
+            if isinstance(exc, ValueError) and str(exc) == safe_scope_error:
+                raise ValueError(safe_scope_error) from None
+            raise ValueError(
+                "external project registry is unavailable or structurally invalid"
+            ) from None
+        raise
+
+
+def load_projects(
+    path: Path,
+    *,
+    require_scope_metadata: bool = False,
+) -> tuple[ProjectDefinition, ...]:
+    return load_project_snapshot(
+        path,
+        require_scope_metadata=require_scope_metadata,
+    ).projects
 
 
 def load_dependencies(path: Path) -> tuple[DependencyEdge, ...]:

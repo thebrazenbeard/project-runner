@@ -44,6 +44,10 @@ class SQLiteLineageBudgetStore:
             )
 
     def create(self, envelope: BudgetEnvelope) -> StoredBudget:
+        if envelope.scope_id != "root":
+            raise ValueError(
+                "lineage-wide budget store accepts only the root budget scope"
+            )
         with _connect(self.path) as conn:
             try:
                 conn.execute(

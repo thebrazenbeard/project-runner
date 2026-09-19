@@ -50,3 +50,75 @@ projects:
   - read
   - analyze
   - propose
+- id: roots
+  name: Roots
+  visibility: public
+  repositories:
+  - thebrazenbeard/roots
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: testament
+  name: Testament
+  visibility: public
+  repositories:
+  - thebrazenbeard/testament
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: transcendence
+  name: Transcendence
+  visibility: public
+  repositories:
+  - thebrazenbeard/transcendence
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: rezon
+  name: Rezon
+  visibility: public
+  repositories:
+  - thebrazenbeard/rezon
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: world-zero
+  name: World Zero
+  visibility: public
+  repositories:
+  - thebrazenbeard/world-zero
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: on-theo
+  name: On Theo
+  visibility: public
+  repositories:
+  - thebrazenbeard/on-theo
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: wip
+  name: WIP
+  visibility: public
+  repositories:
+  - thebrazenbeard/wip
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: mosaic
+  name: Mosaic
+  visibility: public
+  repositories:
+  - thebrazenbeard/mosaic
+  capabilities:
+  - read
+  - analyze
+  - propose
