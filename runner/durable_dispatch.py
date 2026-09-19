@@ -29,6 +29,10 @@ from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
 
+_RECONCILIATION_OUTCOMES = frozenset(
+    {"INDETERMINATE", "NO_EFFECT_CONFIRMED", "EFFECT_CONFIRMED"}
+)
+
 _EXECUTION_JOURNAL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS execution_attempts (
     lineage_id TEXT NOT NULL,
@@ -58,6 +62,22 @@ CREATE TABLE IF NOT EXISTS execution_verifications (
     FOREIGN KEY (lineage_id, work_fingerprint, fencing_token)
         REFERENCES execution_attempts (lineage_id, work_fingerprint, fencing_token)
 );
+
+CREATE TABLE IF NOT EXISTS execution_reconciliations (
+    lineage_id TEXT NOT NULL,
+    work_fingerprint TEXT NOT NULL,
+    fencing_token INTEGER NOT NULL,
+    sequence INTEGER NOT NULL,
+    outcome TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    evidence_json TEXT NOT NULL,
+    reconciler TEXT NOT NULL,
+    observed_at REAL NOT NULL,
+    reconciliation_sha256 TEXT NOT NULL,
+    PRIMARY KEY (lineage_id, work_fingerprint, fencing_token, sequence),
+    FOREIGN KEY (lineage_id, work_fingerprint, fencing_token)
+        REFERENCES execution_attempts (lineage_id, work_fingerprint, fencing_token)
+);
 """
 
 
@@ -74,6 +94,8 @@ class DurableExecutionJournalEntry:
     result_sha256: str | None
     last_verification_status: WorkUnitStatus | None
     last_verification_reason: str | None
+    last_reconciliation_outcome: str | None = None
+    last_reconciliation_reason: str | None = None
 
 
 def _canonical_json(payload: object) -> str:
@@ -138,6 +160,27 @@ def _verification_digest(
                 "reason": reason,
                 "status": status.value,
                 "verified_at": verified_at,
+            }
+        )
+    )
+
+
+def _reconciliation_digest(
+    *,
+    outcome: str,
+    reason: str,
+    evidence: tuple[str, ...],
+    reconciler: str,
+    observed_at: float,
+) -> str:
+    return _sha256_text(
+        _canonical_json(
+            {
+                "evidence": list(evidence),
+                "observed_at": observed_at,
+                "outcome": outcome,
+                "reason": reason,
+                "reconciler": reconciler,
             }
         )
     )
