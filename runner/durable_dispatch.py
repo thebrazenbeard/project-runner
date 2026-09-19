@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import hmac
 import json
 from pathlib import Path
 import sqlite3
 
+from .backends import BackendResult
 from .budgets import BudgetEnvelope
 from .leases import Lease
 from .persistent_state import _SCHEMA as _PERSISTENT_SCHEMA
@@ -19,6 +21,121 @@ from .recursive_state import (
     _work_from_payload,
 )
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
+
+
+
+_EXECUTION_JOURNAL_SCHEMA = """
+CREATE TABLE IF NOT EXISTS execution_attempts (
+    lineage_id TEXT NOT NULL,
+    work_fingerprint TEXT NOT NULL,
+    fencing_token INTEGER NOT NULL,
+    holder TEXT NOT NULL,
+    admitted_at REAL NOT NULL,
+    budget_generation INTEGER NOT NULL,
+    work_generation INTEGER NOT NULL,
+    attempt_sha256 TEXT NOT NULL,
+    result_json TEXT,
+    result_sha256 TEXT,
+    result_recorded_at REAL,
+    PRIMARY KEY (lineage_id, work_fingerprint, fencing_token)
+);
+
+CREATE TABLE IF NOT EXISTS execution_verifications (
+    lineage_id TEXT NOT NULL,
+    work_fingerprint TEXT NOT NULL,
+    fencing_token INTEGER NOT NULL,
+    sequence INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    verified_at REAL NOT NULL,
+    verification_sha256 TEXT NOT NULL,
+    PRIMARY KEY (lineage_id, work_fingerprint, fencing_token, sequence),
+    FOREIGN KEY (lineage_id, work_fingerprint, fencing_token)
+        REFERENCES execution_attempts (lineage_id, work_fingerprint, fencing_token)
+);
+"""
+
+
+@dataclass(frozen=True)
+class DurableExecutionJournalEntry:
+    lineage_id: str
+    work_fingerprint: str
+    fencing_token: int
+    holder: str
+    admitted_at: float
+    budget_generation: int
+    work_generation: int
+    phase: str
+    result_sha256: str | None
+    last_verification_status: WorkUnitStatus | None
+    last_verification_reason: str | None
+
+
+def _canonical_json(payload: object) -> str:
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _attempt_digest(
+    *,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+    holder: str,
+    admitted_at: float,
+    budget_generation: int,
+    work_generation: int,
+) -> str:
+    return _sha256_text(
+        _canonical_json(
+            {
+                "admitted_at": admitted_at,
+                "budget_generation": budget_generation,
+                "fencing_token": fencing_token,
+                "holder": holder,
+                "lineage_id": lineage_id,
+                "work_fingerprint": work_fingerprint_value,
+                "work_generation": work_generation,
+            }
+        )
+    )
+
+
+def _result_payload(result: BackendResult) -> str:
+    return _canonical_json(
+        {
+            "classification": result.classification,
+            "evidence": list(result.evidence),
+            "outputs": list(result.outputs),
+            "succeeded": result.succeeded,
+            "work_fingerprint": result.work_fingerprint,
+        }
+    )
+
+
+def _verification_digest(
+    *,
+    status: WorkUnitStatus,
+    reason: str,
+    verified_at: float,
+) -> str:
+    return _sha256_text(
+        _canonical_json(
+            {
+                "reason": reason,
+                "status": status.value,
+                "verified_at": verified_at,
+            }
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -44,6 +161,7 @@ class SqliteDispatchAdmissionStore:
             _migrate_budget_scope_schema(self.connection)
             self.connection.executescript(_RECURSIVE_SCHEMA)
             _migrate_recursive_capability_schema(self.connection)
+            self.connection.executescript(_EXECUTION_JOURNAL_SCHEMA)
         except BaseException:
             self.connection.close()
             raise
@@ -226,6 +344,36 @@ class SqliteDispatchAdmissionStore:
                     (holder, token, expires_at, work_fingerprint_value),
                 )
 
+            admitted_budget_generation = expected_budget_generation + 1
+            admitted_work_generation = expected_work_generation + 1
+            attempt_sha256 = _attempt_digest(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=token,
+                holder=holder,
+                admitted_at=now,
+                budget_generation=admitted_budget_generation,
+                work_generation=admitted_work_generation,
+            )
+            self.connection.execute(
+                """
+                INSERT INTO execution_attempts (
+                    lineage_id, work_fingerprint, fencing_token, holder,
+                    admitted_at, budget_generation, work_generation, attempt_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    lineage_id,
+                    work_fingerprint_value,
+                    token,
+                    holder,
+                    now,
+                    admitted_budget_generation,
+                    admitted_work_generation,
+                    attempt_sha256,
+                ),
+            )
+
             budget_after = BudgetEnvelope(
                 lineage_id=lineage_id,
                 max_depth=int(max_depth),
@@ -312,3 +460,354 @@ class SqliteDispatchAdmissionStore:
             work_generation=expected_work_generation + 1,
             retry_consumed=retry_consumed,
         )
+
+
+    def _attempt_row(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+    ):
+        row = self.connection.execute(
+            """
+            SELECT holder, admitted_at, budget_generation, work_generation,
+                   attempt_sha256, result_json, result_sha256, result_recorded_at
+            FROM execution_attempts
+            WHERE lineage_id = ?
+              AND work_fingerprint = ?
+              AND fencing_token = ?
+            """,
+            (lineage_id, work_fingerprint_value, fencing_token),
+        ).fetchone()
+        if row is None:
+            raise KeyError((lineage_id, work_fingerprint_value, fencing_token))
+        (
+            holder,
+            admitted_at,
+            budget_generation,
+            work_generation,
+            attempt_sha256,
+            result_json,
+            result_sha256,
+            result_recorded_at,
+        ) = row
+        expected_attempt_sha256 = _attempt_digest(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+            holder=str(holder),
+            admitted_at=float(admitted_at),
+            budget_generation=int(budget_generation),
+            work_generation=int(work_generation),
+        )
+        if not hmac.compare_digest(str(attempt_sha256), expected_attempt_sha256):
+            raise ValueError("execution attempt journal digest mismatch")
+        return (
+            str(holder),
+            float(admitted_at),
+            int(budget_generation),
+            int(work_generation),
+            str(attempt_sha256),
+            str(result_json) if result_json is not None else None,
+            str(result_sha256) if result_sha256 is not None else None,
+            float(result_recorded_at) if result_recorded_at is not None else None,
+        )
+
+    def record_result(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+        result: BackendResult,
+        recorded_at: float,
+    ) -> None:
+        if result.work_fingerprint != work_fingerprint_value:
+            raise ValueError("backend result fingerprint does not match execution attempt")
+        payload = _result_payload(result)
+        payload_sha256 = _sha256_text(payload)
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            row = self._attempt_row(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            existing_json = row[5]
+            existing_sha256 = row[6]
+            if existing_json is not None or existing_sha256 is not None:
+                if (
+                    existing_json == payload
+                    and existing_sha256 is not None
+                    and hmac.compare_digest(existing_sha256, payload_sha256)
+                ):
+                    self.connection.rollback()
+                    return
+                raise ValueError("execution attempt already has a different result")
+
+            updated = self.connection.execute(
+                """
+                UPDATE execution_attempts
+                SET result_json = ?, result_sha256 = ?, result_recorded_at = ?
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND fencing_token = ?
+                  AND result_json IS NULL
+                  AND result_sha256 IS NULL
+                """,
+                (
+                    payload,
+                    payload_sha256,
+                    recorded_at,
+                    lineage_id,
+                    work_fingerprint_value,
+                    fencing_token,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise ValueError("execution result journal changed during recording")
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+
+    def load_result(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+    ) -> BackendResult | None:
+        row = self._attempt_row(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        payload = row[5]
+        payload_sha256 = row[6]
+        if payload is None and payload_sha256 is None:
+            return None
+        if payload is None or payload_sha256 is None:
+            raise ValueError("execution result journal is incomplete")
+        expected = _sha256_text(payload)
+        if not hmac.compare_digest(payload_sha256, expected):
+            raise ValueError("execution result journal digest mismatch")
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise ValueError("execution result journal is invalid JSON") from exc
+        if not isinstance(data, dict):
+            raise ValueError("execution result journal payload is invalid")
+        result = BackendResult(
+            work_fingerprint=str(data["work_fingerprint"]),
+            succeeded=bool(data["succeeded"]),
+            outputs=tuple(str(item) for item in data["outputs"]),
+            evidence=tuple(str(item) for item in data["evidence"]),
+            classification=str(data["classification"]),
+        )
+        if result.work_fingerprint != work_fingerprint_value:
+            raise ValueError("execution result journal fingerprint mismatch")
+        return result
+
+    def record_verification(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+        status: WorkUnitStatus,
+        reason: str,
+        verified_at: float,
+    ) -> int:
+        allowed_statuses = {
+            WorkUnitStatus.COMPLETE,
+            WorkUnitStatus.FAILED_RETRYABLE,
+            WorkUnitStatus.FAILED_DETERMINISTIC,
+            WorkUnitStatus.OUTCOME_UNKNOWN,
+            WorkUnitStatus.SUPERSEDED,
+        }
+        if status not in allowed_statuses:
+            raise ValueError("unsupported execution verification status")
+        if not reason.strip():
+            raise ValueError("execution verification reason is required")
+        verification_sha256 = _verification_digest(
+            status=status,
+            reason=reason,
+            verified_at=verified_at,
+        )
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            row = self._attempt_row(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            if row[5] is None or row[6] is None:
+                raise ValueError("execution result must be recorded before verification")
+
+            latest = self.connection.execute(
+                """
+                SELECT sequence, status, reason, verified_at, verification_sha256
+                FROM execution_verifications
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND fencing_token = ?
+                ORDER BY sequence DESC
+                LIMIT 1
+                """,
+                (lineage_id, work_fingerprint_value, fencing_token),
+            ).fetchone()
+            if latest is not None:
+                (
+                    latest_sequence,
+                    latest_status,
+                    latest_reason,
+                    latest_verified_at,
+                    latest_sha256,
+                ) = latest
+                latest_status_value = WorkUnitStatus(str(latest_status))
+                latest_expected = _verification_digest(
+                    status=latest_status_value,
+                    reason=str(latest_reason),
+                    verified_at=float(latest_verified_at),
+                )
+                if not hmac.compare_digest(str(latest_sha256), latest_expected):
+                    raise ValueError("execution verification journal digest mismatch")
+                if (
+                    latest_status_value is status
+                    and str(latest_reason) == reason
+                    and float(latest_verified_at) == verified_at
+                    and hmac.compare_digest(str(latest_sha256), verification_sha256)
+                ):
+                    self.connection.rollback()
+                    return int(latest_sequence)
+                if latest_status_value is not WorkUnitStatus.OUTCOME_UNKNOWN:
+                    raise ValueError("execution attempt already has terminal verification")
+                sequence = int(latest_sequence) + 1
+            else:
+                sequence = 1
+
+            self.connection.execute(
+                """
+                INSERT INTO execution_verifications (
+                    lineage_id, work_fingerprint, fencing_token, sequence,
+                    status, reason, verified_at, verification_sha256
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    lineage_id,
+                    work_fingerprint_value,
+                    fencing_token,
+                    sequence,
+                    status.value,
+                    reason,
+                    verified_at,
+                    verification_sha256,
+                ),
+            )
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+        return sequence
+
+    def unresolved_attempts(self) -> tuple[DurableExecutionJournalEntry, ...]:
+        rows = self.connection.execute(
+            """
+            SELECT lineage_id, work_fingerprint, fencing_token, holder,
+                   admitted_at, budget_generation, work_generation,
+                   attempt_sha256, result_json, result_sha256
+            FROM execution_attempts
+            ORDER BY admitted_at, lineage_id, work_fingerprint, fencing_token
+            """
+        ).fetchall()
+        unresolved: list[DurableExecutionJournalEntry] = []
+        for (
+            lineage_id,
+            work_fingerprint_value,
+            fencing_token,
+            holder,
+            admitted_at,
+            budget_generation,
+            work_generation,
+            attempt_sha256,
+            result_json,
+            result_sha256,
+        ) in rows:
+            expected_attempt_sha256 = _attempt_digest(
+                lineage_id=str(lineage_id),
+                work_fingerprint_value=str(work_fingerprint_value),
+                fencing_token=int(fencing_token),
+                holder=str(holder),
+                admitted_at=float(admitted_at),
+                budget_generation=int(budget_generation),
+                work_generation=int(work_generation),
+            )
+            if not hmac.compare_digest(str(attempt_sha256), expected_attempt_sha256):
+                raise ValueError("execution attempt journal digest mismatch")
+
+            latest = self.connection.execute(
+                """
+                SELECT status, reason, verified_at, verification_sha256
+                FROM execution_verifications
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND fencing_token = ?
+                ORDER BY sequence DESC
+                LIMIT 1
+                """,
+                (lineage_id, work_fingerprint_value, fencing_token),
+            ).fetchone()
+
+            last_status = None
+            last_reason = None
+            if latest is not None:
+                last_status = WorkUnitStatus(str(latest[0]))
+                last_reason = str(latest[1])
+                latest_expected = _verification_digest(
+                    status=last_status,
+                    reason=last_reason,
+                    verified_at=float(latest[2]),
+                )
+                if not hmac.compare_digest(str(latest[3]), latest_expected):
+                    raise ValueError("execution verification journal digest mismatch")
+
+            if result_json is None and result_sha256 is None:
+                phase = "ADMITTED"
+            elif result_json is None or result_sha256 is None:
+                raise ValueError("execution result journal is incomplete")
+            elif last_status is None:
+                phase = "RESULT_RECORDED"
+            elif last_status is WorkUnitStatus.OUTCOME_UNKNOWN:
+                phase = "OUTCOME_UNKNOWN"
+            else:
+                continue
+
+            if result_json is not None:
+                expected_result_sha256 = _sha256_text(str(result_json))
+                if not hmac.compare_digest(str(result_sha256), expected_result_sha256):
+                    raise ValueError("execution result journal digest mismatch")
+
+            unresolved.append(
+                DurableExecutionJournalEntry(
+                    lineage_id=str(lineage_id),
+                    work_fingerprint=str(work_fingerprint_value),
+                    fencing_token=int(fencing_token),
+                    holder=str(holder),
+                    admitted_at=float(admitted_at),
+                    budget_generation=int(budget_generation),
+                    work_generation=int(work_generation),
+                    phase=phase,
+                    result_sha256=(
+                        str(result_sha256) if result_sha256 is not None else None
+                    ),
+                    last_verification_status=last_status,
+                    last_verification_reason=last_reason,
+                )
+            )
+        return tuple(unresolved)
