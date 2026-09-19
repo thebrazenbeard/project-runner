@@ -392,6 +392,22 @@ def verify_github_mutation_attempt(
                 reason="independent file postcondition does not match",
             )
 
+        final_ref_readback = verification_backend.execute(
+            _github_read_work(target, expected=False)
+        )
+        if not final_ref_readback.succeeded or len(final_ref_readback.outputs) != 1:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.OUTCOME_UNKNOWN,
+                reason="final independent branch readback is unavailable",
+            )
+        if final_ref_readback.outputs[0] != new_commit:
+            return VerificationOutcome(
+                work=attempt.work,
+                status=WorkUnitStatus.SUPERSEDED,
+                reason="mutated branch moved during independent verification",
+            )
+
     if not lease_store.complete(attempt.lease, now=now):
         return VerificationOutcome(
             work=attempt.work,
