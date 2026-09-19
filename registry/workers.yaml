@@ -1,11 +1,10 @@
-workers:
+﻿workers:
 - id: 3dg3
   name: 3dg3
   worker_type: CHATGPT_CUSTOM_GPT
   lifecycle: REGISTERED
   locators:
     gpt_id: g-6a9010d9fa1481918734dd436f1e1d4e
-    share_url: https://chatgpt.com/g/g-6a9010d9fa1481918734dd436f1e1d4e-3dg3
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -18,7 +17,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-6a6a22302ac08191ac4c2d78f9f9e666
-    share_url: https://chatgpt.com/g/g-6a6a22302ac08191ac4c2d78f9f9e666-akoonah
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -31,7 +29,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-6a50d55b7a2c8191a57a3ec8ec5c8978
-    share_url: https://chatgpt.com/g/g-6a50d55b7a2c8191a57a3ec8ec5c8978-vera-mirror
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -44,7 +41,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-6a67ceb5786c819198689a4f96094896
-    share_url: https://chatgpt.com/g/g-6a67ceb5786c819198689a4f96094896-vera-voice
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -57,7 +53,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-6a60e28752908191900ff86ebcfb1e70
-    share_url: https://chatgpt.com/g/g-6a60e28752908191900ff86ebcfb1e70-shell-f-discovery-test
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -70,7 +65,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-6911ba4fad088191a0e73fcd2f5bd4ee
-    share_url: https://chatgpt.com/g/g-6911ba4fad088191a0e73fcd2f5bd4ee-myhealthyplate-pro
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -78,12 +72,11 @@ workers:
     DIRECT_EXTERNAL_DISPATCH: UNVERIFIED
     PLUGIN_TOOL_CALL: UNVERIFIED
 - id: tam-truth-alignment-mechanism
-  name: TAM — Truth Alignment Mechanism
+  name: TAM â€” Truth Alignment Mechanism
   worker_type: CHATGPT_CUSTOM_GPT
   lifecycle: REGISTERED
   locators:
     gpt_id: g-68f12858b5ac8191908ac99635579119
-    share_url: https://chatgpt.com/g/g-68f12858b5ac8191908ac99635579119-tam-truth-alignment-mechanism
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -96,7 +89,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-68c3e43aabc4819180ef0a89a10c4eb6
-    share_url: https://chatgpt.com/g/g-68c3e43aabc4819180ef0a89a10c4eb6-tkal-in-ket-quorum
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -109,7 +101,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-680227bcbd748191b5bb6714f23bbe2c
-    share_url: https://chatgpt.com/g/g-680227bcbd748191b5bb6714f23bbe2c-inner-beast-unleashed
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -122,7 +113,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-67f64b3b94348191b6f6ee4a83135b5a
-    share_url: https://chatgpt.com/g/g-67f64b3b94348191b6f6ee4a83135b5a-aeonith-the-transcendent-critic
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -135,7 +125,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-67f50e0b86188191ae4a7bd69e01467f
-    share_url: https://chatgpt.com/g/g-67f50e0b86188191ae4a7bd69e01467f-lucien
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
@@ -148,7 +137,6 @@ workers:
   lifecycle: REGISTERED
   locators:
     gpt_id: g-67f4fd707f04819186dc1d576ce8e196
-    share_url: https://chatgpt.com/g/g-67f4fd707f04819186dc1d576ce8e196-safetybot
   roles: []
   routes:
     CHATGPT_INVOCATION: UNVERIFIED
