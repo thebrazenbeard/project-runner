@@ -81,7 +81,36 @@ def _persist_and_admit(db: Path):
         ttl=30.0,
     )
     store.close()
-    return fingerprint, budget.lineage_id, admitted.lease.fencing_token
+    return fingerprint, budget.lineage_id, admitted
+
+
+def _advance_to_verifying(
+    db: Path,
+    *,
+    lineage_id: str,
+    fingerprint: str,
+    admitted,
+) -> None:
+    works = SqliteRecursiveWorkStore(db)
+    running = works.compare_and_swap_status(
+        lineage_id=lineage_id,
+        work_fingerprint_value=fingerprint,
+        expected_generation=admitted.work_generation,
+        status=WorkUnitStatus.RUNNING,
+        lease=admitted.lease,
+        now=11.0,
+    )
+    assert running.generation == 3
+    verifying = works.compare_and_swap_status(
+        lineage_id=lineage_id,
+        work_fingerprint_value=fingerprint,
+        expected_generation=3,
+        status=WorkUnitStatus.VERIFYING,
+        lease=admitted.lease,
+        now=11.5,
+    )
+    assert verifying.generation == 4
+    works.close()
 
 
 def _result(fingerprint: str, *, classification: str = "SUCCEEDED") -> BackendResult:
@@ -96,7 +125,8 @@ def _result(fingerprint: str, *, classification: str = "SUCCEEDED") -> BackendRe
 
 def test_admission_creates_restart_visible_unresolved_attempt(tmp_path: Path):
     db = tmp_path / "journal.db"
-    fingerprint, lineage_id, token = _persist_and_admit(db)
+    fingerprint, lineage_id, admitted = _persist_and_admit(db)
+    token = admitted.lease.fencing_token
 
     reopened = SqliteDispatchAdmissionStore(db)
     unresolved = reopened.unresolved_attempts()
@@ -114,7 +144,8 @@ def test_admission_creates_restart_visible_unresolved_attempt(tmp_path: Path):
 
 def test_result_and_verification_survive_restart_and_resolve_frontier(tmp_path: Path):
     db = tmp_path / "journal.db"
-    fingerprint, lineage_id, token = _persist_and_admit(db)
+    fingerprint, lineage_id, admitted = _persist_and_admit(db)
+    token = admitted.lease.fencing_token
     result = _result(fingerprint)
 
     store = SqliteDispatchAdmissionStore(db)
@@ -154,21 +185,37 @@ def test_result_and_verification_survive_restart_and_resolve_frontier(tmp_path: 
     assert unresolved[0].phase == "OUTCOME_UNKNOWN"
     assert unresolved[0].last_verification_status is WorkUnitStatus.OUTCOME_UNKNOWN
 
-    assert reopened.record_verification(
+    _advance_to_verifying(
+        db,
+        lineage_id=lineage_id,
+        fingerprint=fingerprint,
+        admitted=admitted,
+    )
+    assert reopened.finalize_terminal_verification(
         lineage_id=lineage_id,
         work_fingerprint_value=fingerprint,
         fencing_token=token,
+        expected_work_generation=4,
+        lease=admitted.lease,
         status=WorkUnitStatus.COMPLETE,
         reason="postcondition independently verified",
         verified_at=13.0,
-    ) == 2
+    ) == 5
     assert reopened.unresolved_attempts() == ()
     reopened.close()
+
+    works = SqliteRecursiveWorkStore(db)
+    final = works.get(lineage_id, fingerprint)
+    assert final is not None
+    assert final.generation == 5
+    assert final.work.status is WorkUnitStatus.COMPLETE
+    works.close()
 
 
 def test_conflicting_result_cannot_overwrite_durable_attempt(tmp_path: Path):
     db = tmp_path / "journal.db"
-    fingerprint, lineage_id, token = _persist_and_admit(db)
+    fingerprint, lineage_id, admitted = _persist_and_admit(db)
+    token = admitted.lease.fencing_token
 
     store = SqliteDispatchAdmissionStore(db)
     first = _result(fingerprint)
@@ -203,9 +250,10 @@ def test_conflicting_result_cannot_overwrite_durable_attempt(tmp_path: Path):
     store.close()
 
 
-def test_terminal_verification_is_append_only(tmp_path: Path):
+def test_terminal_verification_requires_atomic_work_finalization(tmp_path: Path):
     db = tmp_path / "journal.db"
-    fingerprint, lineage_id, token = _persist_and_admit(db)
+    fingerprint, lineage_id, admitted = _persist_and_admit(db)
+    token = admitted.lease.fencing_token
 
     store = SqliteDispatchAdmissionStore(db)
     store.record_result(
@@ -215,14 +263,35 @@ def test_terminal_verification_is_append_only(tmp_path: Path):
         result=_result(fingerprint),
         recorded_at=11.0,
     )
-    assert store.record_verification(
+    with pytest.raises(ValueError, match="requires atomic finalization"):
+        store.record_verification(
+            lineage_id=lineage_id,
+            work_fingerprint_value=fingerprint,
+            fencing_token=token,
+            status=WorkUnitStatus.COMPLETE,
+            reason="bypass attempt",
+            verified_at=12.0,
+        )
+    assert store.unresolved_attempts()[0].phase == "RESULT_RECORDED"
+
+    _advance_to_verifying(
+        db,
+        lineage_id=lineage_id,
+        fingerprint=fingerprint,
+        admitted=admitted,
+    )
+    assert store.finalize_terminal_verification(
         lineage_id=lineage_id,
         work_fingerprint_value=fingerprint,
         fencing_token=token,
+        expected_work_generation=4,
+        lease=admitted.lease,
         status=WorkUnitStatus.COMPLETE,
         reason="verified",
         verified_at=12.0,
-    ) == 1
+    ) == 5
+    assert store.unresolved_attempts() == ()
+
     with pytest.raises(ValueError, match="terminal verification"):
         store.record_verification(
             lineage_id=lineage_id,
@@ -237,7 +306,8 @@ def test_terminal_verification_is_append_only(tmp_path: Path):
 
 def test_attempt_integrity_tamper_fails_closed(tmp_path: Path):
     db = tmp_path / "journal.db"
-    fingerprint, lineage_id, token = _persist_and_admit(db)
+    fingerprint, lineage_id, admitted = _persist_and_admit(db)
+    token = admitted.lease.fencing_token
 
     store = SqliteDispatchAdmissionStore(db)
     store.connection.execute(

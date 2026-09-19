@@ -627,15 +627,14 @@ class SqliteDispatchAdmissionStore:
         reason: str,
         verified_at: float,
     ) -> int:
-        allowed_statuses = {
-            WorkUnitStatus.COMPLETE,
-            WorkUnitStatus.FAILED_RETRYABLE,
-            WorkUnitStatus.FAILED_DETERMINISTIC,
-            WorkUnitStatus.OUTCOME_UNKNOWN,
-            WorkUnitStatus.SUPERSEDED,
-        }
-        if status not in allowed_statuses:
-            raise ValueError("unsupported execution verification status")
+        if status in _TERMINAL_STATUSES:
+            raise ValueError(
+                "terminal verification requires atomic finalization"
+            )
+        if status is not WorkUnitStatus.OUTCOME_UNKNOWN:
+            raise ValueError(
+                "direct verification recording is limited to OUTCOME_UNKNOWN"
+            )
         if not reason.strip():
             raise ValueError("execution verification reason is required")
         verification_sha256 = _verification_digest(
