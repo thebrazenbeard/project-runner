@@ -1,6 +1,6 @@
 # Portfolio Discovery Policy V1
 
-Status: EXODUS_CANDIDATE  
+Status: EXODUS_CANDIDATE
 Last discovery cut: 2026-09-20
 
 Project Runner must not rely on a hand-maintained chat list as the complete project inventory.
@@ -25,13 +25,25 @@ Discovery must preserve repository-local autonomy. A newly discovered repository
 
 `EXECUTABLE_ROUTE != TARGET_AUTHORITY`
 
-## Current discovery evidence
+## Bound Discovery cut and current estate observation
 
-The owner-repository inventory was freshly enumerated on 2026-09-20:
+The exact Discovery census consumed by `DISCOVERY_CENSUS_CONSUMER_V1` was observed on 2026-09-19 and remains intentionally frozen as drift-baseline evidence:
 
 - repository count: **57**
-- archived repositories: preserved as historical/archive candidates rather than silently scheduled
-- private repository identities/content: retained in the private portfolio checkpoint rather than mirrored into this public repository
+- public repository count: **12**
+- private repository identities/content: not mirrored into this public repository
+
+A fresh authorized estate enumeration on 2026-09-20 now observes:
+
+- repository count: **58**
+- public repository count: **14**
+- non-public repository count: **44**
+- public repositories newly visible relative to the bound Discovery cut: `thebrazenbeard/god-brain` and `thebrazenbeard/voss`
+
+This newer observation does **not** rewrite the frozen 57-repository fixture or silently promote either public repository into the runtime registry. The mismatch is the expected output of a drift/currentness mechanism: the bound census is historical exact evidence and the live inventory must be refreshed before scheduling or mutation.
+
+- archived repositories remain historical/archive candidates rather than silently scheduled
+- private repository identities/content remain outside this public repository
 
 The previous 2026-09-17 inventory contained 53 repositories and is now historical evidence.
 
@@ -48,7 +60,7 @@ The public seed is intentionally incomplete. It contains public-safe current pro
 
 ## Complete private inventory
 
-The complete 57-repository classification belongs in the private Exodus/portfolio checkpoint and, when used by Project Runner, in an explicitly selected external registry bound by exact SHA-256.
+The complete portfolio classification is mutable currentness state. The older 57-repository classification is historical; any current complete classification must be freshly regenerated from authorized inventory and, when used by Project Runner, selected through an external registry bound by exact SHA-256.
 
 That private registry is a **replacement** runtime registry, not a hidden merge into public source.
 
