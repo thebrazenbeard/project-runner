@@ -1,11 +1,26 @@
 {
   "schema": "PROJECT_RUNNER_REPOSITORY_RECONCILIATION_V1",
-  "status": "CANONICALIZATION_CANDIDATE_NOT_MERGED",
+  "status": "INTEROPERABILITY_COMPOSITION_CANDIDATE_NOT_CANONICAL_BASELINE",
   "generated_date": "2026-09-20",
   "repository": "thebrazenbeard/project-runner",
+  "adjudication": {
+    "decision": "PR29_IS_MINIMAL_CANONICAL_BASELINE_CANDIDATE",
+    "canonical_baseline_pr": 29,
+    "canonical_baseline_head": "48c2074ce4f679c724036e14c5b6910e145c2492",
+    "canonical_baseline_source_parent_pr": 22,
+    "canonical_baseline_source_parent_sha": "bee7e720ba923ef38ce87fca4c9c2560163a9360",
+    "reason": "PR29 contains the current M6/runtime/reconstruction baseline plus reconciliation/currentness repairs without promoting Discovery/Rezon experimental fan-out into canonical runtime/source scope.",
+    "this_pr_role": "BROADER_INTEROPERABILITY_COMPOSITION_ONLY",
+    "this_pr_not_authorized_as": [
+      "minimal canonical baseline",
+      "canonical main merge target",
+      "Discovery or Rezon authority promotion",
+      "runtime activation or deployment target"
+    ]
+  },
   "default_branch": {
     "name": "main",
-    "head_sha": "bc05812b560b4fcde3a362e72fba04c626cafac8",
+    "head_sha_at_adjudication": "bc05812b560b4fcde3a362e72fba04c626cafac8",
     "classification": [
       "MAIN_BEHIND_ACTIVE_WORK",
       "PR_STACK_IS_DE_FACTO_PROJECT",
@@ -13,176 +28,70 @@
       "ACTIVE_IMPLEMENTATION"
     ]
   },
-  "candidate": {
+  "interoperability_candidate": {
     "branch": "estate/project-runner-canonical-baseline-v1-20260920",
-    "pre_manifest_head_sha": "74df3a1d5c1009b7d67cb8250acab7364dce53c2",
-    "relation_to_main_before_manifest": {
-      "ahead_by": 220,
-      "behind_by": 0
-    },
+    "prior_exact_head_before_reframe": "5aee380d98666ac54340813c41ff1007ac29b460",
     "composition": [
       {
-        "kind": "BACKBONE",
+        "kind": "BACKBONE_WITH_REZON_MECHANICAL_EVIDENCE",
         "pr": 27,
         "sha": "b48e2a19fa9e26eac233d1813ee04346e96b68a7",
-        "contains_prs": [
-          26,
-          22,
-          20,
-          12,
-          9,
-          8,
-          2
-        ]
+        "contains_prs": [26, 22, 20, 12, 9, 8, 2],
+        "canonical_necessity": "NOT_ESTABLISHED_ABOVE_PR22"
       },
       {
         "kind": "DISCOVERY_CENSUS_CONSUMER",
         "pr": 23,
-        "sha": "b763c707abacc7dfe30dc451b2b42354a30e3621"
+        "sha": "b763c707abacc7dfe30dc451b2b42354a30e3621",
+        "canonical_necessity": "NOT_ESTABLISHED",
+        "currentness": "FROZEN_57_REPOSITORY_OBSERVATION_NOT_CURRENT_58_REPOSITORY_ESTATE"
       },
       {
         "kind": "DISCOVERY_EFFECT_ENVELOPE_PRODUCER",
         "pr": 24,
-        "sha": "a32dc6987145c826d9ff3afe4b21eb95b1801ba9"
+        "sha": "a32dc6987145c826d9ff3afe4b21eb95b1801ba9",
+        "canonical_necessity": "NOT_ESTABLISHED",
+        "source_class": "SOURCE_EXPERIMENT_ONE_WAY_INTERCHANGE_ONLY"
       }
     ],
     "estate_repairs": [
       {
         "path": ".gitattributes",
-        "reason": "Pin the three byte-bound Discovery/Rezon JSON fixtures to LF so exact Git/blob fixture checks survive Windows checkout."
+        "reason": "Pin byte-bound Discovery/Rezon JSON fixtures to LF so exact Git/blob fixture checks survive Windows checkout."
       },
       {
         "path": "docs/exodus/PORTFOLIO_DISCOVERY_V1.md",
-        "reason": "Separate the frozen 57-repository Discovery cut from the fresh 58-repository estate observation; remove stale currentness wording and trailing whitespace."
+        "reason": "Separate the frozen 57-repository Discovery cut from the fresh 58-repository estate observation and remove stale-currentness wording."
       }
     ]
   },
-  "currentness": {
-    "bound_discovery_cut": {
-      "observed_date": "2026-09-19",
-      "total_repositories": 57,
-      "public_repositories": 12,
-      "status": "FROZEN_DRIFT_BASELINE_NOT_CURRENT_RUNTIME_REGISTRY"
+  "evidence": {
+    "pr29_exact_head": {
+      "head": "48c2074ce4f679c724036e14c5b6910e145c2492",
+      "local_windows_python312": "213/213 PASS",
+      "hosted_run": 35538015801,
+      "hosted_conclusion": "SUCCESS",
+      "claim": "MINIMAL_BASELINE_COMPATIBILITY_AND_SOURCE_TEST_EVIDENCE"
     },
-    "fresh_estate_observation": {
-      "observed_date": "2026-09-20",
-      "total_repositories": 58,
-      "public_repositories": 14,
-      "non_public_repositories": 44,
-      "public_additions_relative_to_bound_cut": [
-        "thebrazenbeard/god-brain",
-        "thebrazenbeard/voss"
-      ],
-      "authority_effect": "NONE"
-    }
-  },
-  "executable_evidence": [
-    {
-      "subject": "PR27_PLUS_PR23_PLUS_PR24_BEFORE_EOL_REPAIR",
-      "environment": "Windows / Python 3.12",
-      "full_suite": "239 PASS / 3 FAIL",
-      "registry_validation": "PASS",
-      "recursive_restart": "COMPLETE",
-      "staged_diff_check": "PASS",
-      "failure_class": "WORKING_TREE_EOL_BYTE_CUSTODY_ONLY"
+    "pr30_prior_exact_head": {
+      "head": "5aee380d98666ac54340813c41ff1007ac29b460",
+      "local_windows_python312": "242/242 PASS",
+      "hosted_run": 35538034211,
+      "hosted_conclusion": "SUCCESS",
+      "claim": "BROADER_INTEROPERABILITY_COMPOSITION_COMPATIBILITY_ONLY",
+      "non_inference": "PASS does not establish canonical necessity of PR23/24/26/27"
     },
-    {
-      "subject": "estate/project-runner-canonical-baseline-v1-20260920@2ca402f97d1ee81772fdbcae71bf5de805db0354",
-      "environment": "fresh Windows checkout / Python 3.12",
-      "full_suite": "242/242 PASS",
-      "registry_validation": "PASS: 15 projects / 12 workers",
-      "recursive_restart": "COMPLETE",
-      "compileall": "PASS",
-      "diff_check": "BLOCKED_ONLY_BY_INHERITED_TRAILING_WHITESPACE_LATER_REPAIRED"
-    }
-  ],
-  "open_pr_reconciliation": {
-    "exact_ancestry_absorbed": [
-      {
-        "pr": 27,
-        "status": "CURRENT_CANDIDATE_COMPONENT"
-      },
-      {
-        "pr": 26,
-        "status": "CURRENT_STACK_DEPENDENCY"
-      },
-      {
-        "pr": 24,
-        "status": "CURRENT_CANDIDATE_COMPONENT"
-      },
-      {
-        "pr": 23,
-        "status": "CURRENT_CANDIDATE_COMPONENT"
-      },
-      {
-        "pr": 22,
-        "status": "CURRENT_STACK_DEPENDENCY"
-      },
-      {
-        "pr": 20,
-        "status": "CURRENT_STACK_DEPENDENCY"
-      },
-      {
-        "pr": 12,
-        "status": "CURRENT_STACK_DEPENDENCY"
-      },
-      {
-        "pr": 9,
-        "status": "CURRENT_STACK_DEPENDENCY"
-      },
-      {
-        "pr": 8,
-        "status": "CURRENT_STACK_DEPENDENCY"
-      },
-      {
-        "pr": 2,
-        "status": "CURRENT_STACK_DEPENDENCY"
-      }
-    ],
-    "divergent": [
-      {
-        "pr": 25,
-        "status": "SUPERSEDED_BY_PR26_PR27",
-        "reason": "Earlier PLAN-observer API is a sibling from PR22; PR26/27 provide the stronger current mechanical verifier/failure-path line. Carrying both would create competing Rezon evidence APIs."
-      },
-      {
-        "pr": 21,
-        "status": "SEMANTICALLY_COMPOSED_INTO_PR22_NOT_ANCESTOR",
-        "reason": "PR22 explicitly incorporates the chatless-orchestration/interface/discovery material from PR21 and is the reviewed current integration subject."
-      },
-      {
-        "pr": 19,
-        "status": "FUTURE_ARCHITECTURE_FRONTIER",
-        "reason": "Documentation-only Rezon/Project Runner overlap hypothesis; useful but not required for the smallest current canonical runtime/source composition."
-      },
-      {
-        "pr": 16,
-        "status": "HISTORICAL_DECHATIFICATION_PROVENANCE",
-        "reason": "PR20 descends from the earlier PR16 subject; the current PR16 head later moved one registry-name encoding commit and is no longer an exact ancestor. The corrected UTF-8 worker name is present in the candidate."
-      },
-      {
-        "pr": 15,
-        "status": "QUALIFICATION_ONLY_EVIDENCE",
-        "reason": "Workflow-only Windows qualification bound to PR12 exact code subject; preserve as evidence rather than source to merge."
-      },
-      {
-        "pr": 14,
-        "status": "PARALLEL_WINDOWS_SQLITE_REPAIR_PROVENANCE",
-        "reason": "Sibling SQLite lifecycle repair line; canonical M6 composition uses PR9 plus PR8 through PR12, with Windows qualification preserved separately in PR15."
-      },
-      {
-        "pr": 10,
-        "status": "HISTORICAL_ALTERNATIVE_COMPOSITION",
-        "reason": "Older M6 race+SQLite+Exodus composition from the PR9 lineage; superseded for current integration by PR12 -> PR20 -> PR22."
-      }
-    ],
-    "post_merge_closure_rule": "No PR is closure-eligible merely from this manifest. Exact-ancestry and semantically superseded PRs become closure candidates only after Patrick authorizes canonicalization, main readback succeeds, and evidence/provenance pointers are verified."
+    "head_binding_policy": "This artifact does not self-bind the commit that contains it. Any later exact-head qualification/review must bind the externally observed PR head after this file is committed."
   },
-  "issue_reconciliation": {
-    "open_non_pr_issues": 0,
-    "status": "NO_OPEN_ISSUE_SPRAWL_AT_RECONCILIATION_TIME"
+  "fanout_disposition": {
+    "23": "INTEROPERABILITY_EVIDENCE_FROZEN_EXTERNAL_CUT_NOT_MINIMAL_MAIN",
+    "24": "SOURCE_EXPERIMENT_NOT_MINIMAL_MAIN",
+    "25": "DIVERGENT_ALTERNATE_REZON_PLAN_OBSERVER",
+    "26": "MECHANICAL_REZON_EVIDENCE_EXPERIMENT_NOT_MINIMAL_MAIN",
+    "27": "MECHANICAL_REZON_FAILURE_PATH_EXPERIMENT_NOT_MINIMAL_MAIN"
   },
   "boundaries": [
+    "COMPATIBLE != CANONICALLY_NECESSARY",
     "DISCOVERABLE != COUPLED",
     "COORDINATED != AUTHORIZED",
     "EXECUTABLE_ROUTE != TARGET_AUTHORITY",
@@ -197,5 +106,8 @@
     "deploy_or_install_authorized": false,
     "provider_or_credential_mutation_authorized": false
   },
-  "next_gate": "FINAL_EXACT_HEAD_LOCAL_QUALIFICATION_THEN_INDEPENDENT_HOSTILE_REVIEW_THEN_PATRICK_EXACT_MERGE_AUTHORIZATION"
+  "next_gate": {
+    "pr29": "INDEPENDENT_EXACT_HEAD_HOSTILE_REVIEW_BEFORE_ANY_PATRICK_MERGE_AUTHORIZATION_PACKET",
+    "pr30": "NO_CANONICAL_MERGE_PACKET; PRESERVE_AS_INTEROPERABILITY_CANDIDATE UNLESS LATER CURRENT DEPENDENCY EVIDENCE JUSTIFIES PROMOTION"
+  }
 }
