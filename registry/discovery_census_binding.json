@@ -1,0 +1,9 @@
+{
+  "repository": "thebrazenbeard/discovery",
+  "subject": "vera/discovery-shared-substrate-v1@1316094edbed17fa5918b70793c95ffddfcf92ea",
+  "path": "portfolio/PORTFOLIO_CENSUS_V1.json",
+  "git_blob_sha1": "34cd2ab55d46f5a1ecc2c894f3e8cfdb8afa41df",
+  "total_count": 57,
+  "all_names_sha256": "43dfda1fa3dd24dec39e2aa345d93ab192dbda777433feae384da632b3d008dd",
+  "authority_ceiling": "OBSERVATIONAL_DRIFT_INPUT_NOT_RUNTIME_REGISTRY"
+}
