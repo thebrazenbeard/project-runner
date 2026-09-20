@@ -94,20 +94,73 @@ def test_non_plan_effect_state_cannot_be_promoted_through_runner():
         verify_rezon_run_evidence(evidence)
 
 
-def test_claim_dispositions_are_opaque_to_runner():
+def test_generic_receipt_cannot_carry_claim_dispositions():
     evidence = load_fixture()
     evidence["receipt"]["accepted_claim_ids"] = ["claim-runner-must-not-interpret"]
+    rehash(evidence)
+    with pytest.raises(RezonEvidenceError, match="claim disposition"):
+        verify_rezon_run_evidence(evidence)
+
+    evidence = load_fixture()
     evidence["receipt"]["rejected_claim_ids"] = ["another-opaque-claim"]
-    evidence["receipt"]["unresolved"] = ["opaque-question"]
+    rehash(evidence)
+    with pytest.raises(RezonEvidenceError, match="claim disposition"):
+        verify_rezon_run_evidence(evidence)
+
+    evidence = load_fixture()
     evidence["receipt"]["claim_disposition_complete"] = True
     rehash(evidence)
+    with pytest.raises(RezonEvidenceError, match="disposition completeness"):
+        verify_rezon_run_evidence(evidence)
 
-    result = verify_rezon_run_evidence(evidence)
 
-    assert result.status == "STRUCTURALLY_VALID_NON_PROMOTIONAL"
-    assert not hasattr(result, "truth")
-    assert not hasattr(result, "admitted")
-    assert not hasattr(result, "qualified")
+def test_duplicate_execution_bindings_are_rejected():
+    evidence = load_fixture()
+    record = deepcopy(evidence["executions"][0])
+    evidence["executions"].append(record)
+    evidence["receipt"]["execution_ids"].append(record["execution_id"])
+    evidence["receipt"]["execution_output_digests"].append(
+        deepcopy(evidence["receipt"]["execution_output_digests"][0])
+    )
+    evidence["receipt"]["execution_producer_ids"].append(
+        deepcopy(evidence["receipt"]["execution_producer_ids"][0])
+    )
+    rehash(evidence)
+
+    with pytest.raises(RezonEvidenceError, match="duplicate execution id"):
+        verify_rezon_run_evidence(evidence)
+
+
+def test_canonical_output_digest_must_be_sha256():
+    evidence = load_fixture()
+    evidence["executions"][0]["canonical_output_digest"] = "not-a-digest"
+    evidence["receipt"]["execution_output_digests"][0][1] = "not-a-digest"
+    rehash(evidence)
+
+    with pytest.raises(RezonEvidenceError, match="lowercase SHA-256"):
+        verify_rezon_run_evidence(evidence)
+
+
+def test_task_envelope_digest_must_be_sha256():
+    evidence = load_fixture()
+    evidence["executions"][0]["task_envelope_digest"] = "not-a-digest"
+    evidence["receipt"]["task_envelope_digest"] = "not-a-digest"
+    rehash(evidence)
+
+    with pytest.raises(RezonEvidenceError, match="lowercase SHA-256"):
+        verify_rezon_run_evidence(evidence)
+
+
+def test_producer_binding_requires_snapshot_and_output_digests():
+    evidence = load_fixture()
+    evidence["executions"][0]["canonical_episode_snapshot_digest"] = None
+    rehash(evidence)
+
+    with pytest.raises(
+        RezonEvidenceError,
+        match="requires snapshot and output digests",
+    ):
+        verify_rezon_run_evidence(evidence)
 
 
 def test_unknown_schema_field_fails_closed():
