@@ -96,6 +96,19 @@ def _optional_string(value: Any, label: str) -> str | None:
     return _string(value, label)
 
 
+def _sha256_string(value: Any, label: str) -> str:
+    value = _string(value, label)
+    if _SHA256.fullmatch(value) is None:
+        raise RezonEvidenceError(f"{label} must be lowercase SHA-256")
+    return value
+
+
+def _optional_sha256(value: Any, label: str) -> str | None:
+    if value is None:
+        return None
+    return _sha256_string(value, label)
+
+
 def _string_list(value: Any, label: str) -> list[str]:
     if type(value) is not list:
         raise RezonEvidenceError(f"{label} must be a list")
@@ -109,12 +122,17 @@ def _pair_list(value: Any, label: str) -> list[list[str]]:
     if type(value) is not list:
         raise RezonEvidenceError(f"{label} must be a list")
     out: list[list[str]] = []
+    seen_execution_ids: set[str] = set()
     for index, item in enumerate(value):
         if type(item) is not list or len(item) != 2:
             raise RezonEvidenceError(f"{label}[{index}] must be a two-string list")
+        execution_id = _string(item[0], f"{label}[{index}][0]")
+        if execution_id in seen_execution_ids:
+            raise RezonEvidenceError(f"{label} cannot duplicate execution id")
+        seen_execution_ids.add(execution_id)
         out.append(
             [
-                _string(item[0], f"{label}[{index}][0]"),
+                execution_id,
                 _string(item[1], f"{label}[{index}][1]"),
             ]
         )
@@ -169,8 +187,18 @@ def verify_rezon_run_evidence(
 
     _string(receipt["task_id"], "receipt.task_id")
     _string(receipt["episode_version"], "receipt.episode_version")
-    _string_list(receipt["accepted_claim_ids"], "receipt.accepted_claim_ids")
-    _string_list(receipt["rejected_claim_ids"], "receipt.rejected_claim_ids")
+    accepted_claim_ids = _string_list(
+        receipt["accepted_claim_ids"],
+        "receipt.accepted_claim_ids",
+    )
+    rejected_claim_ids = _string_list(
+        receipt["rejected_claim_ids"],
+        "receipt.rejected_claim_ids",
+    )
+    if accepted_claim_ids or rejected_claim_ids:
+        raise RezonEvidenceError(
+            "generic Rezon run evidence cannot carry claim disposition"
+        )
     _string_list(receipt["unresolved"], "receipt.unresolved")
     receipt_failures = _string_list(receipt["failures"], "receipt.failures")
     if receipt["effect_state"] != "plan":
@@ -191,12 +219,16 @@ def verify_rezon_run_evidence(
         receipt["execution_producer_ids"],
         "receipt.execution_producer_ids",
     )
-    receipt_task_digest = _optional_string(
+    receipt_task_digest = _optional_sha256(
         receipt["task_envelope_digest"],
         "receipt.task_envelope_digest",
     )
     if type(receipt["claim_disposition_complete"]) is not bool:
         raise RezonEvidenceError("receipt.claim_disposition_complete must be bool")
+    if receipt["claim_disposition_complete"]:
+        raise RezonEvidenceError(
+            "generic Rezon run evidence cannot assert claim disposition completeness"
+        )
 
     expected_execution_ids: list[str] = []
     expected_sources: list[str] = []
@@ -233,11 +265,11 @@ def verify_rezon_run_evidence(
                 f"executions[{index}].independence_demonstrated must be bool"
             )
 
-        task_digest = _optional_string(
+        task_digest = _optional_sha256(
             record["task_envelope_digest"],
             f"executions[{index}].task_envelope_digest",
         )
-        _optional_string(
+        _optional_sha256(
             record["executor_task_specification_digest"],
             f"executions[{index}].executor_task_specification_digest",
         )
@@ -249,11 +281,11 @@ def verify_rezon_run_evidence(
             record["canonical_producer_execution_id"],
             f"executions[{index}].canonical_producer_execution_id",
         )
-        _optional_string(
+        snapshot_digest = _optional_sha256(
             record["canonical_episode_snapshot_digest"],
             f"executions[{index}].canonical_episode_snapshot_digest",
         )
-        output_digest = _optional_string(
+        output_digest = _optional_sha256(
             record["canonical_output_digest"],
             f"executions[{index}].canonical_output_digest",
         )
@@ -268,6 +300,12 @@ def verify_rezon_run_evidence(
 
         if task_digest != receipt_task_digest:
             raise RezonEvidenceError("receipt task envelope digest does not match trace")
+        if producer_id is not None and (
+            snapshot_digest is None or output_digest is None
+        ):
+            raise RezonEvidenceError(
+                "canonical producer binding requires snapshot and output digests"
+            )
 
         expected_execution_ids.append(execution_id)
         for source in sources:
