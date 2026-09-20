@@ -211,6 +211,8 @@ def verify_rezon_run_evidence(
         receipt["execution_ids"],
         "receipt.execution_ids",
     )
+    if len(receipt_execution_ids) != len(set(receipt_execution_ids)):
+        raise RezonEvidenceError("receipt.execution_ids cannot duplicate execution id")
     receipt_output_bindings = _pair_list(
         receipt["execution_output_digests"],
         "receipt.execution_output_digests",
@@ -235,6 +237,7 @@ def verify_rezon_run_evidence(
     expected_output_bindings: list[list[str]] = []
     expected_producer_bindings: list[list[str]] = []
     trace_failures: list[str] = []
+    seen_trace_execution_ids: set[str] = set()
 
     for index, record in enumerate(executions):
         if type(record) is not dict:
@@ -245,6 +248,9 @@ def verify_rezon_run_evidence(
             record["execution_id"],
             f"executions[{index}].execution_id",
         )
+        if execution_id in seen_trace_execution_ids:
+            raise RezonEvidenceError("executions cannot duplicate execution id")
+        seen_trace_execution_ids.add(execution_id)
         _string(record["node_id"], f"executions[{index}].node_id")
         _string(record["episode_version"], f"executions[{index}].episode_version")
 
