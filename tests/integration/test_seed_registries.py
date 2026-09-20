@@ -22,6 +22,8 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "on-theo",
         "wip",
         "mosaic",
+        "driftguard",
+        "discovery",
     }
 
     private_projects = {p.id for p in projects if p.visibility == "private"}
