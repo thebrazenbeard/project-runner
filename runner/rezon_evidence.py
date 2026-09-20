@@ -139,6 +139,24 @@ def _pair_list(value: Any, label: str) -> list[list[str]]:
     return out
 
 
+def _canonical_producer_execution_id(
+    node_id: str,
+    episode_snapshot_digest: str,
+    task_specification_digest: str | None,
+    output_digest: str,
+) -> str:
+    payload = "\x1f".join(
+        (
+            node_id,
+            episode_snapshot_digest,
+            task_specification_digest or "no-task-spec",
+            output_digest,
+        )
+    )
+    digest = sha256(payload.encode("utf-8")).hexdigest()
+    return f"canonical:exec:{node_id}:{digest}"
+
+
 def _canonical_body_digest(evidence: Mapping[str, Any]) -> str:
     body = {
         "schema_version": evidence["schema_version"],
@@ -251,7 +269,7 @@ def verify_rezon_run_evidence(
         if execution_id in seen_trace_execution_ids:
             raise RezonEvidenceError("executions cannot duplicate execution id")
         seen_trace_execution_ids.add(execution_id)
-        _string(record["node_id"], f"executions[{index}].node_id")
+        node_id = _string(record["node_id"], f"executions[{index}].node_id")
         _string(record["episode_version"], f"executions[{index}].episode_version")
 
         for field in (
@@ -275,7 +293,7 @@ def verify_rezon_run_evidence(
             record["task_envelope_digest"],
             f"executions[{index}].task_envelope_digest",
         )
-        _optional_sha256(
+        task_specification_digest = _optional_sha256(
             record["executor_task_specification_digest"],
             f"executions[{index}].executor_task_specification_digest",
         )
@@ -312,6 +330,17 @@ def verify_rezon_run_evidence(
             raise RezonEvidenceError(
                 "canonical producer binding requires snapshot and output digests"
             )
+        if producer_id is not None:
+            expected_producer_id = _canonical_producer_execution_id(
+                node_id,
+                snapshot_digest,
+                task_specification_digest,
+                output_digest,
+            )
+            if producer_id != expected_producer_id:
+                raise RezonEvidenceError(
+                    "trace canonical producer identity does not recompute"
+                )
 
         expected_execution_ids.append(execution_id)
         for source in sources:
