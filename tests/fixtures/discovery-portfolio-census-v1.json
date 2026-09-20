@@ -1,0 +1,46 @@
+{
+  "schema": "DISCOVERY_PORTFOLIO_CENSUS_V1",
+  "observed_date": "2026-09-19",
+  "source": "GitHub accessible repository inventory for owner thebrazenbeard",
+  "status": "OBSERVED_INVENTORY_NOT_ARCHITECTURAL_AUTHORITY",
+  "counts": {
+    "total": 57,
+    "public": 12,
+    "private": 45
+  },
+  "public_repositories": [
+    "discovery",
+    "driftguard",
+    "hc-brain",
+    "mosaic",
+    "on-theo",
+    "project-runner",
+    "rezon",
+    "roots",
+    "testament",
+    "transcendence",
+    "wip",
+    "world-zero"
+  ],
+  "inventory_digests": {
+    "algorithm": "SHA-256 over lexicographically sorted repository names, UTF-8, one name per line with trailing newline",
+    "public_names_sha256": "290a9a832b1c6a51dc0288de6892591fdbf5fd904d875782005d2b2d44197d34",
+    "private_names_sha256": "11d06664d55b63998530eba7ab6047488e0fe384de6f444331f8b21b9d4df8df",
+    "all_names_sha256": "43dfda1fa3dd24dec39e2aa345d93ab192dbda777433feae384da632b3d008dd"
+  },
+  "privacy_rule": "Private repository names and private technical detail are intentionally not published by this public repository. Private repositories still participate in the analysis and aggregate counts.",
+  "discovery_roles": {
+    "direct_architecture_subjects": 32,
+    "boundary_or_negative_control_consumers": 22,
+    "historical_or_reference_only": 2,
+    "discovery_self": 1
+  },
+  "role_semantics": {
+    "direct_architecture_subjects": "Repositories containing potentially reusable mechanics, overlapping infrastructure, implementation duplication, orchestration, evidence, currentness, recovery, transport, cognition, or experiment machinery.",
+    "boundary_or_negative_control_consumers": "Repositories useful for proving that a proposed substrate preserves domain-specific semantics and independence rather than swallowing them.",
+    "historical_or_reference_only": "Repositories retained for provenance/comparison and not presumed to be current architecture candidates.",
+    "discovery_self": "Discovery must also be reviewed for overreach and accidental framework gravity."
+  },
+  "completeness_rule": "A repository does not need to be a consolidation candidate to be included. Exclusion from a particular experiment must be explicit rather than inferred from absence.",
+  "refresh_rule": "Any change in repository count or any inventory digest invalidates claims that this exact census is current."
+}
