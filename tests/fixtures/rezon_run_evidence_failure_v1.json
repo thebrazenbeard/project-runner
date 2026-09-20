@@ -1,0 +1,57 @@
+{
+  "evidence_digest": "516146d1f01291510e5b31e645520ed5434760ff953139d6aba71ea4cc37e752",
+  "executions": [
+    {
+      "blinded_proposition_ids": [],
+      "blinded_relation_ids": [],
+      "canonical_episode_snapshot_digest": "3d945f03974c84a3df2a41262827fba52dab9b10f6f8cde70c031b8d31cbee9a",
+      "canonical_output_digest": null,
+      "canonical_producer_execution_id": null,
+      "emitted_proposition_ids": [],
+      "episode_version": "e1@1",
+      "execution_id": "discovery-rezon-runner-failure-v1:exec:1:echo_hypothesis",
+      "executor_episode_version": "e1@1",
+      "executor_task_specification_digest": null,
+      "failures": [
+        "contract_violation"
+      ],
+      "independence_demonstrated": false,
+      "node_id": "echo_hypothesis",
+      "reported_source_refs": [],
+      "reported_source_versions": [],
+      "source_refs": [],
+      "source_versions": [
+        "source:failure-fixture@v1"
+      ],
+      "task_envelope_digest": null,
+      "visible_proposition_ids": [
+        "o1"
+      ],
+      "visible_relation_ids": []
+    }
+  ],
+  "receipt": {
+    "accepted_claim_ids": [],
+    "claim_disposition_complete": false,
+    "effect_state": "plan",
+    "episode_version": "e1@1",
+    "execution_ids": [
+      "discovery-rezon-runner-failure-v1:exec:1:echo_hypothesis"
+    ],
+    "execution_output_digests": [],
+    "execution_producer_ids": [],
+    "failures": [
+      "contract_violation"
+    ],
+    "rejected_claim_ids": [],
+    "source_versions": [
+      "source:failure-fixture@v1"
+    ],
+    "task_envelope_digest": null,
+    "task_id": "discovery-rezon-runner-failure-v1",
+    "unresolved": [
+      "execution_result:invalid_contract:discovery-rezon-runner-failure-v1:exec:1:echo_hypothesis"
+    ]
+  },
+  "schema_version": "rezon.run-evidence.v1"
+}
