@@ -1,6 +1,6 @@
 # Portfolio Discovery Policy V1
 
-Status: EXODUS_CANDIDATE  
+Status: EXODUS_CANDIDATE
 Last discovery cut: 2026-09-20
 
 Project Runner must not rely on a hand-maintained chat list as the complete project inventory.
@@ -27,15 +27,15 @@ Discovery must preserve repository-local autonomy. A newly discovered repository
 
 ## Current discovery evidence
 
-The owner-repository inventory was freshly enumerated on 2026-09-20:
+The owner-repository inventory was freshly enumerated again during repository-estate reconciliation on 2026-09-20:
 
-- repository count: **57**
+- repository count: **58**
 - archived repositories: preserved as historical/archive candidates rather than silently scheduled
 - private repository identities/content: retained in the private portfolio checkpoint rather than mirrored into this public repository
 
-The previous 2026-09-17 inventory contained 53 repositories and is now historical evidence.
+The previous 2026-09-17 inventory contained 53 repositories and is historical evidence. An earlier 2026-09-20 cut contained 57 repositories and is also historical evidence; one additional repository existed by the estate-reconciliation refresh.
 
-The 2026-09-20 pass discovered four repositories that did not exist in that older cut:
+The earlier 57-repository cut had already discovered four repositories that did not exist in the 2026-09-17 cut:
 
 - `thebrazenbeard/mosaic`
 - `thebrazenbeard/testament`
@@ -48,7 +48,7 @@ The public seed is intentionally incomplete. It contains public-safe current pro
 
 ## Complete private inventory
 
-The complete 57-repository classification belongs in the private Exodus/portfolio checkpoint and, when used by Project Runner, in an explicitly selected external registry bound by exact SHA-256.
+The complete 58-repository classification belongs in the private estate/portfolio checkpoint and, when used by Project Runner, in an explicitly selected external registry bound by exact SHA-256.
 
 That private registry is a **replacement** runtime registry, not a hidden merge into public source.
 
@@ -60,6 +60,12 @@ Every private external project record must explicitly declare:
 - scheduling state.
 
 `HELD`, `ARCHIVED`, `DORMANT`, `SENSITIVE_HELD`, and `DECISION_HELD` remain observable but non-schedulable.
+
+## Discovery census currentness
+
+Project Runner PR #23 is bound to Discovery census bytes with count 57 and all-name SHA-256 `43dfda1fa3dd24dec39e2aa345d93ab192dbda777433feae384da632b3d008dd`. Discovery's own census contract states that a repository-count or inventory-digest change invalidates claims that those exact bytes are current. The live estate count is now 58, so those exact census bytes remain historical interoperability evidence, not current portfolio state.
+
+A future Discovery-census consumer must bind freshly generated Discovery bytes and undergo fresh exact-head review. Project Runner does not silently substitute remembered or newly observed inventory into an old exact binding.
 
 ## Refresh rule
 
