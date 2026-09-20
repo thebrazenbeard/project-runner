@@ -52,11 +52,11 @@ def test_real_rezon_r51_fixture_verifies_mechanically():
 def test_fixture_file_is_bound_to_exact_generated_bytes():
     binding = json.loads(BINDING.read_text(encoding="utf-8"))
     raw = FIXTURE.read_bytes()
-    assert sha256(raw).hexdigest() == binding["fixture"]["file_sha256"]
+    assert sha256(raw).hexdigest() == binding["fixture"]["persisted_fixture_sha256_lf"]
     assert binding["source"]["exact_head"] == (
         "8289914ec500a1392b10fe1a3774dee166e73b40"
     )
-    assert binding["fixture"]["generation_method"].endswith("NO_PACKAGE_INSTALL")
+    assert binding["fixture"]["generation_method"].endswith("NO_PACKAGE_INSTALL")\n    assert binding["fixture"]["source_generated_sha256_windows_crlf"] == (\n        "86266b74d807e3fb98fec13a5f8ccd2d05ff509b27bd3beb7e2abfe61e4952b5"\n    )\n    assert binding["fixture"]["transport_normalization"] == "CRLF_TO_LF_ONLY"
 
 
 def test_digest_tampering_fails_closed():
