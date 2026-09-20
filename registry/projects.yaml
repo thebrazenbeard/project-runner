@@ -122,3 +122,21 @@ projects:
   - read
   - analyze
   - propose
+- id: driftguard
+  name: DriftGuard
+  visibility: public
+  repositories:
+  - thebrazenbeard/driftguard
+  capabilities:
+  - read
+  - analyze
+  - propose
+- id: discovery
+  name: Discovery
+  visibility: public
+  repositories:
+  - thebrazenbeard/discovery
+  capabilities:
+  - read
+  - analyze
+  - propose
