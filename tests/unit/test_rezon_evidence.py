@@ -15,6 +15,7 @@ from runner.rezon_evidence import (
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests" / "fixtures" / "rezon_run_evidence_v1.json"
+FAILURE_FIXTURE = ROOT / "tests" / "fixtures" / "rezon_run_evidence_failure_v1.json"
 BINDING = ROOT / "tests" / "fixtures" / "rezon_run_evidence_v1.binding.json"
 
 
@@ -125,6 +126,19 @@ def test_duplicate_execution_bindings_are_rejected():
     evidence["receipt"]["execution_producer_ids"].append(
         deepcopy(evidence["receipt"]["execution_producer_ids"][0])
     )
+    rehash(evidence)
+
+    with pytest.raises(RezonEvidenceError, match="duplicate execution id"):
+        verify_rezon_run_evidence(evidence)
+
+
+def test_duplicate_failure_execution_ids_are_rejected_without_bindings():
+    evidence = json.loads(FAILURE_FIXTURE.read_text(encoding="utf-8"))
+    record = deepcopy(evidence["executions"][0])
+    evidence["executions"].append(record)
+    evidence["receipt"]["execution_ids"].append(record["execution_id"])
+    assert evidence["receipt"]["execution_output_digests"] == []
+    assert evidence["receipt"]["execution_producer_ids"] == []
     rehash(evidence)
 
     with pytest.raises(RezonEvidenceError, match="duplicate execution id"):
