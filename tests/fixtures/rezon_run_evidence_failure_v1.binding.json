@@ -1,0 +1,40 @@
+{
+  "schema": "PROJECT_RUNNER_REZON_FAILURE_EVIDENCE_FIXTURE_BINDING_V1",
+  "status": "REAL_REZON_FAILURE_EXPORT / UNCHANGED_VERIFIER / NON_PROMOTIONAL",
+  "source": {
+    "repository": "thebrazenbeard/rezon",
+    "pull_request": 79,
+    "exact_head": "8289914ec500a1392b10fe1a3774dee166e73b40",
+    "exporter_path": "src/rezon/interop.py",
+    "exporter_git_blob_sha1": "e365fd637904d4402891839ab1e187e50694e96b"
+  },
+  "fixture": {
+    "path": "tests/fixtures/rezon_run_evidence_failure_v1.json",
+    "source_generated_sha256_windows_crlf": "938ca1cfc60e055e61fa11f27156fa4226ee27f2dd0d9ff78348c0dfa04783a1",
+    "persisted_fixture_sha256_lf": "d0ddc3c5db5e3547f9b33a16139a20429b823ef93abc2bfa9bb247f63ce80a2d",
+    "transport_normalization": "CRLF_TO_LF_ONLY",
+    "evidence_digest": "516146d1f01291510e5b31e645520ed5434760ff953139d6aba71ea4cc37e752",
+    "generation_method": "DIRECT_EXACT_SOURCE_EXECUTION_PYTHON_3_12_NO_PACKAGE_INSTALL",
+    "effect_state": "plan",
+    "receipt_failures": [
+      "contract_violation"
+    ],
+    "trace_failures": [
+      "contract_violation"
+    ],
+    "executions": 1
+  },
+  "runner_verifier": {
+    "parent_exact_head": "4de0f6148b3d7d04ccdb4e0057435fa0d904590a",
+    "path": "runner/rezon_evidence.py",
+    "git_blob_sha1": "d7827dec743e69fff7f981d91d7a86f6cd4a4839",
+    "production_change_required": false
+  },
+  "semantic_boundary": {
+    "failure_values_are_source_native": true,
+    "runner_checks_coverage_not_failure_meaning": true,
+    "structurally_valid_failure_is_not_runner_completion": true,
+    "structurally_valid_failure_is_not_rezon_truth_or_admission": true
+  },
+  "claim_ceiling": "REAL_REZON_FAILURE_PATH_MECHANICALLY_PRESERVED_WITH_UNCHANGED_RUNNER_VERIFIER"
+}
