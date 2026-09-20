@@ -177,6 +177,19 @@ def test_producer_binding_requires_snapshot_and_output_digests():
         verify_rezon_run_evidence(evidence)
 
 
+def test_forged_matching_trace_and_receipt_producer_id_is_rejected():
+    evidence = load_fixture()
+    execution_id = evidence["executions"][0]["execution_id"]
+    evidence["executions"][0]["canonical_producer_execution_id"] = "forged-producer"
+    evidence["receipt"]["execution_producer_ids"] = [
+        [execution_id, "forged-producer"]
+    ]
+    rehash(evidence)
+
+    with pytest.raises(RezonEvidenceError, match="producer identity does not recompute"):
+        verify_rezon_run_evidence(evidence)
+
+
 def test_unknown_schema_field_fails_closed():
     evidence = load_fixture()
     evidence["runner_should_not_guess"] = True
