@@ -12,11 +12,13 @@
   },
   "fixture": {
     "path": "tests/fixtures/rezon_run_evidence_v1.json",
-    "file_sha256": "86266b74d807e3fb98fec13a5f8ccd2d05ff509b27bd3beb7e2abfe61e4952b5",
     "evidence_digest": "98bca73ae71697601cd7c9c10e2067cd8fef83aa58e7bad2f1fec59c18508c48",
     "generation_method": "DIRECT_EXACT_SOURCE_EXECUTION_PYTHON_3_12_NO_PACKAGE_INSTALL",
     "effect_state": "plan",
-    "executions": 1
+    "executions": 1,
+    "source_generated_sha256_windows_crlf": "86266b74d807e3fb98fec13a5f8ccd2d05ff509b27bd3beb7e2abfe61e4952b5",
+    "persisted_fixture_sha256_lf": "71a05e32974cfadd20272073f154ef2f083daeaa0ac63f54cd85b43e2eb1db28",
+    "transport_normalization": "CRLF_TO_LF_ONLY"
   },
   "verifier_boundary": {
     "may_verify": [
