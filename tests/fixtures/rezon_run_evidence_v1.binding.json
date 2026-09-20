@@ -1,0 +1,42 @@
+{
+  "schema": "PROJECT_RUNNER_REZON_EVIDENCE_FIXTURE_BINDING_V1",
+  "status": "REAL_DETERMINISTIC_EXPORT / NON_PROMOTIONAL",
+  "source": {
+    "repository": "thebrazenbeard/rezon",
+    "pull_request": 79,
+    "exact_head": "8289914ec500a1392b10fe1a3774dee166e73b40",
+    "exporter_path": "src/rezon/interop.py",
+    "exporter_git_blob_sha1": "e365fd637904d4402891839ab1e187e50694e96b",
+    "regression_path": "tests/test_r49_project_runner_evidence_export.py",
+    "regression_git_blob_sha1": "6ae902177bc5d41fd1c3c34ce1e810d5ce3809c1"
+  },
+  "fixture": {
+    "path": "tests/fixtures/rezon_run_evidence_v1.json",
+    "file_sha256": "86266b74d807e3fb98fec13a5f8ccd2d05ff509b27bd3beb7e2abfe61e4952b5",
+    "evidence_digest": "98bca73ae71697601cd7c9c10e2067cd8fef83aa58e7bad2f1fec59c18508c48",
+    "generation_method": "DIRECT_EXACT_SOURCE_EXECUTION_PYTHON_3_12_NO_PACKAGE_INSTALL",
+    "effect_state": "plan",
+    "executions": 1
+  },
+  "verifier_boundary": {
+    "may_verify": [
+      "schema_version",
+      "canonical_body_digest",
+      "receipt_trace_execution_identity",
+      "receipt_trace_source_version_binding",
+      "receipt_trace_failure_coverage",
+      "receipt_trace_output_binding",
+      "receipt_trace_producer_binding",
+      "receipt_trace_task_envelope_binding"
+    ],
+    "must_not_decide": [
+      "REZON_TRUTH",
+      "REZON_ADMISSION",
+      "REZON_CLAIM_CORRECTNESS",
+      "REZON_QUALIFICATION",
+      "REZON_AUTHORITY",
+      "EXTERNAL_EFFECT_AUTHORIZATION"
+    ]
+  },
+  "claim_ceiling": "REAL_REZON_EXPORT_FIXTURE_FOR_MECHANICAL_RUNNER_VERIFICATION_ONLY"
+}
