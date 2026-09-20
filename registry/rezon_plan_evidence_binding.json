@@ -1,0 +1,38 @@
+{
+  "schema": "PROJECT_RUNNER_REZON_PLAN_EVIDENCE_BINDING_V1",
+  "status": "SOURCE_EXPERIMENT / OBSERVATIONAL_EVIDENCE_ONLY / NOT_REGISTERED_BACKEND",
+  "rezon_source": {
+    "repository": "thebrazenbeard/rezon",
+    "pull_request": 79,
+    "exact_head": "8289914ec500a1392b10fe1a3774dee166e73b40",
+    "boundary_path": "docs/architecture/PROJECT_RUNNER_OUTER_ORCHESTRATION_BOUNDARY.md",
+    "boundary_blob_sha1": "ea83250badd4367f9c923bc01f4d8429402ca006",
+    "interop_path": "src/rezon/interop.py",
+    "interop_blob_sha1": "e365fd637904d4402891839ab1e187e50694e96b",
+    "evidence_schema": "rezon.run-evidence.v1",
+    "hosted_exact_head": "NOT_EXECUTED",
+    "claim_ceiling": "STRUCTURAL_EVIDENCE_NOT_ORIGIN_AUTHENTICATION_NOT_OUTER_COMPLETION"
+  },
+  "project_runner_base": {
+    "repository": "thebrazenbeard/project-runner",
+    "pull_request": 22,
+    "exact_head": "bee7e720ba923ef38ce87fca4c9c2560163a9360"
+  },
+  "adapter": {
+    "implementation": "runner.rezon_evidence.validate_rezon_plan_evidence",
+    "result_type": "RezonPlanEvidenceObservation",
+    "backend_registered": false,
+    "completion_eligible": false,
+    "authority_eligible": false,
+    "recomputes_rezon_epistemic_algorithms": false
+  },
+  "preserved_boundaries": [
+    "REZON_PLAN_EVIDENCE_IS_NOT_PROJECT_RUNNER_COMPLETE",
+    "STRUCTURAL_CONSISTENCY_IS_NOT_OBJECT_ORIGIN_AUTHENTICATION",
+    "REZON_PRODUCER_IDENTITY_ALGORITHM_REMAINS_REZON_OWNED",
+    "PROJECT_RUNNER_LEASE_FENCE_CURRENTNESS_AUTHORITY_AND_READBACK_REMAIN_PROJECT_RUNNER_OWNED",
+    "NO_AUTHORITY_STRING_TRANSLATION",
+    "NO_RUNTIME_BACKEND_REGISTRATION"
+  ],
+  "claim_ceiling": "MECHANICAL_EVIDENCE_RETURN_PATH_SOURCE_ONLY_NOT_DELEGATION_NOT_COMPLETION_NOT_AUTHORITY"
+}
