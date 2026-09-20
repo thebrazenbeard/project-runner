@@ -1,0 +1,63 @@
+{
+  "evidence_digest": "98bca73ae71697601cd7c9c10e2067cd8fef83aa58e7bad2f1fec59c18508c48",
+  "executions": [
+    {
+      "blinded_proposition_ids": [],
+      "blinded_relation_ids": [],
+      "canonical_episode_snapshot_digest": "a6ba728b581bcc14c027e5aac189672adb4d58661755d4bc00a0aefe7315aa9c",
+      "canonical_output_digest": "2155c178627dbab1321e01f9764d5c37f439250f24b296718bb47b541658687d",
+      "canonical_producer_execution_id": "canonical:exec:echo_hypothesis:f8b0d6ab81ad2127dd261266a2c942d9a50806edc61f3976b8140dcd9ed9626b",
+      "emitted_proposition_ids": [
+        "h1"
+      ],
+      "episode_version": "e1@1",
+      "execution_id": "discovery-rezon-runner-boundary-v1:exec:1:echo_hypothesis",
+      "executor_episode_version": "e1@1",
+      "executor_task_specification_digest": null,
+      "failures": [],
+      "independence_demonstrated": false,
+      "node_id": "echo_hypothesis",
+      "reported_source_refs": [],
+      "reported_source_versions": [],
+      "source_refs": [],
+      "source_versions": [
+        "source:fixture@v1"
+      ],
+      "task_envelope_digest": null,
+      "visible_proposition_ids": [
+        "o1"
+      ],
+      "visible_relation_ids": []
+    }
+  ],
+  "receipt": {
+    "accepted_claim_ids": [],
+    "claim_disposition_complete": false,
+    "effect_state": "plan",
+    "episode_version": "e1@2",
+    "execution_ids": [
+      "discovery-rezon-runner-boundary-v1:exec:1:echo_hypothesis"
+    ],
+    "execution_output_digests": [
+      [
+        "discovery-rezon-runner-boundary-v1:exec:1:echo_hypothesis",
+        "2155c178627dbab1321e01f9764d5c37f439250f24b296718bb47b541658687d"
+      ]
+    ],
+    "execution_producer_ids": [
+      [
+        "discovery-rezon-runner-boundary-v1:exec:1:echo_hypothesis",
+        "canonical:exec:echo_hypothesis:f8b0d6ab81ad2127dd261266a2c942d9a50806edc61f3976b8140dcd9ed9626b"
+      ]
+    ],
+    "failures": [],
+    "rejected_claim_ids": [],
+    "source_versions": [
+      "source:fixture@v1"
+    ],
+    "task_envelope_digest": null,
+    "task_id": "discovery-rezon-runner-boundary-v1",
+    "unresolved": []
+  },
+  "schema_version": "rezon.run-evidence.v1"
+}
