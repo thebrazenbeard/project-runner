@@ -150,6 +150,108 @@ def _route_payload(
     }
 
 
+def ensure_worker_route_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript(_SCHEMA)
+
+
+def enqueue_worker_route_record(
+    connection: sqlite3.Connection,
+    *,
+    snapshot_id: int,
+    frontier_fingerprint: str,
+    queue_fencing_token: int,
+    worker_registry_digest: str,
+    route: ReadOnlyWorkerRoute,
+    target_repository: str,
+    target_ref: str,
+    target_head: str,
+    frontier_json: str,
+    now: float,
+) -> WorkerRouteEnvelope:
+    payload = _route_payload(
+        snapshot_id=snapshot_id,
+        frontier_fingerprint=frontier_fingerprint,
+        queue_fencing_token=queue_fencing_token,
+        worker_registry_digest=worker_registry_digest,
+        route=route,
+        target_repository=target_repository,
+        target_ref=target_ref,
+        target_head=target_head,
+        frontier_json=frontier_json,
+    )
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    route_id = f"worker-route-{digest[:24]}"
+
+    existing = connection.execute(
+        """
+        SELECT route_id, payload_sha256, state
+        FROM worker_route_outbox
+        WHERE snapshot_id = ?
+          AND frontier_fingerprint = ?
+          AND queue_fencing_token = ?
+        """,
+        (snapshot_id, frontier_fingerprint, queue_fencing_token),
+    ).fetchone()
+    if existing is not None:
+        if str(existing[1]) != digest:
+            raise ValueError(
+                "worker route identity already exists with different payload"
+            )
+        return WorkerRouteEnvelope(
+            route_id=str(existing[0]),
+            snapshot_id=snapshot_id,
+            frontier_fingerprint=frontier_fingerprint,
+            queue_fencing_token=queue_fencing_token,
+            worker_registry_digest=worker_registry_digest,
+            worker_id=route.worker_id,
+            invocation_route=route.invocation_route,
+            replay_policy=route.replay_policy,
+            state=str(existing[2]),
+        )
+
+    connection.execute(
+        """
+        INSERT INTO worker_route_outbox(
+            route_id, snapshot_id, frontier_fingerprint,
+            queue_fencing_token, worker_registry_digest,
+            worker_id, invocation_route, replay_policy,
+            target_repository, target_ref, target_head,
+            frontier_json, payload_sha256, state,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
+        """,
+        (
+            route_id,
+            snapshot_id,
+            frontier_fingerprint,
+            queue_fencing_token,
+            worker_registry_digest,
+            route.worker_id,
+            route.invocation_route.value,
+            route.replay_policy.value,
+            target_repository,
+            target_ref,
+            target_head,
+            frontier_json,
+            digest,
+            now,
+            now,
+        ),
+    )
+    return WorkerRouteEnvelope(
+        route_id=route_id,
+        snapshot_id=snapshot_id,
+        frontier_fingerprint=frontier_fingerprint,
+        queue_fencing_token=queue_fencing_token,
+        worker_registry_digest=worker_registry_digest,
+        worker_id=route.worker_id,
+        invocation_route=route.invocation_route,
+        replay_policy=route.replay_policy,
+        state="PENDING",
+    )
+
+
 class SqliteWorkerRouteStore:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
@@ -161,7 +263,7 @@ class SqliteWorkerRouteStore:
         )
         self.connection.execute("PRAGMA journal_mode=WAL")
         self.connection.execute("PRAGMA foreign_keys=ON")
-        self.connection.executescript(_SCHEMA)
+        ensure_worker_route_schema(self.connection)
 
     def close(self) -> None:
         self.connection.close()
@@ -180,100 +282,23 @@ class SqliteWorkerRouteStore:
         frontier_json: str,
         now: float,
     ) -> WorkerRouteEnvelope:
-        payload = _route_payload(
-            snapshot_id=snapshot_id,
-            frontier_fingerprint=frontier_fingerprint,
-            queue_fencing_token=queue_fencing_token,
-            worker_registry_digest=worker_registry_digest,
-            route=route,
-            target_repository=target_repository,
-            target_ref=target_ref,
-            target_head=target_head,
-            frontier_json=frontier_json,
-        )
-        canonical = json.dumps(
-            payload,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        route_id = f"worker-route-{digest[:24]}"
-
         self.connection.execute("BEGIN IMMEDIATE")
         try:
-            existing = self.connection.execute(
-                """
-                SELECT route_id, payload_sha256, state
-                FROM worker_route_outbox
-                WHERE snapshot_id = ?
-                  AND frontier_fingerprint = ?
-                  AND queue_fencing_token = ?
-                """,
-                (
-                    snapshot_id,
-                    frontier_fingerprint,
-                    queue_fencing_token,
-                ),
-            ).fetchone()
-            if existing is not None:
-                if str(existing[1]) != digest:
-                    raise ValueError(
-                        "worker route identity already exists with different payload"
-                    )
-                self.connection.commit()
-                return WorkerRouteEnvelope(
-                    route_id=str(existing[0]),
-                    snapshot_id=snapshot_id,
-                    frontier_fingerprint=frontier_fingerprint,
-                    queue_fencing_token=queue_fencing_token,
-                    worker_registry_digest=worker_registry_digest,
-                    worker_id=route.worker_id,
-                    invocation_route=route.invocation_route,
-                    replay_policy=route.replay_policy,
-                    state=str(existing[2]),
-                )
-
-            self.connection.execute(
-                """
-                INSERT INTO worker_route_outbox(
-                    route_id, snapshot_id, frontier_fingerprint,
-                    queue_fencing_token, worker_registry_digest,
-                    worker_id, invocation_route, replay_policy,
-                    target_repository, target_ref, target_head,
-                    frontier_json, payload_sha256, state,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
-                """,
-                (
-                    route_id,
-                    snapshot_id,
-                    frontier_fingerprint,
-                    queue_fencing_token,
-                    worker_registry_digest,
-                    route.worker_id,
-                    route.invocation_route.value,
-                    route.replay_policy.value,
-                    target_repository,
-                    target_ref,
-                    target_head,
-                    frontier_json,
-                    digest,
-                    now,
-                    now,
-                ),
-            )
-            self.connection.commit()
-            return WorkerRouteEnvelope(
-                route_id=route_id,
+            envelope = enqueue_worker_route_record(
+                self.connection,
                 snapshot_id=snapshot_id,
                 frontier_fingerprint=frontier_fingerprint,
                 queue_fencing_token=queue_fencing_token,
                 worker_registry_digest=worker_registry_digest,
-                worker_id=route.worker_id,
-                invocation_route=route.invocation_route,
-                replay_policy=route.replay_policy,
-                state="PENDING",
+                route=route,
+                target_repository=target_repository,
+                target_ref=target_ref,
+                target_head=target_head,
+                frontier_json=frontier_json,
+                now=now,
             )
+            self.connection.commit()
+            return envelope
         except BaseException:
             self.connection.rollback()
             raise
