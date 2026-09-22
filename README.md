@@ -114,6 +114,15 @@ A qualified worker route uses a fenced pull/receipt protocol. Delivery rechecks 
       --payload-out /secure/path/packet.json \
       --state-db .project-runner/project-runner.sqlite3
 
+A built-in reference endpoint exercises the same delivery protocol with real GitHub READ_REF currentness checks:
+
+    PROJECT_RUNNER_GITHUB_TOKEN=<read-token> \
+    project-runner run-reference-worker \
+      --holder project-runner-reference-read-worker \
+      --state-db .project-runner/project-runner.sqlite3
+
+The reference worker is read-only and emits only route/receipt summary metadata.
+
     project-runner record-worker-receipt \
       --route-id <route-id> \
       --worker-id <worker-id> \
@@ -139,7 +148,7 @@ Ambiguous or routed queue items retain their collision reservation until explici
 
 A read-only retry release advances the durable attempt generation and uses a new deterministic lineage. SAFE routes permit automatic expired-claim replay and explicit retry release; RECONCILE_REQUIRED permits retry only through explicit reconciliation; NEVER does not permit retry release. Routed `CONFIRM_COMPLETE` also re-reads both the provider ref and bound consumer target ref live—worker success alone is not completion.
 
-The committed public registry currently binds only Project Runner's own `INSPECT` target. The twelve committed worker records remain REGISTERED with UNVERIFIED routes, so none is silently activated. Other work remains blocked until its target and qualified worker route are explicitly declared; Project Runner does not infer `main`, choose the first repository, or manufacture routing authority.
+The committed public registry binds Project Runner's built-in `INSPECT` target and a `REREVIEW` target to the Project Runner reference read worker. The 12 Custom GPT records remain REGISTERED with UNVERIFIED routes and are not silently activated. The reference worker is separate: a GITHUB_ACTION worker with a VERIFIED `RUNNER_ACTION_PULL` READ_ONLY/SAFE route that is live-proven in CI. Other work remains blocked until its target and qualified route are explicitly declared; Project Runner does not infer `main`, choose the first repository, or manufacture routing authority.
 
 ## Private portfolio registry
 
