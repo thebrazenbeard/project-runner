@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
 import tempfile
 
 from runner.dedup import frontier_fingerprint
+from runner.github_backend import GitHubRestTransport
 from runner.models import Frontier, Observation, ProjectDefinition
 from runner.portfolio import SqlitePortfolioStore
 from runner.reference_worker import (
@@ -103,6 +105,31 @@ def main() -> None:
         raise RuntimeError("reference worker pull route is absent")
     if worker.routes[REFERENCE_WORKER_ROUTE].value != "VERIFIED":
         raise RuntimeError("reference worker pull route is not VERIFIED")
+    if worker.reconstruction is None:
+        raise RuntimeError("reference worker lacks reconstruction evidence")
+
+    reconstruction_repository = worker.reconstruction["repository"]
+    reconstruction_path = worker.reconstruction["path"]
+    reconstruction_commit = worker.reconstruction["commit"]
+    reconstruction_transport = GitHubRestTransport(token=token)
+    reconstructed = reconstruction_transport.read_file(
+        reconstruction_repository,
+        reconstruction_path,
+        reconstruction_commit,
+    )
+    if reconstructed is None:
+        raise RuntimeError("reference worker reconstruction file is missing")
+    local_worker_path = ROOT / reconstruction_path
+    if not local_worker_path.is_file():
+        raise RuntimeError("reference worker local implementation is missing")
+    local_worker_content = local_worker_path.read_text(encoding="utf-8")
+    if reconstructed.content != local_worker_content:
+        raise RuntimeError(
+            "reference worker reconstruction bytes differ from exact workflow subject"
+        )
+    reconstruction_sha256 = hashlib.sha256(
+        reconstructed.content.encode("utf-8")
+    ).hexdigest()
 
     frontier = _frontier(repository, ref, expected_head)
     project = ProjectDefinition.from_mapping(
@@ -231,6 +258,12 @@ def main() -> None:
                 "expected_head": expected_head,
                 "receipt_class": "SUCCEEDED",
                 "worker_registry_digest": worker_snapshot.sha256,
+                "reconstruction_repository": reconstruction_repository,
+                "reconstruction_path": reconstruction_path,
+                "reconstruction_commit": reconstruction_commit,
+                "reconstruction_blob_sha": reconstructed.sha,
+                "reconstruction_sha256": reconstruction_sha256,
+                "reconstruction_exact_bytes": True,
             },
             sort_keys=True,
         )
