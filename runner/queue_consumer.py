@@ -764,6 +764,17 @@ class SqliteQueueStore:
         }
         if frontier.subject.identity() not in current_subjects:
             return False
+        if (
+            frontier.subject.commit is None
+            or _SHA40.fullmatch(frontier.subject.commit) is None
+        ):
+            return False
+        observed_provider_head = target_currentness_reader(
+            frontier.subject.repository,
+            frontier.subject.ref,
+        )
+        if observed_provider_head != frontier.subject.commit:
+            return False
 
         target_repository = str(row[2])
         target_ref = str(row[3])
