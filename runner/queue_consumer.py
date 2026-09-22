@@ -679,6 +679,22 @@ class SqliteQueueStore:
                         frontier_fingerprint_value,
                     ),
                 )
+                if previous_state == "ROUTED":
+                    self.connection.execute(
+                        """
+                        UPDATE worker_route_outbox
+                        SET state = 'RECONCILED_RETRY', updated_at = ?
+                        WHERE snapshot_id = ?
+                          AND frontier_fingerprint = ?
+                          AND queue_fencing_token = ?
+                        """,
+                        (
+                            now,
+                            snapshot_id,
+                            frontier_fingerprint_value,
+                            expected_fencing_token,
+                        ),
+                    )
             else:
                 self.connection.execute(
                     """
@@ -695,6 +711,23 @@ class SqliteQueueStore:
                         frontier_fingerprint_value,
                     ),
                 )
+                if previous_state == "ROUTED":
+                    self.connection.execute(
+                        """
+                        UPDATE worker_route_outbox
+                        SET state = ?, updated_at = ?
+                        WHERE snapshot_id = ?
+                          AND frontier_fingerprint = ?
+                          AND queue_fencing_token = ?
+                        """,
+                        (
+                            final_state,
+                            now,
+                            snapshot_id,
+                            frontier_fingerprint_value,
+                            expected_fencing_token,
+                        ),
+                    )
 
             self.connection.execute(
                 """
