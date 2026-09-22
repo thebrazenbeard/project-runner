@@ -116,7 +116,17 @@ The first successful cycle for an exact pair of registry digests establishes a b
 
 All required ref reads must succeed before a snapshot can advance. Snapshot persistence and scheduler decisions are one SQLite transaction. The transaction rechecks the exact latest compatible predecessor under `BEGIN IMMEDIATE`; a stale concurrent collector must fail rather than overwrite or double-schedule from an obsolete predecessor.
 
-READY frontiers are persisted as `QUEUED`; non-ready frontiers are persisted as `BLOCKED`. This queue is coordination/evidence state only. It is not worker authority, target mutation authority, completion evidence, or permission to consume the row.
+READY frontiers are persisted as `QUEUED`; non-ready frontiers are persisted as `BLOCKED`. A frontier is not READY for execution unless the current project snapshot contains one explicit execution target for its work type. Repository membership alone does not authorize a ref, and `main` is never inferred.
+
+## M6 fenced queue consumption
+
+Queue consumption is separately fenced from operator execution. A consumer may claim only a READY supported work item from the latest snapshot whose project/dependency digests equal the current configuration. Claims use monotonic fencing tokens and respect live collision domains across snapshots.
+
+The exact declared target repository/ref is stored with the queue claim. Its resolved exact head is persisted before operator execution and remains stable across reclaim; a reclaimed attempt cannot silently select a newer target head.
+
+The queue derives a deterministic operator lineage from durable snapshot/frontier identity. Before execution it reconstructs the exact expected operator work fingerprint. Existing terminal operator state is reconciliation evidence and must be consumed without backend re-execution. Existing nonterminal state is ambiguous and must become queue `OUTCOME_UNKNOWN`; it does not authorize blind replay.
+
+A newer compatible portfolio snapshot supersedes visibility of older unclaimed queues. Queue state remains coordination/evidence, not downstream mutation authority.
 
 ## Current effect ceiling
 
