@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from runner.models import DependencyEdge, ProjectDefinition
+from runner.models import DependencyEdge, ProjectDefinition, WorkerDefinition
 from runner.portfolio import (
     SqlitePortfolioStore,
     collect_and_schedule_portfolio,
@@ -76,6 +76,7 @@ def _dependency(
     repository: str = "example/provider",
     ref: str = "main",
     path_prefix: str | None = "src/",
+    reaction: str = "INSPECT",
 ) -> DependencyEdge:
     selector = {"repository": repository, "ref": ref}
     if path_prefix is not None:
@@ -87,7 +88,7 @@ def _dependency(
             "consumer": "consumer",
             "kind": "source",
             "selector": selector,
-            "reaction": "INSPECT",
+            "reaction": reaction,
             "evidence": "exact-subject",
         }
     )
@@ -361,7 +362,7 @@ def test_schedulable_consumer_without_execution_target_waits_for_authority(
 
 
 
-def test_worker_registry_digest_change_establishes_new_baseline(tmp_path: Path):
+def test_worker_registry_change_preserves_observation_continuity(tmp_path: Path):
     db = tmp_path / "portfolio-worker-digest.sqlite3"
     transport = FakeTransport(
         {("example/provider", "main"): "a" * 40}
@@ -384,7 +385,7 @@ def test_worker_registry_digest_change_establishes_new_baseline(tmp_path: Path):
     )
     transport.heads[("example/provider", "main")] = "b" * 40
 
-    reset = collect_and_schedule_portfolio(
+    changed = collect_and_schedule_portfolio(
         projects=projects,
         dependencies=(_dependency(),),
         registry_digest="1" * 64,
@@ -396,7 +397,121 @@ def test_worker_registry_digest_change_establishes_new_baseline(tmp_path: Path):
         clock=lambda: 2.0,
     )
 
-    assert reset.baseline is True
-    assert reset.changed_count == 0
-    assert reset.frontier_count == 0
-    assert reset.queued_count == 0
+    assert changed.baseline is False
+    assert changed.changed_count == 1
+    assert changed.frontier_count == 1
+    assert changed.queued_count == 1
+
+
+def test_verified_worker_route_wakes_existing_waiting_authority_frontier(
+    tmp_path: Path,
+):
+    db = tmp_path / "portfolio-worker-authority.sqlite3"
+    transport = FakeTransport(
+        {("example/provider", "main"): "a" * 40}
+    )
+    provider = _project("provider", "example/provider")
+    consumer = ProjectDefinition.from_mapping(
+        {
+            "id": "consumer",
+            "name": "consumer",
+            "visibility": "public",
+            "repositories": ["example/consumer"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "consumer",
+            "scheduling_state": "SCHEDULABLE",
+            "execution_targets": [
+                {
+                    "work_type": "REREVIEW",
+                    "repository": "example/consumer",
+                    "ref": "review",
+                    "worker_id": "reviewer",
+                    "worker_route": "OPENAI_AGENT_API",
+                }
+            ],
+        }
+    )
+    registered = WorkerDefinition.from_mapping(
+        {
+            "id": "reviewer",
+            "name": "Reviewer",
+            "worker_type": "OPENAI_AGENT",
+            "lifecycle": "REGISTERED",
+            "locators": {"model": "reviewer-model"},
+            "roles": ["review"],
+            "routes": {"OPENAI_AGENT_API": "UNVERIFIED"},
+        }
+    )
+    executable = WorkerDefinition.from_mapping(
+        {
+            "id": "reviewer",
+            "name": "Reviewer",
+            "worker_type": "OPENAI_AGENT",
+            "lifecycle": "EXECUTABLE",
+            "locators": {"model": "reviewer-model"},
+            "roles": ["review"],
+            "routes": {"OPENAI_AGENT_API": "VERIFIED"},
+            "route_contracts": {
+                "OPENAI_AGENT_API": {
+                    "effect_class": "READ_ONLY",
+                    "replay_policy": "SAFE",
+                }
+            },
+            "reconstruction": {
+                "repository": "example/workers",
+                "path": "reviewer.md",
+                "commit": "f" * 40,
+            },
+        }
+    )
+    projects = (provider, consumer)
+    dependency = (_dependency(path_prefix=None, reaction="REREVIEW"),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=(registered,),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="6" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    blocked = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=(registered,),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="6" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    assert blocked.ready_count == 0
+    assert blocked.blocked_count == 1
+
+    awakened = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=(executable,),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="7" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+
+    assert awakened.baseline is False
+    assert awakened.changed_count == 0
+    assert awakened.frontier_count == 1
+    assert awakened.ready_count == 1
+    assert awakened.queued_count == 1
