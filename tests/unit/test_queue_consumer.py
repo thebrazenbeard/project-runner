@@ -10,6 +10,7 @@ from runner.queue_consumer import (
     consume_next_queued_inspection,
     summarize_queue_state,
 )
+from runner.work_units import WorkUnitStatus
 
 
 class FakeTransport:
