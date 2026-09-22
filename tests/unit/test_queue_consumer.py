@@ -1178,3 +1178,79 @@ def test_routed_reconciliation_requires_exact_outbox_envelope(tmp_path: Path):
             reconciler="test-reconciler",
             clock=lambda: 4.0,
         )
+
+
+
+def test_failed_retryable_on_older_snapshot_is_recovered_into_latest_queue(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-historical-retry.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "c" * 40,
+        }
+    )
+    projects, changed = _schedule(db, transport)
+
+    store = SqliteQueueStore(db)
+    claim = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        holder="first-holder",
+        now=3.0,
+        ttl=60.0,
+    )
+    assert claim is not None
+    assert claim.snapshot_id == changed.snapshot_id
+    store.close()
+
+    intervening = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 4.0,
+    )
+    assert intervening.frontier_count == 0
+
+    store = SqliteQueueStore(db)
+    store.finalize(
+        claim,
+        state="FAILED_RETRYABLE",
+        reason="synthetic retryable failure",
+        now=5.0,
+    )
+    store.close()
+
+    recovered_snapshot = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 6.0,
+    )
+    assert recovered_snapshot.frontier_count == 1
+    assert recovered_snapshot.queued_count == 1
+
+    result = consume_next_queued_inspection(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        holder="second-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 7.0,
+    )
+    assert result.claimed is True
+    assert result.queue_state == "COMPLETE"
+    assert result.snapshot_id == recovered_snapshot.snapshot_id
