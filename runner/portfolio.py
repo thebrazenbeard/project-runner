@@ -115,6 +115,7 @@ class SqlitePortfolioStore:
                 snapshot_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 registry_digest TEXT NOT NULL,
                 dependency_digest TEXT NOT NULL,
+                worker_registry_digest TEXT NOT NULL DEFAULT 'legacy-unbound',
                 snapshot_digest TEXT NOT NULL,
                 observed_at REAL NOT NULL,
                 baseline INTEGER NOT NULL CHECK (baseline IN (0, 1)),
@@ -169,6 +170,31 @@ class SqlitePortfolioStore:
             );
             """
         )
+        snapshot_columns = {
+            str(row[1])
+            for row in self.connection.execute(
+                "PRAGMA table_info(portfolio_snapshots)"
+            )
+        }
+        if "worker_registry_digest" not in snapshot_columns:
+            self.connection.execute(
+                """
+                ALTER TABLE portfolio_snapshots
+                ADD COLUMN worker_registry_digest TEXT
+                NOT NULL DEFAULT 'legacy-unbound'
+                """
+            )
+        self.connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_portfolio_snapshot_config_v2
+            ON portfolio_snapshots(
+                registry_digest,
+                dependency_digest,
+                worker_registry_digest,
+                snapshot_id
+            )
+            """
+        )
         _ensure_frontier_json_column(self.connection)
 
     def close(self) -> None:
@@ -179,16 +205,19 @@ class SqlitePortfolioStore:
         *,
         registry_digest: str,
         dependency_digest: str,
+        worker_registry_digest: str,
     ) -> int | None:
         row = self.connection.execute(
             """
             SELECT snapshot_id
             FROM portfolio_snapshots
-            WHERE registry_digest = ? AND dependency_digest = ?
+            WHERE registry_digest = ?
+              AND dependency_digest = ?
+              AND worker_registry_digest = ?
             ORDER BY snapshot_id DESC
             LIMIT 1
             """,
-            (registry_digest, dependency_digest),
+            (registry_digest, dependency_digest, worker_registry_digest),
         ).fetchone()
         return None if row is None else int(row[0])
 
@@ -227,6 +256,7 @@ class SqlitePortfolioStore:
         *,
         registry_digest: str,
         dependency_digest: str,
+        worker_registry_digest: str,
         snapshot_digest: str,
         observed_at: float,
         baseline: bool,
@@ -249,11 +279,17 @@ class SqlitePortfolioStore:
                 """
                 SELECT snapshot_id
                 FROM portfolio_snapshots
-                WHERE registry_digest = ? AND dependency_digest = ?
+                WHERE registry_digest = ?
+                  AND dependency_digest = ?
+                  AND worker_registry_digest = ?
                 ORDER BY snapshot_id DESC
                 LIMIT 1
                 """,
-                (registry_digest, dependency_digest),
+                (
+                    registry_digest,
+                    dependency_digest,
+                    worker_registry_digest,
+                ),
             ).fetchone()
             actual_previous = None if row is None else int(row[0])
             if actual_previous != expected_previous_snapshot_id:
@@ -264,14 +300,16 @@ class SqlitePortfolioStore:
             cursor = self.connection.execute(
                 """
                 INSERT INTO portfolio_snapshots(
-                    registry_digest, dependency_digest, snapshot_digest,
+                    registry_digest, dependency_digest,
+                    worker_registry_digest, snapshot_digest,
                     observed_at, baseline, observation_count, changed_count,
                     frontier_count, ready_count, blocked_count
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     registry_digest,
                     dependency_digest,
+                    worker_registry_digest,
                     snapshot_digest,
                     observed_at,
                     int(baseline),
@@ -593,11 +631,13 @@ def _snapshot_digest(
     *,
     registry_digest: str,
     dependency_digest: str,
+    worker_registry_digest: str,
     observations: tuple[Observation, ...],
 ) -> str:
     payload = {
         "registry_digest": registry_digest,
         "dependency_digest": dependency_digest,
+        "worker_registry_digest": worker_registry_digest,
         "observations": [
             {
                 "target": item.target,
@@ -623,6 +663,7 @@ def collect_and_schedule_portfolio(
     workers: Iterable[WorkerDefinition] = (),
     registry_digest: str,
     dependency_digest: str,
+    worker_registry_digest: str = "0000000000000000000000000000000000000000000000000000000000000000",
     state_db: Path,
     token: str | None,
     transport: GitHubTransport | None = None,
@@ -637,6 +678,10 @@ def collect_and_schedule_portfolio(
     """
     _validate_digest(registry_digest, label="project registry digest")
     _validate_digest(dependency_digest, label="dependency registry digest")
+    _validate_digest(
+        worker_registry_digest,
+        label="worker registry digest",
+    )
     project_tuple = tuple(projects)
     dependency_tuple = tuple(dependencies)
     worker_tuple = tuple(workers)
@@ -652,6 +697,7 @@ def collect_and_schedule_portfolio(
     digest = _snapshot_digest(
         registry_digest=registry_digest,
         dependency_digest=dependency_digest,
+        worker_registry_digest=worker_registry_digest,
         observations=current,
     )
 
@@ -660,6 +706,7 @@ def collect_and_schedule_portfolio(
         previous_snapshot_id = store.latest_compatible_snapshot_id(
             registry_digest=registry_digest,
             dependency_digest=dependency_digest,
+            worker_registry_digest=worker_registry_digest,
         )
         baseline = previous_snapshot_id is None
         if baseline:
@@ -723,6 +770,7 @@ def collect_and_schedule_portfolio(
         snapshot_id = store.commit_cycle(
             registry_digest=registry_digest,
             dependency_digest=dependency_digest,
+            worker_registry_digest=worker_registry_digest,
             snapshot_digest=digest,
             observed_at=now,
             baseline=baseline,
