@@ -112,6 +112,43 @@
                 "pattern": "^[0-9a-f]{40}$"
               }
             }
+          },
+          "route_contracts": {
+            "type": "object",
+            "propertyNames": {
+              "enum": [
+                "CHATGPT_INVOCATION",
+                "RUNNER_ACTION_PULL",
+                "DIRECT_EXTERNAL_DISPATCH",
+                "PLUGIN_TOOL_CALL",
+                "OPENAI_AGENT_API",
+                "GITHUB_ACTION",
+                "HUMAN_MANUAL"
+              ]
+            },
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "effect_class",
+                "replay_policy"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "effect_class": {
+                  "enum": [
+                    "READ_ONLY",
+                    "MUTATING"
+                  ]
+                },
+                "replay_policy": {
+                  "enum": [
+                    "SAFE",
+                    "RECONCILE_REQUIRED",
+                    "NEVER"
+                  ]
+                }
+              }
+            }
           }
         }
       }
