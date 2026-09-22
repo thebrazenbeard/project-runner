@@ -188,6 +188,23 @@ def _expected_lineage(
     return f"queue:{snapshot_id}:{fingerprint}:retry:{attempt_generation}"
 
 
+def _frontier_from_json(
+    *,
+    fingerprint: str,
+    frontier_json: str | None,
+) -> tuple[Frontier, str]:
+    if frontier_json is None:
+        raise ValueError("queued frontier predates reconstructable frontier state")
+    frontier_json_text = str(frontier_json)
+    raw = json.loads(frontier_json_text)
+    if not isinstance(raw, dict):
+        raise ValueError("queued frontier payload is structurally invalid")
+    frontier = Frontier.from_mapping(raw)
+    if frontier_fingerprint(frontier) != fingerprint:
+        raise ValueError("queued frontier fingerprint does not match durable payload")
+    return frontier, frontier_json_text
+
+
 class SqliteQueueStore:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
@@ -213,15 +230,10 @@ class SqliteQueueStore:
         frontier_json: str | None,
         projects: tuple[ProjectDefinition, ...],
     ) -> tuple[Frontier, ProjectExecutionTarget, str]:
-        if frontier_json is None:
-            raise ValueError("queued frontier predates reconstructable frontier state")
-        frontier_json_text = str(frontier_json)
-        raw = json.loads(frontier_json_text)
-        if not isinstance(raw, dict):
-            raise ValueError("queued frontier payload is structurally invalid")
-        frontier = Frontier.from_mapping(raw)
-        if frontier_fingerprint(frontier) != fingerprint:
-            raise ValueError("queued frontier fingerprint does not match durable payload")
+        frontier, frontier_json_text = _frontier_from_json(
+            fingerprint=fingerprint,
+            frontier_json=frontier_json,
+        )
         target = _execution_target(projects, frontier)
         return frontier, target, frontier_json_text
 
@@ -270,13 +282,14 @@ class SqliteQueueStore:
                 (
                     str(repository),
                     str(ref),
-                    str(path),
                     str(commit_sha),
+                    str(path) or None,
+                    None if digest is None else str(digest),
                 )
-                for repository, ref, path, commit_sha
+                for repository, ref, path, commit_sha, digest
                 in self.connection.execute(
                     """
-                    SELECT repository, ref, path, commit_sha
+                    SELECT repository, ref, path, commit_sha, digest
                     FROM portfolio_observations
                     WHERE snapshot_id = ?
                     """,
@@ -290,10 +303,7 @@ class SqliteQueueStore:
                     qc.snapshot_id,
                     pf.frontier_fingerprint,
                     pf.collision_keys_json,
-                    pf.subject_repository,
-                    pf.subject_ref,
-                    COALESCE(pf.subject_path, ''),
-                    pf.subject_commit
+                    pf.frontier_json
                 FROM portfolio_queue_claims qc
                 JOIN portfolio_frontiers pf
                   ON pf.snapshot_id = qc.snapshot_id
@@ -357,16 +367,11 @@ class SqliteQueueStore:
                 if work_type not in supported_work_types:
                     continue
 
-                subject_commit = (
-                    None if row[8] is None else str(row[8])
+                candidate_frontier, _candidate_json = _frontier_from_json(
+                    fingerprint=fingerprint,
+                    frontier_json=None if row[4] is None else str(row[4]),
                 )
-                current_key = (
-                    str(row[5]),
-                    str(row[6]),
-                    str(row[7]),
-                    subject_commit or "",
-                )
-                if subject_commit is None or current_key not in current_subjects:
+                if candidate_frontier.subject.identity() not in current_subjects:
                     continue
 
                 prior_state = None if row[12] is None else str(row[12])
@@ -376,32 +381,31 @@ class SqliteQueueStore:
                     continue
 
                 collision_keys = _canonical_collision_keys(str(row[3]))
-                other_reserved_collisions = {
-                    str(item)
-                    for (
-                        reserved_snapshot,
-                        reserved_fingerprint,
-                        raw_keys,
-                        reserved_repository,
-                        reserved_ref,
-                        reserved_path,
-                        reserved_commit,
-                    ) in reservation_rows
+                other_reserved_collisions: set[str] = set()
+                for (
+                    reserved_snapshot,
+                    reserved_fingerprint,
+                    raw_keys,
+                    reserved_frontier_json,
+                ) in reservation_rows:
                     if (
-                        (
-                            int(reserved_snapshot) != snapshot_id
-                            or str(reserved_fingerprint) != fingerprint
-                        )
-                        and reserved_commit is not None
-                        and (
-                            str(reserved_repository),
-                            str(reserved_ref),
-                            str(reserved_path),
-                            str(reserved_commit),
-                        ) in current_subjects
+                        int(reserved_snapshot) == snapshot_id
+                        and str(reserved_fingerprint) == fingerprint
+                    ):
+                        continue
+                    reserved_frontier, _ = _frontier_from_json(
+                        fingerprint=str(reserved_fingerprint),
+                        frontier_json=(
+                            None
+                            if reserved_frontier_json is None
+                            else str(reserved_frontier_json)
+                        ),
                     )
-                    for item in _canonical_collision_keys(str(raw_keys))
-                }
+                    if reserved_frontier.subject.identity() not in current_subjects:
+                        continue
+                    other_reserved_collisions.update(
+                        _canonical_collision_keys(str(raw_keys))
+                    )
                 if collision_keys & other_reserved_collisions:
                     continue
 
