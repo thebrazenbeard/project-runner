@@ -1,8 +1,15 @@
 from pathlib import Path
+import json
 
 import pytest
 
-from runner.models import Frontier, ProjectDefinition, WorkerDefinition
+from runner.models import (
+    Frontier,
+    Observation,
+    ProjectDefinition,
+    WorkerDefinition,
+)
+from runner.portfolio import SqlitePortfolioStore
 from runner.worker_routing import (
     SqliteWorkerRouteStore,
     resolve_read_only_worker_route,
@@ -108,6 +115,33 @@ def _frontier():
     )
 
 
+
+def _frontier_json() -> str:
+    frontier = _frontier()
+    return json.dumps(
+        {
+            "id": frontier.id,
+            "project": frontier.project,
+            "subject": {
+                "repository": frontier.subject.repository,
+                "ref": frontier.subject.ref,
+                "commit": frontier.subject.commit,
+                "path": frontier.subject.path,
+                "digest": frontier.subject.digest,
+            },
+            "work_type": frontier.work_type,
+            "reason": frontier.reason,
+            "dependencies": list(frontier.dependencies),
+            "required_capabilities": list(frontier.required_capabilities),
+            "collision_keys": list(frontier.collision_keys),
+            "cost_class": frontier.cost_class.value,
+            "priority_inputs": dict(frontier.priority_inputs),
+            "status": frontier.status.value,
+        },
+        sort_keys=True,
+    )
+
+
 def test_verified_read_only_worker_route_resolves():
     route = resolve_read_only_worker_route(
         project=_project(),
@@ -191,6 +225,36 @@ def test_worker_route_outbox_is_idempotent_for_exact_queue_fence(tmp_path: Path)
 
 def _enqueued_store(tmp_path: Path, *, replay_policy: str = "SAFE"):
     db = tmp_path / "worker-delivery.sqlite3"
+    portfolio = SqlitePortfolioStore(db)
+    observation = Observation.from_mapping(
+        {
+            "target": "provider",
+            "evidence_class": "AUTHORITATIVE",
+            "subject": {
+                "repository": "example/provider",
+                "ref": "main",
+                "commit": "b" * 40,
+            },
+            "observed_value": "b" * 40,
+            "observed_at": "test",
+            "observer": "test",
+        }
+    )
+    snapshot_id = portfolio.commit_cycle(
+        registry_digest="0" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="1" * 64,
+        snapshot_digest="3" * 64,
+        observed_at=1.0,
+        baseline=True,
+        observations=(observation,),
+        changed_count=0,
+        ranked_frontiers=(),
+        expected_previous_snapshot_id=None,
+        expected_previous_dependency_snapshot_id=None,
+    )
+    portfolio.close()
+
     store = SqliteWorkerRouteStore(db)
     route = resolve_read_only_worker_route(
         project=_project(),
@@ -199,7 +263,7 @@ def _enqueued_store(tmp_path: Path, *, replay_policy: str = "SAFE"):
     )
     assert route is not None
     envelope = store.enqueue(
-        snapshot_id=2,
+        snapshot_id=snapshot_id,
         frontier_fingerprint="f" * 64,
         queue_fencing_token=3,
         worker_registry_digest="1" * 64,
@@ -207,7 +271,7 @@ def _enqueued_store(tmp_path: Path, *, replay_policy: str = "SAFE"):
         target_repository="example/consumer",
         target_ref="main",
         target_head="c" * 40,
-        frontier_json='{"id":"frontier-review","project":"consumer"}',
+        frontier_json=_frontier_json(),
         now=10.0,
     )
     return store, envelope
