@@ -577,6 +577,7 @@ def _portfolio_cycle(args) -> int:
             workers=worker_snapshot.workers,
             registry_digest=registry_snapshot.sha256,
             dependency_digest=dependency_snapshot.sha256,
+            worker_registry_digest=worker_snapshot.sha256,
             state_db=args.state_db,
             token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
             private_collision_key=collision_key,
