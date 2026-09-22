@@ -88,6 +88,28 @@ CREATE TABLE IF NOT EXISTS worker_route_outbox (
 """
 
 
+def validate_read_only_delivery_route(
+    *,
+    workers: Iterable[WorkerDefinition],
+    worker_id: str,
+    invocation_route: InvocationRoute,
+) -> ReplayPolicy:
+    matches = tuple(worker for worker in workers if worker.id == worker_id)
+    if len(matches) != 1:
+        raise ValueError("delivery worker is absent or ambiguous")
+    worker = matches[0]
+    if worker.lifecycle is not WorkerLifecycle.EXECUTABLE:
+        raise ValueError("delivery worker is not EXECUTABLE")
+    if worker.routes.get(invocation_route) is not RouteState.VERIFIED:
+        raise ValueError("delivery worker route is not VERIFIED")
+    contract = worker.route_contracts.get(invocation_route)
+    if contract is None:
+        raise ValueError("delivery worker route lacks an effect contract")
+    if contract.effect_class is not RouteEffectClass.READ_ONLY:
+        raise ValueError("delivery worker route is not qualified as READ_ONLY")
+    return contract.replay_policy
+
+
 def resolve_read_only_worker_route(
     *,
     project: ProjectDefinition,
@@ -111,24 +133,15 @@ def resolve_read_only_worker_route(
             "non-INSPECT read-only work requires an explicit worker route"
         )
 
-    matches = tuple(worker for worker in workers if worker.id == target.worker_id)
-    if len(matches) != 1:
-        raise ValueError("execution target worker is absent or ambiguous")
-    worker = matches[0]
-    if worker.lifecycle is not WorkerLifecycle.EXECUTABLE:
-        raise ValueError("execution target worker is not EXECUTABLE")
-    if worker.routes.get(target.worker_route) is not RouteState.VERIFIED:
-        raise ValueError("execution target worker route is not VERIFIED")
-    contract = worker.route_contracts.get(target.worker_route)
-    if contract is None:
-        raise ValueError("execution target worker route lacks an effect contract")
-    if contract.effect_class is not RouteEffectClass.READ_ONLY:
-        raise ValueError("worker route is not qualified as READ_ONLY")
-
-    return ReadOnlyWorkerRoute(
-        worker_id=worker.id,
+    replay_policy = validate_read_only_delivery_route(
+        workers=workers,
+        worker_id=target.worker_id,
         invocation_route=target.worker_route,
-        replay_policy=contract.replay_policy,
+    )
+    return ReadOnlyWorkerRoute(
+        worker_id=target.worker_id,
+        invocation_route=target.worker_route,
+        replay_policy=replay_policy,
     )
 
 
@@ -350,6 +363,7 @@ class SqliteWorkerRouteStore:
         *,
         worker_id: str,
         invocation_route: InvocationRoute,
+        workers: Iterable[WorkerDefinition],
         holder: str,
         now: float,
         ttl: float,
@@ -361,6 +375,11 @@ class SqliteWorkerRouteStore:
             raise ValueError("delivery holder is required")
         if ttl <= 0:
             raise ValueError("delivery lease ttl must be positive")
+        replay_policy = validate_read_only_delivery_route(
+            workers=workers,
+            worker_id=worker_id,
+            invocation_route=invocation_route,
+        )
 
         self.connection.execute("BEGIN IMMEDIATE")
         try:
@@ -386,6 +405,10 @@ class SqliteWorkerRouteStore:
                     continue
                 if str(row[5]) != worker_registry_digest:
                     continue
+                if str(row[13]) != replay_policy.value:
+                    raise ValueError(
+                        "worker route replay policy diverges from current registry"
+                    )
 
                 token = int(row[3]) + 1
                 expires_at = now + ttl
