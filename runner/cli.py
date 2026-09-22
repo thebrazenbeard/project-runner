@@ -7,6 +7,7 @@ import hmac
 import json
 import os
 from pathlib import Path
+import time
 from typing import Sequence
 
 from .backends import MockBackend
@@ -18,7 +19,12 @@ from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .leases import InMemoryLeaseStore
-from .models import FrontierStatus, ProjectSchedulingState
+from .models import ExactSubject, FrontierStatus, ProjectSchedulingState
+from .operator import (
+    build_github_read_backend,
+    run_durable_github_read_inspection,
+    summarize_recovery_state,
+)
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
@@ -431,6 +437,92 @@ def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> 
     }, sort_keys=True))
     return 0 if result.succeeded else 1
 
+
+def _select_ready_inspection(frontiers, *, project: str, frontier_id: str | None):
+    candidates = tuple(
+        frontier
+        for frontier in frontiers
+        if frontier.status is FrontierStatus.READY
+        and frontier.work_type == "INSPECT"
+        and frontier.project == project
+        and (frontier_id is None or frontier.id == frontier_id)
+    )
+    if not candidates:
+        raise ValueError("no matching READY INSPECT frontier")
+    if len(candidates) != 1:
+        raise ValueError(
+            "multiple matching READY INSPECT frontiers; supply --frontier-id"
+        )
+    return candidates[0]
+
+
+def _run_inspection(args) -> int:
+    frontiers = _derive_frontier_set(
+        args.before,
+        args.after,
+        args.dependencies,
+    )
+    frontier = _select_ready_inspection(
+        frontiers,
+        project=args.project,
+        frontier_id=args.frontier_id,
+    )
+    target = ExactSubject(
+        repository=args.target_repository,
+        ref=args.target_ref,
+        commit=args.target_head,
+    )
+    registry_snapshot = _load_project_registry_snapshot()
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    backend = build_github_read_backend(
+        (frontier.subject, target),
+        token=token,
+    )
+    lineage_id = args.lineage_id or (
+        "inspect:"
+        + frontier_fingerprint(frontier)[:24]
+        + ":"
+        + args.target_head[:12]
+    )
+    result = run_durable_github_read_inspection(
+        frontier=frontier,
+        target_subject=target,
+        state_db=args.state_db,
+        lineage_id=lineage_id,
+        holder=args.holder,
+        lease_ttl=args.lease_ttl,
+        registry_digest=registry_snapshot.sha256,
+        backend=backend,
+    )
+    payload = {
+        "mode": "M6_DURABLE_GITHUB_READ_INSPECTION",
+        "status": result.status.value,
+        "reason": result.reason,
+        "backend_classification": result.backend_classification,
+        "lineage_id": result.lineage_id,
+        "work_fingerprint": result.work_fingerprint,
+        "fencing_token": result.fencing_token,
+        "budget_generation": result.budget_generation,
+        "work_generation": result.work_generation,
+    }
+    if not _external_project_registry_selected():
+        payload["project"] = frontier.project
+        payload["frontier_id"] = frontier.id
+    print(json.dumps(payload, sort_keys=True))
+    return 0 if result.status is WorkUnitStatus.COMPLETE else 2
+
+
+def _operator_status(args) -> int:
+    if args.detailed:
+        _require_public_safe_reporting()
+    payload = summarize_recovery_state(
+        args.state_db,
+        now=time.time(),
+        detailed=args.detailed,
+    )
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="project-runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -462,6 +554,32 @@ def main(argv: Sequence[str] | None = None) -> int:
     github_smoke.add_argument("--ref", required=True)
     github_smoke.add_argument("--expected-head")
 
+    run_inspection = subparsers.add_parser("run-inspection")
+    run_inspection.add_argument("--before", type=Path, required=True)
+    run_inspection.add_argument("--after", type=Path, required=True)
+    run_inspection.add_argument("--dependencies", type=Path, required=True)
+    run_inspection.add_argument("--project", required=True)
+    run_inspection.add_argument("--frontier-id")
+    run_inspection.add_argument("--target-repository", required=True)
+    run_inspection.add_argument("--target-ref", required=True)
+    run_inspection.add_argument("--target-head", required=True)
+    run_inspection.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+    run_inspection.add_argument("--lineage-id")
+    run_inspection.add_argument("--holder", default="project-runner-cli")
+    run_inspection.add_argument("--lease-ttl", type=float, default=300.0)
+
+    operator_status = subparsers.add_parser("operator-status")
+    operator_status.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+    operator_status.add_argument("--detailed", action="store_true")
+
     args = parser.parse_args(argv)
     if args.command == "validate":
         return _validate()
@@ -475,6 +593,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _frontier_report(args.before, args.after, args.dependencies)
     if args.command == "dispatch-report":
         return _dispatch_report(args.before, args.after, args.dependencies)
+    if args.command == "run-inspection":
+        return _run_inspection(args)
+    if args.command == "operator-status":
+        return _operator_status(args)
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
 
