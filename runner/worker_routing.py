@@ -27,6 +27,27 @@ class ReadOnlyWorkerRoute:
 
 
 @dataclass(frozen=True)
+class WorkerRouteDeliveryClaim:
+    route_id: str
+    worker_id: str
+    invocation_route: InvocationRoute
+    fencing_token: int
+    expires_at: float
+    payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class WorkerRouteReceipt:
+    route_id: str
+    worker_id: str
+    invocation_route: InvocationRoute
+    fencing_token: int
+    receipt_class: str
+    receipt_sha256: str
+    state: str
+
+
+@dataclass(frozen=True)
 class WorkerRouteEnvelope:
     route_id: str
     snapshot_id: int
@@ -55,6 +76,11 @@ CREATE TABLE IF NOT EXISTS worker_route_outbox (
     frontier_json TEXT NOT NULL,
     payload_sha256 TEXT NOT NULL,
     state TEXT NOT NULL,
+    delivery_holder TEXT,
+    delivery_fencing_token INTEGER NOT NULL DEFAULT 0,
+    delivery_expires_at REAL NOT NULL DEFAULT 0,
+    receipt_class TEXT,
+    receipt_sha256 TEXT,
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL,
     UNIQUE(snapshot_id, frontier_fingerprint, queue_fencing_token)
@@ -152,6 +178,22 @@ def _route_payload(
 
 def ensure_worker_route_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(_SCHEMA)
+    columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(worker_route_outbox)")
+    }
+    migrations = {
+        "delivery_holder": "TEXT",
+        "delivery_fencing_token": "INTEGER NOT NULL DEFAULT 0",
+        "delivery_expires_at": "REAL NOT NULL DEFAULT 0",
+        "receipt_class": "TEXT",
+        "receipt_sha256": "TEXT",
+    }
+    for name, sql_type in migrations.items():
+        if name not in columns:
+            connection.execute(
+                f"ALTER TABLE worker_route_outbox ADD COLUMN {name} {sql_type}"
+            )
 
 
 def enqueue_worker_route_record(
@@ -299,6 +341,189 @@ class SqliteWorkerRouteStore:
             )
             self.connection.commit()
             return envelope
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def claim_next(
+        self,
+        *,
+        worker_id: str,
+        invocation_route: InvocationRoute,
+        holder: str,
+        now: float,
+        ttl: float,
+        worker_registry_digest: str,
+    ) -> WorkerRouteDeliveryClaim | None:
+        if not worker_id.strip():
+            raise ValueError("worker_id is required")
+        if not holder.strip():
+            raise ValueError("delivery holder is required")
+        if ttl <= 0:
+            raise ValueError("delivery lease ttl must be positive")
+
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            rows = self.connection.execute(
+                """
+                SELECT
+                    route_id, state, delivery_holder,
+                    delivery_fencing_token, delivery_expires_at,
+                    worker_registry_digest, target_repository, target_ref,
+                    target_head, frontier_json, snapshot_id,
+                    frontier_fingerprint, queue_fencing_token,
+                    replay_policy
+                FROM worker_route_outbox
+                WHERE worker_id = ? AND invocation_route = ?
+                  AND state IN ('PENDING', 'CLAIMED')
+                ORDER BY created_at, route_id
+                """,
+                (worker_id, invocation_route.value),
+            ).fetchall()
+            for row in rows:
+                state = str(row[1])
+                if state == "CLAIMED" and now < float(row[4]):
+                    continue
+                if str(row[5]) != worker_registry_digest:
+                    continue
+
+                token = int(row[3]) + 1
+                expires_at = now + ttl
+                route_id = str(row[0])
+                self.connection.execute(
+                    """
+                    UPDATE worker_route_outbox
+                    SET state = 'CLAIMED',
+                        delivery_holder = ?,
+                        delivery_fencing_token = ?,
+                        delivery_expires_at = ?,
+                        updated_at = ?
+                    WHERE route_id = ?
+                    """,
+                    (holder, token, expires_at, now, route_id),
+                )
+                payload = {
+                    "route_id": route_id,
+                    "snapshot_id": int(row[10]),
+                    "frontier_fingerprint": str(row[11]),
+                    "queue_fencing_token": int(row[12]),
+                    "worker_registry_digest": str(row[5]),
+                    "worker_id": worker_id,
+                    "invocation_route": invocation_route.value,
+                    "replay_policy": str(row[13]),
+                    "target_repository": str(row[6]),
+                    "target_ref": str(row[7]),
+                    "target_head": str(row[8]),
+                    "frontier": json.loads(str(row[9])),
+                }
+                self.connection.commit()
+                return WorkerRouteDeliveryClaim(
+                    route_id=route_id,
+                    worker_id=worker_id,
+                    invocation_route=invocation_route,
+                    fencing_token=token,
+                    expires_at=expires_at,
+                    payload=payload,
+                )
+            self.connection.commit()
+            return None
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def record_receipt(
+        self,
+        *,
+        route_id: str,
+        worker_id: str,
+        invocation_route: InvocationRoute,
+        holder: str,
+        expected_fencing_token: int,
+        receipt_class: str,
+        receipt_sha256: str,
+        now: float,
+    ) -> WorkerRouteReceipt:
+        allowed = {
+            "SUCCEEDED",
+            "FAILED_RETRYABLE",
+            "FAILED_DETERMINISTIC",
+            "OUTCOME_UNKNOWN",
+            "SUPERSEDED",
+        }
+        if receipt_class not in allowed:
+            raise ValueError("unsupported worker receipt class")
+        if len(receipt_sha256) != 64 or any(
+            ch not in "0123456789abcdef" for ch in receipt_sha256
+        ):
+            raise ValueError("worker receipt digest must be lowercase SHA-256")
+
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.connection.execute(
+                """
+                SELECT
+                    worker_id, invocation_route, state,
+                    delivery_holder, delivery_fencing_token,
+                    delivery_expires_at, receipt_class, receipt_sha256
+                FROM worker_route_outbox
+                WHERE route_id = ?
+                """,
+                (route_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError("worker route does not exist")
+            if str(row[0]) != worker_id or str(row[1]) != invocation_route.value:
+                raise ValueError("worker receipt route identity mismatch")
+            if (
+                str(row[2]) == "RECEIPT_RECORDED"
+                and row[6] is not None
+                and row[7] is not None
+            ):
+                if (
+                    str(row[6]) == receipt_class
+                    and str(row[7]) == receipt_sha256
+                    and int(row[4]) == expected_fencing_token
+                ):
+                    self.connection.commit()
+                    return WorkerRouteReceipt(
+                        route_id=route_id,
+                        worker_id=worker_id,
+                        invocation_route=invocation_route,
+                        fencing_token=expected_fencing_token,
+                        receipt_class=receipt_class,
+                        receipt_sha256=receipt_sha256,
+                        state="RECEIPT_RECORDED",
+                    )
+                raise ValueError("worker route already has a different receipt")
+            if (
+                str(row[2]) != "CLAIMED"
+                or str(row[3]) != holder
+                or int(row[4]) != expected_fencing_token
+                or now >= float(row[5])
+            ):
+                raise ValueError("delivery fence no longer authorizes receipt")
+            self.connection.execute(
+                """
+                UPDATE worker_route_outbox
+                SET state = 'RECEIPT_RECORDED',
+                    receipt_class = ?,
+                    receipt_sha256 = ?,
+                    delivery_expires_at = 0,
+                    updated_at = ?
+                WHERE route_id = ?
+                """,
+                (receipt_class, receipt_sha256, now, route_id),
+            )
+            self.connection.commit()
+            return WorkerRouteReceipt(
+                route_id=route_id,
+                worker_id=worker_id,
+                invocation_route=invocation_route,
+                fencing_token=expected_fencing_token,
+                receipt_class=receipt_class,
+                receipt_sha256=receipt_sha256,
+                state="RECEIPT_RECORDED",
+            )
         except BaseException:
             self.connection.rollback()
             raise
