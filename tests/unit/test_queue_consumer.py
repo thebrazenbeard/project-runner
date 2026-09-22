@@ -427,3 +427,63 @@ def test_reclaimed_queue_refuses_nonterminal_operator_reexecution(tmp_path: Path
     assert recovered.operator_status == "PENDING"
     assert "re-execution was not attempted" in recovered.reason
     assert transport.calls == []
+
+
+
+def test_ambiguous_old_claim_blocks_newer_colliding_frontier(tmp_path: Path):
+    db = tmp_path / "queue-ambiguous-collision.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "c" * 40,
+        }
+    )
+    projects, _changed = _schedule(db, transport)
+
+    store = SqliteQueueStore(db)
+    first = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        holder="first-holder",
+        now=3.0,
+        ttl=10.0,
+    )
+    assert first is not None
+    store.finalize(
+        first,
+        state="OUTCOME_UNKNOWN",
+        reason="simulated ambiguous prior operator state",
+        now=3.1,
+    )
+    store.close()
+
+    transport.heads[("example/provider", "main")] = "d" * 40
+    newer = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 4.0,
+    )
+    assert newer.queued_count == 1
+    transport.calls.clear()
+
+    result = consume_next_queued_inspection(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        holder="second-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 5.0,
+    )
+
+    assert result.claimed is False
+    assert result.queue_state == "NO_WORK"
+    assert transport.calls == []
