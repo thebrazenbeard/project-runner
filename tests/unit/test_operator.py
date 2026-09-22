@@ -190,7 +190,7 @@ def test_durable_operator_does_not_silently_restart_existing_lineage(tmp_path: P
     first = run_durable_github_read_inspection(**kwargs)
     assert first.status is WorkUnitStatus.COMPLETE
 
-    with pytest.raises(ValueError, match="budget scope already exists"):
+    with pytest.raises(ValueError, match="root execution state already exists"):
         run_durable_github_read_inspection(**kwargs)
 
 
