@@ -50,6 +50,29 @@ The live CI route still has only `contents: read`; it proves exact-head GitHub c
     project-runner github-read-smoke --repository thebrazenbeard/project-runner --ref main
     python -m pytest -q
 
+## Real operator path
+
+The ordinary CLI now has one deliberately narrow real execution route: a durable, read-only M6 GitHub inspection. It derives one READY INSPECT frontier, persists budget/work/lease/journal state before and during execution, performs exact-ref reads under explicit grants, independently rechecks currentness, and atomically finalizes terminal evidence.
+
+    export PROJECT_RUNNER_GITHUB_TOKEN=<token-with-required-read-access>
+    project-runner run-inspection \
+      --before <previous-observations.yaml> \
+      --after <current-observations.yaml> \
+      --dependencies <dependencies.yaml> \
+      --project <consumer-project-id> \
+      --target-repository <owner/repository> \
+      --target-ref <branch> \
+      --target-head <exact-40-hex-head> \
+      --state-db .project-runner/project-runner.sqlite3
+
+Interrupted or unresolved durable attempts are visible without backend re-execution:
+
+    project-runner operator-status --state-db .project-runner/project-runner.sqlite3
+
+This first operator route is intentionally read-only. A GitHub token's technical permissions do not manufacture write, merge, or deploy authority. The SQLite file is durable only on the filesystem that retains it; an ephemeral CI runner does not become a persistent orchestrator merely because SQLite was involved.
+
+See docs/OPERATOR_EXECUTION_V1.md.
+
 ## Private portfolio registry
 
 The committed `registry/projects.yaml` is a public-safe seed. It may name repositories that were already part of Project Runner's historical public baseline, but it must not expand the public repository with additional private project identifiers merely because those projects are relevant to orchestration.
