@@ -208,11 +208,11 @@ class SqliteQueueStore:
 
     def _claim_row(
         self,
-        row,
         *,
+        fingerprint: str,
+        frontier_json: str | None,
         projects: tuple[ProjectDefinition, ...],
     ) -> tuple[Frontier, ProjectExecutionTarget, str]:
-        frontier_json = row[3]
         if frontier_json is None:
             raise ValueError("queued frontier predates reconstructable frontier state")
         frontier_json_text = str(frontier_json)
@@ -220,7 +220,7 @@ class SqliteQueueStore:
         if not isinstance(raw, dict):
             raise ValueError("queued frontier payload is structurally invalid")
         frontier = Frontier.from_mapping(raw)
-        if frontier_fingerprint(frontier) != str(row[0]):
+        if frontier_fingerprint(frontier) != fingerprint:
             raise ValueError("queued frontier fingerprint does not match durable payload")
         target = _execution_target(projects, frontier)
         return frontier, target, frontier_json_text
@@ -245,7 +245,7 @@ class SqliteQueueStore:
 
         self.connection.execute("BEGIN IMMEDIATE")
         try:
-            snapshot = self.connection.execute(
+            latest = self.connection.execute(
                 """
                 SELECT snapshot_id
                 FROM portfolio_snapshots
@@ -261,17 +261,39 @@ class SqliteQueueStore:
                     worker_registry_digest,
                 ),
             ).fetchone()
-            if snapshot is None:
+            if latest is None:
                 self.connection.commit()
                 return None
-            snapshot_id = int(snapshot[0])
+            latest_snapshot_id = int(latest[0])
+
+            current_subjects = {
+                (
+                    str(repository),
+                    str(ref),
+                    str(path),
+                    str(commit_sha),
+                )
+                for repository, ref, path, commit_sha
+                in self.connection.execute(
+                    """
+                    SELECT repository, ref, path, commit_sha
+                    FROM portfolio_observations
+                    WHERE snapshot_id = ?
+                    """,
+                    (latest_snapshot_id,),
+                ).fetchall()
+            }
 
             reservation_rows = self.connection.execute(
                 """
                 SELECT
                     qc.snapshot_id,
                     pf.frontier_fingerprint,
-                    pf.collision_keys_json
+                    pf.collision_keys_json,
+                    pf.subject_repository,
+                    pf.subject_ref,
+                    COALESCE(pf.subject_path, ''),
+                    pf.subject_commit
                 FROM portfolio_queue_claims qc
                 JOIN portfolio_frontiers pf
                   ON pf.snapshot_id = qc.snapshot_id
@@ -283,10 +305,15 @@ class SqliteQueueStore:
             candidates = self.connection.execute(
                 """
                 SELECT
+                    pf.snapshot_id,
                     pf.frontier_fingerprint,
                     pf.work_type,
                     pf.collision_keys_json,
                     pf.frontier_json,
+                    pf.subject_repository,
+                    pf.subject_ref,
+                    COALESCE(pf.subject_path, ''),
+                    pf.subject_commit,
                     qc.holder,
                     qc.fencing_token,
                     qc.expires_at,
@@ -297,34 +324,81 @@ class SqliteQueueStore:
                     qc.operator_lineage,
                     qc.attempt_generation
                 FROM portfolio_frontiers pf
+                JOIN portfolio_snapshots ps
+                  ON ps.snapshot_id = pf.snapshot_id
                 LEFT JOIN portfolio_queue_claims qc
                   ON qc.snapshot_id = pf.snapshot_id
                  AND qc.frontier_fingerprint = pf.frontier_fingerprint
-                WHERE pf.snapshot_id = ? AND pf.queue_state = 'QUEUED'
-                ORDER BY pf.priority_score DESC, pf.frontier_fingerprint
+                WHERE ps.registry_digest = ?
+                  AND ps.dependency_digest = ?
+                  AND ps.worker_registry_digest = ?
+                  AND pf.queue_state = 'QUEUED'
+                ORDER BY
+                    pf.priority_score DESC,
+                    pf.snapshot_id DESC,
+                    pf.frontier_fingerprint
                 """,
-                (snapshot_id,),
+                (
+                    registry_digest,
+                    dependency_digest,
+                    worker_registry_digest,
+                ),
             ).fetchall()
 
+            seen_fingerprints: set[str] = set()
             for row in candidates:
-                fingerprint = str(row[0])
-                work_type = str(row[1])
+                snapshot_id = int(row[0])
+                fingerprint = str(row[1])
+                if fingerprint in seen_fingerprints:
+                    continue
+                seen_fingerprints.add(fingerprint)
+
+                work_type = str(row[2])
                 if work_type not in supported_work_types:
                     continue
-                prior_state = None if row[7] is None else str(row[7])
-                if prior_state in _NONCLAIMABLE_QUEUE_STATES:
-                    continue
-                if prior_state == "CLAIMED" and now < float(row[6]):
+
+                subject_commit = (
+                    None if row[8] is None else str(row[8])
+                )
+                current_key = (
+                    str(row[5]),
+                    str(row[6]),
+                    str(row[7]),
+                    subject_commit or "",
+                )
+                if subject_commit is None or current_key not in current_subjects:
                     continue
 
-                collision_keys = _canonical_collision_keys(str(row[2]))
+                prior_state = None if row[12] is None else str(row[12])
+                if prior_state in _NONCLAIMABLE_QUEUE_STATES:
+                    continue
+                if prior_state == "CLAIMED" and now < float(row[11]):
+                    continue
+
+                collision_keys = _canonical_collision_keys(str(row[3]))
                 other_reserved_collisions = {
                     str(item)
-                    for reserved_snapshot, reserved_fingerprint, raw_keys
-                    in reservation_rows
-                    if not (
-                        int(reserved_snapshot) == snapshot_id
-                        and str(reserved_fingerprint) == fingerprint
+                    for (
+                        reserved_snapshot,
+                        reserved_fingerprint,
+                        raw_keys,
+                        reserved_repository,
+                        reserved_ref,
+                        reserved_path,
+                        reserved_commit,
+                    ) in reservation_rows
+                    if (
+                        (
+                            int(reserved_snapshot) != snapshot_id
+                            or str(reserved_fingerprint) != fingerprint
+                        )
+                        and reserved_commit is not None
+                        and (
+                            str(reserved_repository),
+                            str(reserved_ref),
+                            str(reserved_path),
+                            str(reserved_commit),
+                        ) in current_subjects
                     )
                     for item in _canonical_collision_keys(str(raw_keys))
                 }
@@ -332,7 +406,8 @@ class SqliteQueueStore:
                     continue
 
                 frontier, target, frontier_json = self._claim_row(
-                    row,
+                    fingerprint=fingerprint,
+                    frontier_json=None if row[4] is None else str(row[4]),
                     projects=project_tuple,
                 )
                 if target.repository not in {
@@ -342,35 +417,35 @@ class SqliteQueueStore:
                     for repo in project.repositories
                 }:
                     raise ValueError("execution target escaped project repository scope")
-                if row[8] is not None and (
-                    str(row[8]) != target.repository
-                    or str(row[9]) != target.ref
+                if row[13] is not None and (
+                    str(row[13]) != target.repository
+                    or str(row[14]) != target.ref
                 ):
                     raise ValueError(
                         "persisted queue target diverges from current registry binding"
                     )
 
-                previous_token = 0 if row[5] is None else int(row[5])
+                previous_token = 0 if row[10] is None else int(row[10])
                 token = previous_token + 1
                 expires_at = now + ttl
                 attempt_generation = (
-                    1 if row[12] is None else int(row[12])
+                    1 if row[17] is None else int(row[17])
                 )
                 expected_lineage = _expected_lineage(
                     snapshot_id,
                     fingerprint,
                     attempt_generation,
                 )
-                if row[11] is not None and str(row[11]) != expected_lineage:
+                if row[16] is not None and str(row[16]) != expected_lineage:
                     raise ValueError(
                         "persisted queue lineage diverges from durable queue identity"
                     )
                 lineage = expected_lineage
-                target_head = None if row[10] is None else str(row[10])
+                target_head = None if row[15] is None else str(row[15])
                 if target_head is not None and _SHA40.fullmatch(target_head) is None:
                     raise ValueError("persisted queue target head is structurally invalid")
 
-                if row[5] is None:
+                if row[10] is None:
                     self.connection.execute(
                         """
                         INSERT INTO portfolio_queue_claims(
