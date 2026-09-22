@@ -231,6 +231,7 @@ class SqliteQueueStore:
         projects: Iterable[ProjectDefinition],
         registry_digest: str,
         dependency_digest: str,
+        worker_registry_digest: str = "0000000000000000000000000000000000000000000000000000000000000000",
         holder: str,
         now: float,
         ttl: float,
@@ -248,11 +249,17 @@ class SqliteQueueStore:
                 """
                 SELECT snapshot_id
                 FROM portfolio_snapshots
-                WHERE registry_digest = ? AND dependency_digest = ?
+                WHERE registry_digest = ?
+                  AND dependency_digest = ?
+                  AND worker_registry_digest = ?
                 ORDER BY snapshot_id DESC
                 LIMIT 1
                 """,
-                (registry_digest, dependency_digest),
+                (
+                    registry_digest,
+                    dependency_digest,
+                    worker_registry_digest,
+                ),
             ).fetchone()
             if snapshot is None:
                 self.connection.commit()
@@ -975,6 +982,7 @@ def consume_next_queued_read_only_work(
             projects=project_tuple,
             registry_digest=registry_digest,
             dependency_digest=dependency_digest,
+            worker_registry_digest=worker_registry_digest,
             holder=holder,
             now=clock(),
             ttl=lease_ttl,
