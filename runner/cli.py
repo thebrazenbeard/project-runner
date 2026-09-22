@@ -25,9 +25,16 @@ from .operator import (
     run_durable_github_read_inspection,
     summarize_recovery_state,
 )
+from .portfolio import collect_and_schedule_portfolio, summarize_portfolio_state
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
-from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
+from .registry import (
+    load_dependencies,
+    load_dependency_snapshot,
+    load_observations,
+    load_project_snapshot,
+    load_workers,
+)
 from .verify import verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
@@ -542,6 +549,48 @@ def _operator_status(args) -> int:
     print(json.dumps(payload, sort_keys=True))
     return 0
 
+def _portfolio_cycle(args) -> int:
+    registry_snapshot = _load_project_registry_snapshot()
+    dependency_snapshot = load_dependency_snapshot(args.dependencies)
+    collision_key = (
+        _external_private_collision_key()
+        if _external_project_registry_selected()
+        else None
+    )
+    result = collect_and_schedule_portfolio(
+        projects=registry_snapshot.projects,
+        dependencies=dependency_snapshot.dependencies,
+        registry_digest=registry_snapshot.sha256,
+        dependency_digest=dependency_snapshot.sha256,
+        state_db=args.state_db,
+        token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+        private_collision_key=collision_key,
+    )
+    print(
+        json.dumps(
+            {
+                "mode": "M6_DURABLE_PORTFOLIO_CURRENTNESS",
+                "snapshot_id": result.snapshot_id,
+                "snapshot_digest": result.snapshot_digest,
+                "baseline": result.baseline,
+                "observations": result.observation_count,
+                "changed": result.changed_count,
+                "frontiers": result.frontier_count,
+                "ready": result.ready_count,
+                "blocked": result.blocked_count,
+                "queued": result.queued_count,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def _portfolio_status(args) -> int:
+    print(json.dumps(summarize_portfolio_state(args.state_db), sort_keys=True))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="project-runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -599,6 +648,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     operator_status.add_argument("--detailed", action="store_true")
 
+    portfolio_cycle = subparsers.add_parser("portfolio-cycle")
+    portfolio_cycle.add_argument(
+        "--dependencies",
+        type=Path,
+        default=ROOT / "topology" / "dependencies.yaml",
+    )
+    portfolio_cycle.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
+    portfolio_status = subparsers.add_parser("portfolio-status")
+    portfolio_status.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
     args = parser.parse_args(argv)
     if args.command == "validate":
         return _validate()
@@ -616,6 +684,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_inspection(args)
     if args.command == "operator-status":
         return _operator_status(args)
+    if args.command == "portfolio-cycle":
+        return _portfolio_cycle(args)
+    if args.command == "portfolio-status":
+        return _portfolio_status(args)
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
 
