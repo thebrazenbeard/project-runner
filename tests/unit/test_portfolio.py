@@ -45,20 +45,30 @@ def _project(
     repository: str,
     *,
     scheduling_state: str = "SCHEDULABLE",
+    execution_target: bool | None = None,
 ) -> ProjectDefinition:
-    return ProjectDefinition.from_mapping(
-        {
-            "id": project_id,
-            "name": project_id,
-            "visibility": "public",
-            "repositories": [repository],
-            "capabilities": ["read", "analyze"],
-            "assignment_scope": "NONE",
-            "review_scope": "NONE",
-            "family_id": project_id,
-            "scheduling_state": scheduling_state,
-        }
-    )
+    if execution_target is None:
+        execution_target = project_id == "consumer"
+    payload = {
+        "id": project_id,
+        "name": project_id,
+        "visibility": "public",
+        "repositories": [repository],
+        "capabilities": ["read", "analyze"],
+        "assignment_scope": "NONE",
+        "review_scope": "NONE",
+        "family_id": project_id,
+        "scheduling_state": scheduling_state,
+    }
+    if execution_target:
+        payload["execution_targets"] = [
+            {
+                "work_type": "INSPECT",
+                "repository": repository,
+                "ref": "main",
+            }
+        ]
+    return ProjectDefinition.from_mapping(payload)
 
 
 def _dependency(
@@ -290,3 +300,61 @@ def test_exact_ref_is_required_for_currentness_collection(tmp_path: Path):
 
     assert transport.calls == []
     assert not db.exists()
+
+
+
+def test_schedulable_consumer_without_execution_target_waits_for_authority(
+    tmp_path: Path,
+):
+    db = tmp_path / "portfolio-no-target.sqlite3"
+    transport = FakeTransport(
+        {("example/provider", "main"): "a" * 40}
+    )
+    projects = (
+        _project("provider", "example/provider"),
+        _project(
+            "consumer",
+            "example/consumer",
+            execution_target=False,
+        ),
+    )
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="4" * 64,
+        dependency_digest="5" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 100.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    result = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="4" * 64,
+        dependency_digest="5" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 101.0,
+    )
+
+    assert result.ready_count == 0
+    assert result.blocked_count == 1
+    assert result.queued_count == 0
+
+    store = SqlitePortfolioStore(db)
+    try:
+        row = store.connection.execute(
+            """
+            SELECT status, queue_state
+            FROM portfolio_frontiers
+            WHERE snapshot_id = ?
+            """,
+            (result.snapshot_id,),
+        ).fetchone()
+    finally:
+        store.close()
+    assert row == ("WAITING_AUTHORITY", "BLOCKED")
