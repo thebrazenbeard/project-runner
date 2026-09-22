@@ -679,6 +679,7 @@ def _claim_worker_route(args) -> int:
         claim = store.claim_next(
             worker_id=args.worker_id,
             invocation_route=route,
+            workers=worker_snapshot.workers,
             holder=args.holder,
             now=time.time(),
             ttl=args.lease_ttl,
