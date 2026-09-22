@@ -531,9 +531,7 @@ class SqliteWorkerRouteStore:
                         "worker packet sensitivity is missing or invalid"
                     )
                 if packet_sensitivity == "PRIVATE" and not allow_private:
-                    raise ValueError(
-                        "private worker packet requires private-safe destination"
-                    )
+                    continue
                 if not self._provider_subject_current(
                     snapshot_id=int(row[10]),
                     frontier_json=str(row[9]),
