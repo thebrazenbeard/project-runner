@@ -652,33 +652,37 @@ def consume_next_queued_inspection(
                 registry_digest=registry_digest,
             )
             if existing is None:
-                store.finalize(
-                    claim,
-                    state="FAILED_RETRYABLE",
-                    reason="queue execution failed before durable operator state existed",
-                    now=clock(),
+                recovery_state = "FAILED_RETRYABLE"
+                recovery_reason = (
+                    "queue execution failed before durable operator state existed"
                 )
             elif existing.work.status in {
                 WorkUnitStatus.COMPLETE,
                 WorkUnitStatus.FAILED_DETERMINISTIC,
                 WorkUnitStatus.SUPERSEDED,
             }:
-                store.finalize(
-                    claim,
-                    state=_queue_state_for_operator(existing.work.status),
-                    reason="queue recovered terminal operator state after execution error",
-                    now=clock(),
+                recovery_state = _queue_state_for_operator(existing.work.status)
+                recovery_reason = (
+                    "queue recovered terminal operator state after execution error"
                 )
             else:
+                recovery_state = "OUTCOME_UNKNOWN"
+                recovery_reason = (
+                    "durable operator state is nonterminal after execution error; "
+                    "backend re-execution requires reconciliation"
+                )
+            try:
                 store.finalize(
                     claim,
-                    state="OUTCOME_UNKNOWN",
-                    reason=(
-                        "durable operator state is nonterminal after execution error; "
-                        "backend re-execution requires reconciliation"
-                    ),
+                    state=recovery_state,
+                    reason=recovery_reason,
                     now=clock(),
                 )
+            except ValueError as finalize_error:
+                if "queue fence no longer authorizes finalization" not in str(
+                    finalize_error
+                ):
+                    raise
             raise
     finally:
         store.close()
