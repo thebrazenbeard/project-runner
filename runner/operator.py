@@ -117,6 +117,7 @@ def run_durable_github_read_inspection(
     lease_ttl: float,
     registry_digest: str,
     authorized_target_repositories: Iterable[str],
+    authorized_provider_repositories: Iterable[str],
     token: str | None,
     transport: GitHubTransport | None = None,
     clock: Callable[[], float] = time.time,
@@ -146,6 +147,13 @@ def run_durable_github_read_inspection(
     _require_exact_subject(frontier.subject)
     _require_exact_subject(target_subject)
     allowed_targets = frozenset(str(item) for item in authorized_target_repositories)
+    allowed_providers = frozenset(
+        str(item) for item in authorized_provider_repositories
+    )
+    if frontier.subject.repository not in allowed_providers:
+        raise ValueError(
+            "inspection provider repository is not registered in the current portfolio"
+        )
     if target_subject.repository not in allowed_targets:
         raise ValueError(
             "inspection target repository is not authorized for the frontier project"
