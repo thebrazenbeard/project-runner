@@ -561,9 +561,16 @@ class SqliteQueueStore:
         try:
             row = self.connection.execute(
                 """
-                SELECT holder, fencing_token, state, expires_at
-                FROM portfolio_queue_claims
-                WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                SELECT
+                    qc.holder,
+                    qc.fencing_token,
+                    qc.state,
+                    qc.expires_at,
+                    ps.worker_registry_digest
+                FROM portfolio_queue_claims qc
+                JOIN portfolio_snapshots ps
+                  ON ps.snapshot_id = qc.snapshot_id
+                WHERE qc.snapshot_id = ? AND qc.frontier_fingerprint = ?
                 """,
                 (claim.snapshot_id, claim.frontier_fingerprint),
             ).fetchone()
@@ -576,6 +583,10 @@ class SqliteQueueStore:
                 or now >= float(row[3])
             ):
                 raise ValueError("queue fence no longer authorizes worker routing")
+            if str(row[4]) != worker_registry_digest:
+                raise ValueError(
+                    "worker route registry digest diverges from scheduling snapshot"
+                )
 
             envelope = enqueue_worker_route_record(
                 self.connection,
@@ -656,6 +667,25 @@ class SqliteQueueStore:
             fencing_token = int(row[1])
             if fencing_token != expected_fencing_token:
                 raise ValueError("queue reconciliation fencing token mismatch")
+            if previous_state == "ROUTED":
+                route_row = self.connection.execute(
+                    """
+                    SELECT route_id
+                    FROM worker_route_outbox
+                    WHERE snapshot_id = ?
+                      AND frontier_fingerprint = ?
+                      AND queue_fencing_token = ?
+                    """,
+                    (
+                        snapshot_id,
+                        frontier_fingerprint_value,
+                        expected_fencing_token,
+                    ),
+                ).fetchone()
+                if route_row is None:
+                    raise ValueError(
+                        "routed queue item lacks its durable worker-route envelope"
+                    )
             attempt_generation = int(row[2])
             final_state = resolution_map[resolution]
             next_generation = attempt_generation
