@@ -698,3 +698,57 @@ def test_portfolio_cycle_collects_then_schedules_changed_dependency(
     status = json.loads(capsys.readouterr().out)
     assert status["snapshots"] == 2
     assert status["queued_total"] == 1
+
+
+
+def test_external_portfolio_cycle_redacts_private_dependency_failure(
+    tmp_path,
+    monkeypatch,
+):
+    registry = tmp_path / "private-portfolio.yaml"
+    registry.write_text(
+        """
+projects:
+- id: private-provider
+  name: Private Provider
+  visibility: private
+  repositories: [secret-owner/private-provider]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: private-provider-family
+  scheduling_state: SCHEDULABLE
+- id: private-consumer
+  name: Private Consumer
+  visibility: private
+  repositories: [secret-owner/private-consumer]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: private-consumer-family
+  scheduling_state: SCHEDULABLE
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+    private_dependencies = tmp_path / "do-not-leak-client-topology.yaml"
+
+    with pytest.raises(
+        ValueError,
+        match="external portfolio cycle is unavailable or structurally invalid",
+    ) as exc:
+        main(
+            [
+                "portfolio-cycle",
+                "--dependencies",
+                str(private_dependencies),
+                "--state-db",
+                str(tmp_path / "state.sqlite3"),
+            ]
+        )
+
+    message = str(exc.value)
+    assert "do-not-leak" not in message
+    assert "private-provider" not in message
+    assert "private-consumer" not in message
+    assert "secret-owner" not in message
