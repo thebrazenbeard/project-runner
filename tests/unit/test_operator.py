@@ -2,6 +2,9 @@ from pathlib import Path
 
 import pytest
 
+from runner.budgets import BudgetEnvelope
+from runner.durable_dispatch import SqliteDispatchAdmissionStore
+from runner.m6_github import frontier_to_github_inspection_work
 from runner.models import CostClass, ExactSubject, Frontier, FrontierStatus
 from runner.operator import (
     build_github_read_backend,
@@ -206,3 +209,53 @@ def test_recovery_summary_for_missing_database_is_empty(tmp_path: Path):
         "phases": {},
         "items": [],
     }
+
+
+def test_atomic_root_initialization_rolls_back_budget_when_work_insert_collides(
+    tmp_path: Path,
+):
+    db = tmp_path / "atomic-root.sqlite3"
+    frontier = _frontier()
+    work = frontier_to_github_inspection_work(
+        frontier,
+        TARGET,
+        registry_digest="1" * 64,
+    )
+
+    works = SqliteRecursiveWorkStore(db)
+    works.put_initial(
+        work=work,
+        lineage_id="atomic-root",
+        budget_scope_id="root",
+        parent_fingerprint=None,
+        ancestry_fingerprints={result_fingerprint := __import__(
+            "runner.work_units",
+            fromlist=["work_unit_fingerprint"],
+        ).work_unit_fingerprint(work)},
+        effective_capabilities={"read", "analyze"},
+    )
+    works.close()
+    assert result_fingerprint
+
+    budget = BudgetEnvelope(
+        lineage_id="atomic-root",
+        max_depth=1,
+        depth=0,
+        remaining_children=0,
+        remaining_active=1,
+        remaining_retries=0,
+        remaining_backend_jobs=1,
+    )
+    dispatch = SqliteDispatchAdmissionStore(db)
+    with pytest.raises(ValueError, match="root execution state already exists"):
+        dispatch.initialize_root(
+            budget=budget,
+            work=work,
+            effective_capabilities={"read", "analyze"},
+        )
+    dispatch.close()
+
+    budgets = SqliteBudgetStore(db)
+    with pytest.raises(KeyError):
+        budgets.get("atomic-root")
+    budgets.close()
