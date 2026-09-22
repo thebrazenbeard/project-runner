@@ -566,3 +566,72 @@ def test_portfolio_status_deduplicates_carried_queue_history(tmp_path: Path):
     summary = summarize_portfolio_state(db)
     assert summary["snapshots"] == 3
     assert summary["queued_total"] == 1
+
+
+
+def test_topology_predecessor_cas_rejects_concurrent_config_fork(tmp_path: Path):
+    db = tmp_path / "portfolio-topology-cas.sqlite3"
+    transport = FakeTransport(
+        {("example/provider", "main"): "a" * 40}
+    )
+    projects = (
+        _project("provider", "example/provider"),
+        _project("consumer", "example/consumer"),
+    )
+
+    baseline = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    assert baseline.snapshot_id == 1
+
+    first = SqlitePortfolioStore(db)
+    second = SqlitePortfolioStore(db)
+    try:
+        observations = first.load_observations(baseline.snapshot_id)
+        assert first.latest_snapshot_id_for_dependency(
+            dependency_digest="2" * 64
+        ) == baseline.snapshot_id
+
+        advanced = first.commit_cycle(
+            registry_digest="1" * 64,
+            dependency_digest="2" * 64,
+            worker_registry_digest="4" * 64,
+            snapshot_digest="a" * 64,
+            observed_at=2.0,
+            baseline=False,
+            observations=observations,
+            changed_count=0,
+            ranked_frontiers=(),
+            expected_previous_snapshot_id=None,
+            expected_previous_dependency_snapshot_id=baseline.snapshot_id,
+        )
+        assert advanced == 2
+
+        with pytest.raises(
+            RuntimeError,
+            match="topology currentness changed concurrently",
+        ):
+            second.commit_cycle(
+                registry_digest="1" * 64,
+                dependency_digest="2" * 64,
+                worker_registry_digest="5" * 64,
+                snapshot_digest="b" * 64,
+                observed_at=2.1,
+                baseline=False,
+                observations=observations,
+                changed_count=0,
+                ranked_frontiers=(),
+                expected_previous_snapshot_id=None,
+                expected_previous_dependency_snapshot_id=baseline.snapshot_id,
+            )
+    finally:
+        first.close()
+        second.close()
