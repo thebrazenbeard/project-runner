@@ -757,6 +757,7 @@ def _reconcile_queue(args) -> int:
             resolution=args.resolution,
             evidence_sha256=args.evidence_sha256,
             reconciler=args.reconciler,
+            token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
         )
     except Exception:
         if external:
