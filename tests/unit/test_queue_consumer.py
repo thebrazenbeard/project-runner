@@ -8,6 +8,7 @@ from runner.m6_github import frontier_to_github_inspection_work
 from runner.models import (
     DependencyEdge,
     ExactSubject,
+    InvocationRoute,
     ProjectDefinition,
     WorkerDefinition,
 )
@@ -20,7 +21,10 @@ from runner.queue_consumer import (
     summarize_queue_state,
 )
 from runner.work_units import WorkUnitStatus
-from runner.worker_routing import resolve_read_only_worker_route
+from runner.worker_routing import (
+    SqliteWorkerRouteStore,
+    resolve_read_only_worker_route,
+)
 
 
 class FakeTransport:
@@ -959,6 +963,28 @@ def test_routed_worker_reconciliation_closes_outbox_and_releases_retry(
     )
     assert routed.queue_state == "ROUTED"
 
+    route_store = SqliteWorkerRouteStore(db)
+    delivery = route_store.claim_next(
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        holder="worker-delivery",
+        now=3.1,
+        ttl=30.0,
+        worker_registry_digest="3" * 64,
+    )
+    assert delivery is not None
+    route_store.record_receipt(
+        route_id=routed.route_id,
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        holder="worker-delivery",
+        expected_fencing_token=delivery.fencing_token,
+        receipt_class="FAILED_RETRYABLE",
+        receipt_sha256="8" * 64,
+        now=3.2,
+    )
+    route_store.close()
+
     reconciled = reconcile_queue_item(
         state_db=db,
         snapshot_id=routed.snapshot_id,
@@ -1106,6 +1132,158 @@ def test_worker_route_digest_must_match_scheduling_snapshot(tmp_path: Path):
             now=3.2,
         )
     store.close()
+
+
+def test_routed_reconciliation_requires_worker_receipt(tmp_path: Path):
+    db = tmp_path / "queue-route-receipt-required.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    routed = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert routed.queue_state == "ROUTED"
+
+    with pytest.raises(ValueError, match="requires a durable worker receipt"):
+        reconcile_queue_item(
+            state_db=db,
+            snapshot_id=routed.snapshot_id,
+            frontier_fingerprint_value=routed.frontier_fingerprint,
+            expected_fencing_token=routed.fencing_token,
+            resolution="CONFIRM_COMPLETE",
+            evidence_sha256="a" * 64,
+            reconciler="test-reconciler",
+            clock=lambda: 4.0,
+        )
+
+
+def test_routed_reconciliation_rejects_incompatible_receipt_class(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-route-receipt-class.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    routed = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    route_store = SqliteWorkerRouteStore(db)
+    delivery = route_store.claim_next(
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        holder="worker-delivery",
+        now=3.1,
+        ttl=30.0,
+        worker_registry_digest="3" * 64,
+    )
+    assert delivery is not None
+    route_store.record_receipt(
+        route_id=routed.route_id,
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        holder="worker-delivery",
+        expected_fencing_token=delivery.fencing_token,
+        receipt_class="FAILED_RETRYABLE",
+        receipt_sha256="8" * 64,
+        now=3.2,
+    )
+    route_store.close()
+
+    with pytest.raises(ValueError, match="incompatible with reconciliation"):
+        reconcile_queue_item(
+            state_db=db,
+            snapshot_id=routed.snapshot_id,
+            frontier_fingerprint_value=routed.frontier_fingerprint,
+            expected_fencing_token=routed.fencing_token,
+            resolution="CONFIRM_COMPLETE",
+            evidence_sha256="a" * 64,
+            reconciler="test-reconciler",
+            clock=lambda: 4.0,
+        )
 
 
 def test_routed_reconciliation_requires_exact_outbox_envelope(tmp_path: Path):
