@@ -480,7 +480,8 @@ class SqliteWorkerRouteStore:
                 and row[7] is not None
             ):
                 if (
-                    str(row[6]) == receipt_class
+                    str(row[3]) == holder
+                    and str(row[6]) == receipt_class
                     and str(row[7]) == receipt_sha256
                     and int(row[4]) == expected_fencing_token
                 ):
