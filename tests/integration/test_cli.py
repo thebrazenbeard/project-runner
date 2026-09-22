@@ -63,7 +63,7 @@ projects:
     assert main(["inventory"]) == 0
     out = capsys.readouterr().out.lower()
     assert "projects: 1" in out
-    assert "workers: 12" in out
+    assert "workers: 13" in out
 
 
 def test_external_registry_requires_explicit_scope_metadata(tmp_path, monkeypatch):
