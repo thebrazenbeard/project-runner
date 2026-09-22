@@ -436,6 +436,43 @@ def _validate_dependency_scope(
             raise ValueError("portfolio currentness requires an exact dependency ref")
 
 
+def _apply_execution_target_readiness(
+    frontiers: tuple[Frontier, ...],
+    projects: tuple[ProjectDefinition, ...],
+) -> tuple[Frontier, ...]:
+    by_id = {project.id: project for project in projects}
+    result: list[Frontier] = []
+    for frontier in frontiers:
+        if frontier.status is not FrontierStatus.READY:
+            result.append(frontier)
+            continue
+        project = by_id.get(frontier.project)
+        target = None
+        if project is not None:
+            target = next(
+                (
+                    item
+                    for item in project.execution_targets
+                    if item.work_type == frontier.work_type
+                ),
+                None,
+            )
+        if target is not None:
+            result.append(frontier)
+            continue
+        priority_inputs = dict(frontier.priority_inputs)
+        priority_inputs["authority_available"] = 0
+        priority_inputs["executable_now"] = 0
+        result.append(
+            replace(
+                frontier,
+                status=FrontierStatus.WAITING_AUTHORITY,
+                priority_inputs=priority_inputs,
+            )
+        )
+    return tuple(result)
+
+
 def _private_collision_key(key: str, secret_hex: str) -> str:
     if len(secret_hex) != 64 or any(
         character not in "0123456789abcdef" for character in secret_hex
@@ -650,6 +687,10 @@ def collect_and_schedule_portfolio(
                 invalidations,
                 capability_lookup=capability_lookup,
                 scheduling_lookup=scheduling_lookup,
+            )
+            frontiers = _apply_execution_target_readiness(
+                frontiers,
+                project_tuple,
             )
             if private_collision_key is not None:
                 frontiers = tuple(
