@@ -474,10 +474,16 @@ def _run_inspection(args) -> int:
     )
     registry_snapshot = _load_project_registry_snapshot()
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
-    backend = build_github_read_backend(
-        (frontier.subject, target),
-        token=token,
+    project = next(
+        (
+            item
+            for item in registry_snapshot.projects
+            if item.id == frontier.project
+        ),
+        None,
     )
+    if project is None:
+        raise ValueError("frontier project is absent from the current registry")
     lineage_id = args.lineage_id or (
         "inspect:"
         + frontier_fingerprint(frontier)[:24]
@@ -492,7 +498,8 @@ def _run_inspection(args) -> int:
         holder=args.holder,
         lease_ttl=args.lease_ttl,
         registry_digest=registry_snapshot.sha256,
-        backend=backend,
+        authorized_target_repositories=project.repositories,
+        token=token,
     )
     payload = {
         "mode": "M6_DURABLE_GITHUB_READ_INSPECTION",
