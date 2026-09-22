@@ -500,3 +500,64 @@ def test_delivery_claim_rejects_worker_registry_route_downgrade(tmp_path: Path):
             )
     finally:
         store.close()
+
+
+
+def test_worker_delivery_supersedes_packet_when_provider_subject_moves(
+    tmp_path: Path,
+):
+    store, envelope = _enqueued_store(tmp_path)
+    db = store.path
+    store.close()
+
+    portfolio = SqlitePortfolioStore(db)
+    second = portfolio.commit_cycle(
+        registry_digest="0" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="1" * 64,
+        snapshot_digest="4" * 64,
+        observed_at=2.0,
+        baseline=False,
+        observations=(
+            Observation.from_mapping(
+                {
+                    "target": "provider",
+                    "evidence_class": "AUTHORITATIVE",
+                    "subject": {
+                        "repository": "example/provider",
+                        "ref": "main",
+                        "commit": "c" * 40,
+                    },
+                    "observed_value": "c" * 40,
+                    "observed_at": "test-2",
+                    "observer": "test",
+                }
+            ),
+        ),
+        changed_count=1,
+        ranked_frontiers=(),
+        expected_previous_snapshot_id=1,
+        expected_previous_dependency_snapshot_id=1,
+    )
+    assert second == 2
+    portfolio.close()
+
+    store = SqliteWorkerRouteStore(db)
+    try:
+        claim = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
+            holder="worker-one",
+            now=11.0,
+            ttl=10.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert claim is None
+        state = store.connection.execute(
+            "SELECT state FROM worker_route_outbox WHERE route_id = ?",
+            (envelope.route_id,),
+        ).fetchone()
+        assert state == ("SUPERSEDED",)
+    finally:
+        store.close()
