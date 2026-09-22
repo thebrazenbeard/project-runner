@@ -112,7 +112,7 @@ def test_verified_read_only_worker_route_resolves():
     route = resolve_read_only_worker_route(
         project=_project(),
         frontier=_frontier(),
-        workers=(_worker(),),
+        workers=(_worker(replay_policy=replay_policy),),
     )
     assert route is not None
     assert route.worker_id == "reviewer"
@@ -189,7 +189,7 @@ def test_worker_route_outbox_is_idempotent_for_exact_queue_fence(tmp_path: Path)
 
 
 
-def _enqueued_store(tmp_path: Path):
+def _enqueued_store(tmp_path: Path, *, replay_policy: str = "SAFE"):
     db = tmp_path / "worker-delivery.sqlite3"
     store = SqliteWorkerRouteStore(db)
     route = resolve_read_only_worker_route(
@@ -376,6 +376,65 @@ def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path
                 receipt_class="FAILED_RETRYABLE",
                 receipt_sha256="b" * 64,
                 now=14.0,
+            )
+    finally:
+        store.close()
+
+
+
+@pytest.mark.parametrize("replay_policy", ["RECONCILE_REQUIRED", "NEVER"])
+def test_expired_non_safe_delivery_becomes_outcome_unknown(
+    tmp_path: Path,
+    replay_policy: str,
+):
+    store, envelope = _enqueued_store(
+        tmp_path,
+        replay_policy=replay_policy,
+    )
+    worker = _worker(replay_policy=replay_policy)
+    try:
+        first = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            workers=(worker,),
+            holder="worker-one",
+            now=11.0,
+            ttl=5.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert first is not None
+
+        second = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            workers=(worker,),
+            holder="worker-two",
+            now=17.0,
+            ttl=10.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert second is None
+        state = store.connection.execute(
+            "SELECT state FROM worker_route_outbox WHERE route_id = ?",
+            (envelope.route_id,),
+        ).fetchone()
+        assert state == ("OUTCOME_UNKNOWN",)
+    finally:
+        store.close()
+
+
+def test_delivery_claim_rejects_worker_registry_route_downgrade(tmp_path: Path):
+    store, envelope = _enqueued_store(tmp_path)
+    try:
+        with pytest.raises(ValueError, match="not VERIFIED"):
+            store.claim_next(
+                worker_id="reviewer",
+                invocation_route=envelope.invocation_route,
+                workers=(_worker(route_state="CONNECTED"),),
+                holder="worker-one",
+                now=11.0,
+                ttl=10.0,
+                worker_registry_digest="1" * 64,
             )
     finally:
         store.close()
