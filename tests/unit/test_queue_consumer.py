@@ -5,11 +5,18 @@ import pytest
 from runner.budgets import BudgetEnvelope
 from runner.durable_dispatch import SqliteDispatchAdmissionStore
 from runner.m6_github import frontier_to_github_inspection_work
-from runner.models import DependencyEdge, ExactSubject, ProjectDefinition
+from runner.models import (
+    DependencyEdge,
+    ExactSubject,
+    ProjectDefinition,
+    WorkerDefinition,
+)
 from runner.portfolio import collect_and_schedule_portfolio
 from runner.queue_consumer import (
     SqliteQueueStore,
     consume_next_queued_inspection,
+    consume_next_queued_read_only_work,
+    reconcile_queue_item,
     summarize_queue_state,
 )
 from runner.work_units import WorkUnitStatus
@@ -578,3 +585,346 @@ def test_reclaim_rejects_persisted_target_binding_divergence(tmp_path: Path):
             ttl=5.0,
         )
     store.close()
+
+
+
+def test_outcome_unknown_can_be_evidence_released_for_safe_read_retry(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-reconcile-retry.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "c" * 40,
+        }
+    )
+    projects, _changed = _schedule(db, transport)
+
+    store = SqliteQueueStore(db)
+    claim = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        holder="first-holder",
+        now=3.0,
+        ttl=20.0,
+    )
+    assert claim is not None
+    store.finalize(
+        claim,
+        state="OUTCOME_UNKNOWN",
+        reason="simulated ambiguous read",
+        now=4.0,
+    )
+    store.close()
+
+    reconciled = reconcile_queue_item(
+        state_db=db,
+        snapshot_id=claim.snapshot_id,
+        frontier_fingerprint_value=claim.frontier_fingerprint,
+        expected_fencing_token=claim.fencing_token,
+        resolution="RELEASE_RETRY_READ_ONLY",
+        evidence_sha256="e" * 64,
+        reconciler="test-reconciler",
+        clock=lambda: 5.0,
+    )
+    assert reconciled.previous_state == "OUTCOME_UNKNOWN"
+    assert reconciled.final_state == "FAILED_RETRYABLE"
+    assert reconciled.attempt_generation == 2
+
+    store = SqliteQueueStore(db)
+    retry = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        holder="second-holder",
+        now=6.0,
+        ttl=20.0,
+    )
+    store.close()
+    assert retry is not None
+    assert retry.fencing_token == claim.fencing_token + 1
+    assert retry.attempt_generation == 2
+    assert retry.operator_lineage.endswith(":retry:2")
+
+
+def test_reconciliation_requires_exact_fencing_token(tmp_path: Path):
+    db = tmp_path / "queue-reconcile-fence.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "c" * 40,
+        }
+    )
+    projects, _changed = _schedule(db, transport)
+
+    store = SqliteQueueStore(db)
+    claim = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        holder="holder",
+        now=3.0,
+        ttl=20.0,
+    )
+    assert claim is not None
+    store.finalize(
+        claim,
+        state="OUTCOME_UNKNOWN",
+        reason="ambiguous",
+        now=4.0,
+    )
+    store.close()
+
+    with pytest.raises(ValueError, match="fencing token mismatch"):
+        reconcile_queue_item(
+            state_db=db,
+            snapshot_id=claim.snapshot_id,
+            frontier_fingerprint_value=claim.frontier_fingerprint,
+            expected_fencing_token=claim.fencing_token + 1,
+            resolution="CONFIRM_SUPERSEDED",
+            evidence_sha256="e" * 64,
+            reconciler="test-reconciler",
+            clock=lambda: 5.0,
+        )
+
+
+def _read_only_worker_fixture():
+    return WorkerDefinition.from_mapping(
+        {
+            "id": "reviewer",
+            "name": "Reviewer",
+            "worker_type": "OPENAI_AGENT",
+            "lifecycle": "EXECUTABLE",
+            "locators": {"model": "reviewer-model"},
+            "roles": ["review"],
+            "routes": {"OPENAI_AGENT_API": "VERIFIED"},
+            "route_contracts": {
+                "OPENAI_AGENT_API": {
+                    "effect_class": "READ_ONLY",
+                    "replay_policy": "SAFE",
+                }
+            },
+            "reconstruction": {
+                "repository": "example/workers",
+                "path": "reviewer.md",
+                "commit": "f" * 40,
+            },
+        }
+    )
+
+
+def _rereview_projects():
+    provider = ProjectDefinition.from_mapping(
+        {
+            "id": "provider",
+            "name": "Provider",
+            "visibility": "public",
+            "repositories": ["example/provider"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "provider",
+            "scheduling_state": "SCHEDULABLE",
+        }
+    )
+    consumer = ProjectDefinition.from_mapping(
+        {
+            "id": "consumer",
+            "name": "Consumer",
+            "visibility": "public",
+            "repositories": ["example/consumer"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "consumer",
+            "scheduling_state": "SCHEDULABLE",
+            "execution_targets": [
+                {
+                    "work_type": "REREVIEW",
+                    "repository": "example/consumer",
+                    "ref": "review",
+                    "worker_id": "reviewer",
+                    "worker_route": "OPENAI_AGENT_API",
+                }
+            ],
+        }
+    )
+    return provider, consumer
+
+
+def _rereview_dependency():
+    return DependencyEdge.from_mapping(
+        {
+            "id": "provider-review",
+            "provider": "provider",
+            "consumer": "consumer",
+            "kind": "review",
+            "selector": {
+                "repository": "example/provider",
+                "ref": "main",
+            },
+            "reaction": "REREVIEW",
+            "evidence": "exact-subject",
+        }
+    )
+
+
+def test_verified_read_only_worker_work_routes_to_durable_outbox_atomically(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-worker-route.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    changed = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    assert changed.queued_count == 1
+
+    result = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert result.queue_state == "ROUTED"
+    assert result.route_id is not None
+
+    store = SqliteQueueStore(db)
+    try:
+        queue_row = store.connection.execute(
+            """
+            SELECT state
+            FROM portfolio_queue_claims
+            WHERE snapshot_id = ? AND frontier_fingerprint = ?
+            """,
+            (result.snapshot_id, result.frontier_fingerprint),
+        ).fetchone()
+        route_row = store.connection.execute(
+            """
+            SELECT state, worker_id, invocation_route, replay_policy
+            FROM worker_route_outbox
+            WHERE route_id = ?
+            """,
+            (result.route_id,),
+        ).fetchone()
+    finally:
+        store.close()
+
+    assert queue_row == ("ROUTED",)
+    assert route_row == (
+        "PENDING",
+        "reviewer",
+        "OPENAI_AGENT_API",
+        "SAFE",
+    )
+
+
+def test_routed_worker_reconciliation_closes_outbox_and_releases_retry(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-worker-reconcile.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    routed = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert routed.queue_state == "ROUTED"
+
+    reconciled = reconcile_queue_item(
+        state_db=db,
+        snapshot_id=routed.snapshot_id,
+        frontier_fingerprint_value=routed.frontier_fingerprint,
+        expected_fencing_token=routed.fencing_token,
+        resolution="RELEASE_RETRY_READ_ONLY",
+        evidence_sha256="9" * 64,
+        reconciler="test-reconciler",
+        clock=lambda: 4.0,
+    )
+    assert reconciled.final_state == "FAILED_RETRYABLE"
+
+    store = SqliteQueueStore(db)
+    try:
+        outbox = store.connection.execute(
+            "SELECT state FROM worker_route_outbox WHERE route_id = ?",
+            (routed.route_id,),
+        ).fetchone()
+    finally:
+        store.close()
+    assert outbox == ("RECONCILED_RETRY",)
