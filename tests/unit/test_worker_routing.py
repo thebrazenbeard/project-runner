@@ -112,7 +112,7 @@ def test_verified_read_only_worker_route_resolves():
     route = resolve_read_only_worker_route(
         project=_project(),
         frontier=_frontier(),
-        workers=(_worker(replay_policy=replay_policy),),
+        workers=(_worker(),),
     )
     assert route is not None
     assert route.worker_id == "reviewer"
@@ -195,7 +195,7 @@ def _enqueued_store(tmp_path: Path, *, replay_policy: str = "SAFE"):
     route = resolve_read_only_worker_route(
         project=_project(),
         frontier=_frontier(),
-        workers=(_worker(),),
+        workers=(_worker(replay_policy=replay_policy),),
     )
     assert route is not None
     envelope = store.enqueue(
@@ -333,7 +333,6 @@ def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path
             route_id=envelope.route_id,
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
-            workers=(_worker(),),
             holder="worker-one",
             expected_fencing_token=claim.fencing_token,
             receipt_class="SUCCEEDED",
@@ -344,7 +343,6 @@ def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path
             route_id=envelope.route_id,
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
-            workers=(_worker(),),
             holder="worker-one",
             expected_fencing_token=claim.fencing_token,
             receipt_class="SUCCEEDED",
