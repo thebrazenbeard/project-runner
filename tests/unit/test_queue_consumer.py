@@ -1434,3 +1434,205 @@ def test_failed_retryable_on_older_snapshot_is_recovered_into_latest_queue(
     assert result.claimed is True
     assert result.queue_state == "COMPLETE"
     assert result.snapshot_id == recovered_snapshot.snapshot_id
+
+
+
+def test_routed_success_receipt_requires_fresh_provider_and_target_for_complete(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-worker-complete-currentness.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    routed = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert routed.queue_state == "ROUTED"
+
+    route_store = SqliteWorkerRouteStore(db)
+    delivery = route_store.claim_next(
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
+        holder="worker-delivery",
+        now=3.1,
+        ttl=30.0,
+        worker_registry_digest="3" * 64,
+    )
+    assert delivery is not None
+    route_store.record_receipt(
+        route_id=routed.route_id,
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        holder="worker-delivery",
+        expected_fencing_token=delivery.fencing_token,
+        receipt_class="SUCCEEDED",
+        receipt_sha256="8" * 64,
+        now=3.2,
+    )
+    route_store.close()
+
+    completed = reconcile_queue_item(
+        state_db=db,
+        snapshot_id=routed.snapshot_id,
+        frontier_fingerprint_value=routed.frontier_fingerprint,
+        expected_fencing_token=routed.fencing_token,
+        resolution="CONFIRM_COMPLETE",
+        evidence_sha256="9" * 64,
+        reconciler="test-reconciler",
+        transport=transport,
+        clock=lambda: 4.0,
+    )
+    assert completed.final_state == "COMPLETE"
+
+    store = SqliteQueueStore(db)
+    try:
+        queue_state = store.connection.execute(
+            """
+            SELECT state
+            FROM portfolio_queue_claims
+            WHERE snapshot_id = ? AND frontier_fingerprint = ?
+            """,
+            (routed.snapshot_id, routed.frontier_fingerprint),
+        ).fetchone()
+        route_state = store.connection.execute(
+            "SELECT state FROM worker_route_outbox WHERE route_id = ?",
+            (routed.route_id,),
+        ).fetchone()
+    finally:
+        store.close()
+    assert queue_state == ("COMPLETE",)
+    assert route_state == ("COMPLETE",)
+
+
+def test_routed_success_receipt_cannot_complete_after_target_head_moves(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-worker-stale-target.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    routed = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+
+    route_store = SqliteWorkerRouteStore(db)
+    delivery = route_store.claim_next(
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
+        holder="worker-delivery",
+        now=3.1,
+        ttl=30.0,
+        worker_registry_digest="3" * 64,
+    )
+    assert delivery is not None
+    route_store.record_receipt(
+        route_id=routed.route_id,
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        holder="worker-delivery",
+        expected_fencing_token=delivery.fencing_token,
+        receipt_class="SUCCEEDED",
+        receipt_sha256="8" * 64,
+        now=3.2,
+    )
+    route_store.close()
+
+    transport.heads[("example/consumer", "review")] = "d" * 40
+    with pytest.raises(ValueError, match="currentness is stale"):
+        reconcile_queue_item(
+            state_db=db,
+            snapshot_id=routed.snapshot_id,
+            frontier_fingerprint_value=routed.frontier_fingerprint,
+            expected_fencing_token=routed.fencing_token,
+            resolution="CONFIRM_COMPLETE",
+            evidence_sha256="9" * 64,
+            reconciler="test-reconciler",
+            transport=transport,
+            clock=lambda: 4.0,
+        )
