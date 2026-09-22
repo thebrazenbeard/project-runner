@@ -550,22 +550,31 @@ def _operator_status(args) -> int:
     return 0
 
 def _portfolio_cycle(args) -> int:
-    registry_snapshot = _load_project_registry_snapshot()
-    dependency_snapshot = load_dependency_snapshot(args.dependencies)
-    collision_key = (
-        _external_private_collision_key()
-        if _external_project_registry_selected()
-        else None
-    )
-    result = collect_and_schedule_portfolio(
-        projects=registry_snapshot.projects,
-        dependencies=dependency_snapshot.dependencies,
-        registry_digest=registry_snapshot.sha256,
-        dependency_digest=dependency_snapshot.sha256,
-        state_db=args.state_db,
-        token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
-        private_collision_key=collision_key,
-    )
+    external = _external_project_registry_selected()
+    try:
+        registry_snapshot = _load_project_registry_snapshot()
+        dependency_snapshot = load_dependency_snapshot(args.dependencies)
+        collision_key = (
+            _external_private_collision_key()
+            if external
+            else None
+        )
+        result = collect_and_schedule_portfolio(
+            projects=registry_snapshot.projects,
+            dependencies=dependency_snapshot.dependencies,
+            registry_digest=registry_snapshot.sha256,
+            dependency_digest=dependency_snapshot.sha256,
+            state_db=args.state_db,
+            token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+            private_collision_key=collision_key,
+        )
+    except Exception:
+        if external:
+            raise ValueError(
+                "external portfolio cycle is unavailable or structurally invalid"
+            ) from None
+        raise
+
     print(
         json.dumps(
             {
