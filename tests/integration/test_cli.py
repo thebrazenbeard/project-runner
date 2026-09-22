@@ -587,3 +587,114 @@ projects:
                 "--detailed",
             ]
         )
+
+
+
+def test_portfolio_status_missing_database_is_safe_and_empty(tmp_path, capsys):
+    state_db = tmp_path / "missing-portfolio.sqlite3"
+
+    assert main(
+        [
+            "portfolio-status",
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+
+    assert json.loads(capsys.readouterr().out) == {
+        "baseline": None,
+        "blocked": 0,
+        "changed": 0,
+        "frontiers": 0,
+        "latest_snapshot_digest": None,
+        "latest_snapshot_id": None,
+        "observations": 0,
+        "queued_total": 0,
+        "ready": 0,
+        "snapshots": 0,
+    }
+
+
+def test_portfolio_cycle_collects_then_schedules_changed_dependency(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from runner import portfolio as portfolio_module
+
+    class FakeTransport:
+        def __init__(self):
+            self.heads = {
+                ("thebrazenbeard/chat-communication-bus", "main"): "a" * 40,
+                ("thebrazenbeard/vera-control-plane", "main"): "b" * 40,
+            }
+
+        def read_ref(self, repository, ref):
+            return self.heads[(repository, ref)]
+
+        def read_file(self, repository, path, ref):
+            raise AssertionError("portfolio cycle is ref-read only")
+
+        def create_branch(self, repository, branch, sha):
+            raise AssertionError("portfolio cycle is read-only")
+
+        def put_file(
+            self,
+            repository,
+            path,
+            branch,
+            content,
+            message,
+            expected_blob_sha=None,
+        ):
+            raise AssertionError("portfolio cycle is read-only")
+
+    transport = FakeTransport()
+    monkeypatch.setattr(
+        portfolio_module,
+        "GitHubRestTransport",
+        lambda token=None: transport,
+    )
+    state_db = tmp_path / "portfolio.sqlite3"
+
+    assert main(
+        [
+            "portfolio-cycle",
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+    baseline = json.loads(capsys.readouterr().out)
+    assert baseline["baseline"] is True
+    assert baseline["observations"] == 2
+    assert baseline["frontiers"] == 0
+    assert baseline["queued"] == 0
+
+    transport.heads[
+        ("thebrazenbeard/chat-communication-bus", "main")
+    ] = "c" * 40
+
+    assert main(
+        [
+            "portfolio-cycle",
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+    changed = json.loads(capsys.readouterr().out)
+    assert changed["baseline"] is False
+    assert changed["changed"] == 1
+    assert changed["frontiers"] == 1
+    assert changed["ready"] == 1
+    assert changed["queued"] == 1
+
+    assert main(
+        [
+            "portfolio-status",
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["snapshots"] == 2
+    assert status["queued_total"] == 1
