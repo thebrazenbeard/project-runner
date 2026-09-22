@@ -140,3 +140,85 @@ def test_non_schedulable_project_states_remain_explicit(tmp_path: Path, state: s
     project = load_project_snapshot(path, require_scope_metadata=True).projects[0]
     assert project.scheduling_state.value == state
     assert project.scheduling_state.schedulable is False
+
+
+
+def test_project_execution_target_is_parsed_and_bound_to_project_repository(
+    tmp_path: Path,
+):
+    path = tmp_path / "projects.yaml"
+    path.write_text(
+        """
+projects:
+  - id: example
+    name: Example
+    visibility: public
+    repositories: [owner/example]
+    capabilities: [read, analyze]
+    execution_targets:
+      - work_type: INSPECT
+        repository: owner/example
+        ref: review
+""".lstrip(),
+        encoding="utf-8",
+    )
+    project = load_projects(path)[0]
+    assert len(project.execution_targets) == 1
+    assert project.execution_targets[0].work_type == "INSPECT"
+    assert project.execution_targets[0].repository == "owner/example"
+    assert project.execution_targets[0].ref == "review"
+
+
+def test_project_execution_target_cannot_escape_project_repository_scope(
+    tmp_path: Path,
+):
+    path = tmp_path / "projects.yaml"
+    path.write_text(
+        """
+projects:
+  - id: example
+    name: Example
+    visibility: public
+    repositories: [owner/example]
+    capabilities: [read, analyze]
+    execution_targets:
+      - work_type: INSPECT
+        repository: attacker/other
+        ref: main
+""".lstrip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="execution target repository must belong",
+    ):
+        load_projects(path)
+
+
+def test_project_execution_target_work_type_must_be_unique(tmp_path: Path):
+    path = tmp_path / "projects.yaml"
+    path.write_text(
+        """
+projects:
+  - id: example
+    name: Example
+    visibility: public
+    repositories: [owner/example]
+    capabilities: [read, analyze]
+    execution_targets:
+      - work_type: INSPECT
+        repository: owner/example
+        ref: main
+      - work_type: INSPECT
+        repository: owner/example
+        ref: review
+""".lstrip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="work_type must be unique",
+    ):
+        load_projects(path)
