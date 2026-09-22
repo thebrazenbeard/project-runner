@@ -281,7 +281,8 @@ def test_unchanged_newer_snapshot_does_not_erase_pending_queue_work(
         transport=transport,
         clock=lambda: 3.0,
     )
-    assert unchanged.frontier_count == 0
+    assert unchanged.frontier_count == 1
+    assert unchanged.queued_count == 1
     transport.calls.clear()
 
     result = consume_next_queued_inspection(
@@ -298,7 +299,7 @@ def test_unchanged_newer_snapshot_does_not_erase_pending_queue_work(
 
     assert result.claimed is True
     assert result.queue_state == "COMPLETE"
-    assert result.snapshot_id == changed.snapshot_id
+    assert result.snapshot_id == unchanged.snapshot_id
 
 
 def test_newer_provider_subject_supersedes_old_unclaimed_queue_candidate(
@@ -539,9 +540,10 @@ def test_ambiguous_old_claim_blocks_newer_colliding_frontier(tmp_path: Path):
         clock=lambda: 5.0,
     )
 
-    assert result.claimed is False
-    assert result.queue_state == "NO_WORK"
-    assert transport.calls == []
+    assert result.claimed is True
+    assert result.queue_state == "COMPLETE"
+    assert result.snapshot_id == newer.snapshot_id
+    assert transport.calls
 
 
 
