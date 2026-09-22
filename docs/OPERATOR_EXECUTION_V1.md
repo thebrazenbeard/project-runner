@@ -51,12 +51,12 @@ These are design references, not runtime dependencies.
 
 `project-runner portfolio-cycle` removes the requirement to hand-author before/after observation snapshots for registered dependency refs. It:
 
-1. loads one exact project-registry snapshot and one exact dependency-registry snapshot, each digest-bound;
+1. loads one exact project-registry snapshot, one exact dependency-registry snapshot, and one exact worker-registry snapshot, each digest-bound;
 2. validates that every dependency provider/consumer exists and that each selector repository belongs to its declared provider;
 3. requires an exact dependency ref;
 4. derives exact READ_REF grants from those validated selectors and performs only read-only GitHub ref reads;
 5. writes a complete currentness snapshot only after every required read succeeds;
-6. treats the first cycle for an exact project-registry + dependency-registry digest pair as a baseline;
+6. treats the first cycle for an exact project-registry + dependency-registry + worker-registry digest tuple as a baseline;
 7. compares later compatible cycles to their latest durable predecessor;
 8. derives invalidations, frontiers, scheduling eligibility, and priority using the existing M6 logic;
 9. commits the new snapshot and all scheduler decisions in one `BEGIN IMMEDIATE` transaction with a predecessor CAS;
@@ -74,7 +74,7 @@ Projects may now declare explicit `execution_targets` by work type. A target con
 
 Scheduler readiness now includes target availability. A schedulable/capable frontier without one declared target for its work type is persisted as `WAITING_AUTHORITY`, never `QUEUED`.
 
-`project-runner consume-queue` consumes only READY `INSPECT` rows from the latest snapshot matching the current project-registry and dependency-registry digests. The queue bridge:
+`project-runner consume-queue` consumes only READY supported read-only rows from the latest snapshot matching the current project-registry, dependency-registry, and worker-registry digests. The queue bridge:
 
 1. claims one row with a monotonic fencing token;
 2. refuses collision domains already held by another live queue claim, including claims from older snapshots;
@@ -92,8 +92,22 @@ A new currentness snapshot supersedes older unclaimed queue visibility: queue co
 
 The committed public-safe registry intentionally contains only the explicit execution targets already justified by public Project Runner state. Missing targets in other projects are not guessed.
 
+## Queue reconciliation and read-only worker routing V1
+
+Worker routing is explicit and fail-closed. A project execution target may bind a `worker_id` plus an invocation route. A routed worker must exist in the exact worker-registry snapshot, be `EXECUTABLE`, have that exact route marked `VERIFIED`, and carry a route contract that classifies the route as `READ_ONLY`. Route contracts also declare replay policy (`SAFE`, `RECONCILE_REQUIRED`, or `NEVER`).
+
+Worker-registry bytes are part of scheduler currentness. A route-state or route-contract change therefore creates a new scheduling baseline rather than inheriting old runnable decisions.
+
+For qualified non-INSPECT work such as RETEST/REREVIEW/REQUALIFY, queue consumption resolves and freezes the exact consumer target head, then atomically changes the queue item to `ROUTED` while inserting one digest-bound worker-route outbox envelope. The envelope binds the queue fence, worker-registry digest, worker identity, invocation route, replay policy, exact target, and exact frontier payload. The public registry currently has no executable verified worker routes, so no existing Custom GPT registration is silently activated by this feature.
+
+`project-runner worker-route-status` exposes aggregate route-envelope state. It does not invoke a worker.
+
+`OUTCOME_UNKNOWN` and `ROUTED` both continue to reserve their collision domain until explicit reconciliation. `project-runner reconcile-queue` requires the exact snapshot, frontier fingerprint, fencing token, a reconciliation resolution, a SHA-256 evidence binding, and a named reconciler. Confirmation resolutions can terminalize the queue item as COMPLETE, SUPERSEDED, or FAILED_DETERMINISTIC. `RELEASE_RETRY_READ_ONLY` is accepted only where replay is explicitly qualified safe; it increments the durable attempt generation and assigns a new deterministic lineage before the item can be claimed again. Routed outbox state is reconciled in the same transaction as queue state.
+
+Reconciliation evidence is an explicit operator-supplied binding; Project Runner does not pretend the digest independently proves the underlying external fact.
+
 ## Current ceiling and next frontier
 
-The scheduler/consumer bridge is still read-only and currently consumes `INSPECT` only. It does not manufacture targets for RETEST/REREVIEW/REQUALIFY, invoke external workers, write branches/files, open or merge PRs, deploy, install, or change providers/credentials/permissions.
+The runtime remains read-only. Worker routing currently creates a durable outbox handoff but does not itself invoke a Custom GPT, API agent, Action, plugin, or human route. The twelve committed worker records remain REGISTERED with UNVERIFIED routes, so they are not routable.
 
-The next bounded frontier is durable queue lifecycle/reconciliation tooling plus a read-only worker-routing abstraction for additional explicitly bound work types. Any mutation path remains a separate authority-gated frontier with expected-state checks and independent postcondition verification.
+The next bounded frontier is a route-specific delivery/receipt adapter framework with authenticated claimant identity, exact route currentness, and receipt reconciliation. Mutation execution remains a separate authority-gated frontier with expected-state checks and independent postcondition verification.
