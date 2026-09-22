@@ -1547,10 +1547,20 @@ def test_routed_success_receipt_requires_fresh_provider_and_target_for_complete(
     assert route_state == ("COMPLETE",)
 
 
-def test_routed_success_receipt_cannot_complete_after_target_head_moves(
+@pytest.mark.parametrize(
+    ("stale_repository", "stale_ref", "new_head"),
+    [
+        ("example/consumer", "review", "d"),
+        ("example/provider", "main", "e"),
+    ],
+)
+def test_routed_success_receipt_cannot_complete_after_live_subject_moves(
     tmp_path: Path,
+    stale_repository: str,
+    stale_ref: str,
+    new_head: str,
 ):
-    db = tmp_path / "queue-worker-stale-target.sqlite3"
+    db = tmp_path / "queue-worker-stale-live-subject.sqlite3"
     transport = FakeTransport(
         {
             ("example/provider", "main"): "a" * 40,
@@ -1623,7 +1633,7 @@ def test_routed_success_receipt_cannot_complete_after_target_head_moves(
     )
     route_store.close()
 
-    transport.heads[("example/consumer", "review")] = "d" * 40
+    transport.heads[(stale_repository, stale_ref)] = new_head * 40
     with pytest.raises(ValueError, match="currentness is stale"):
         reconcile_queue_item(
             state_db=db,
