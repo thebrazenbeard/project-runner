@@ -917,12 +917,16 @@ def collect_and_schedule_portfolio(
             current_dependency_ids = {
                 dependency.id for dependency in dependency_tuple
             }
+            current_project_ids = {
+                project.id for project in project_tuple
+            }
             carried = tuple(
                 frontier
                 for frontier in store.load_unresolved_frontiers_for_dependency(
                     dependency_digest=dependency_digest
                 )
-                if _frontier_is_current(frontier, current)
+                if frontier.project in current_project_ids
+                and _frontier_is_current(frontier, current)
                 and set(frontier.dependencies).issubset(
                     current_dependency_ids
                 )
