@@ -1129,6 +1129,7 @@ def test_worker_route_digest_must_match_scheduling_snapshot(tmp_path: Path):
         store.route_worker_claim(
             claim,
             worker_registry_digest="4" * 64,
+            packet_sensitivity="PUBLIC",
             route=route,
             now=3.2,
         )
