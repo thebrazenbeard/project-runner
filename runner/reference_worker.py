@@ -55,6 +55,7 @@ def run_reference_read_worker_once(
             now=clock(),
             ttl=lease_ttl,
             worker_registry_digest=worker_registry_digest,
+            allow_private=False,
         )
         if claim is None:
             return ReferenceWorkerResult(
