@@ -25,6 +25,7 @@ from .models import (
     DependencyEdge,
     EvidenceClass,
     ExactSubject,
+    Frontier,
     FrontierStatus,
     Observation,
     ProjectDefinition,
@@ -63,6 +64,39 @@ def _empty_summary() -> dict[str, object]:
         "blocked": 0,
         "queued_total": 0,
     }
+
+
+def _frontier_mapping(frontier: Frontier) -> dict[str, object]:
+    return {
+        "id": frontier.id,
+        "project": frontier.project,
+        "subject": {
+            "repository": frontier.subject.repository,
+            "ref": frontier.subject.ref,
+            "commit": frontier.subject.commit,
+            "path": frontier.subject.path,
+            "digest": frontier.subject.digest,
+        },
+        "work_type": frontier.work_type,
+        "reason": frontier.reason,
+        "dependencies": list(frontier.dependencies),
+        "required_capabilities": list(frontier.required_capabilities),
+        "collision_keys": list(frontier.collision_keys),
+        "cost_class": frontier.cost_class.value,
+        "priority_inputs": dict(frontier.priority_inputs),
+        "status": frontier.status.value,
+    }
+
+
+def _ensure_frontier_json_column(connection: sqlite3.Connection) -> None:
+    columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(portfolio_frontiers)")
+    }
+    if "frontier_json" not in columns:
+        connection.execute(
+            "ALTER TABLE portfolio_frontiers ADD COLUMN frontier_json TEXT"
+        )
 
 
 class SqlitePortfolioStore:
@@ -125,6 +159,7 @@ class SqlitePortfolioStore:
                 subject_path TEXT,
                 collision_keys_json TEXT NOT NULL,
                 required_capabilities_json TEXT NOT NULL,
+                frontier_json TEXT,
                 PRIMARY KEY (snapshot_id, frontier_fingerprint),
                 FOREIGN KEY (snapshot_id)
                     REFERENCES portfolio_snapshots(snapshot_id)
@@ -132,6 +167,7 @@ class SqlitePortfolioStore:
             );
             """
         )
+        _ensure_frontier_json_column(self.connection)
 
     def close(self) -> None:
         self.connection.close()
@@ -277,8 +313,9 @@ class SqlitePortfolioStore:
                     snapshot_id, frontier_fingerprint, frontier_id, project,
                     work_type, status, priority_score, queue_state,
                     subject_repository, subject_ref, subject_commit, subject_path,
-                    collision_keys_json, required_capabilities_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    collision_keys_json, required_capabilities_json,
+                    frontier_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -305,6 +342,11 @@ class SqlitePortfolioStore:
                         ),
                         json.dumps(
                             list(decision.frontier.required_capabilities),
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ),
+                        json.dumps(
+                            _frontier_mapping(decision.frontier),
                             sort_keys=True,
                             separators=(",", ":"),
                         ),
