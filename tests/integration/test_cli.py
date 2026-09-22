@@ -532,3 +532,58 @@ def test_external_non_schedulable_states_never_become_ready(
     )
     assert len(frontiers) == 1
     assert frontiers[0].status.value == "WAITING_SCHEDULING"
+
+
+def test_operator_status_missing_database_is_safe_and_empty(tmp_path, capsys):
+    state_db = tmp_path / "missing-state.sqlite3"
+
+    assert main(
+        [
+            "operator-status",
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+
+    assert json.loads(capsys.readouterr().out) == {
+        "actions": {},
+        "live_fences": 0,
+        "phases": {},
+        "unresolved": 0,
+    }
+
+
+def test_external_registry_disables_detailed_operator_status(
+    tmp_path,
+    monkeypatch,
+):
+    registry = tmp_path / "private-operator.yaml"
+    registry.write_text(
+        """
+projects:
+- id: private-example
+  name: Private Example
+  visibility: private
+  repositories: [secret-owner/private-example]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: private-family
+  scheduling_state: SCHEDULABLE
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+
+    with pytest.raises(
+        ValueError,
+        match="detailed reports are disabled with an external project registry",
+    ):
+        main(
+            [
+                "operator-status",
+                "--state-db",
+                str(tmp_path / "state.sqlite3"),
+                "--detailed",
+            ]
+        )
