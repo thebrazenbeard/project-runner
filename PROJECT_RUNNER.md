@@ -112,7 +112,7 @@ Portfolio currentness is a separate read-only durability boundary from execution
 
 A portfolio cycle must use one exact project-registry snapshot, one exact dependency-registry snapshot, and one exact worker-registry snapshot. Dependency edges may create READ_REF target grants only after the provider and consumer exist in that project snapshot, the selector repository is registered to the declared provider, and the selector has an exact ref.
 
-The first successful cycle for an exact project/dependency/worker registry digest tuple establishes a baseline. Configuration or worker-route changes do not silently compare unlike scheduling authority; a new digest tuple establishes a new baseline.
+The first successful cycle for a dependency-registry digest establishes the observation baseline. Project- and worker-registry changes on that same dependency topology do not discard observation history or unresolved work: current exact-subject frontiers are recovered from durable topology history and re-evaluated under the current scheduling/authority state. A dependency-topology digest change still establishes a new observation baseline.
 
 All required ref reads must succeed before a snapshot can advance. Snapshot persistence and scheduler decisions are one SQLite transaction. The transaction rechecks the exact latest compatible predecessor under `BEGIN IMMEDIATE`; a stale concurrent collector must fail rather than overwrite or double-schedule from an obsolete predecessor.
 
@@ -126,7 +126,7 @@ The exact declared target repository/ref is stored with the queue claim. Its res
 
 The queue derives a deterministic operator lineage from durable snapshot/frontier identity. Before execution it reconstructs the exact expected operator work fingerprint. Existing terminal operator state is reconciliation evidence and must be consumed without backend re-execution. Existing nonterminal state is ambiguous and must become queue `OUTCOME_UNKNOWN`; it does not authorize blind replay.
 
-A newer compatible portfolio snapshot supersedes visibility of older unclaimed queues. Queue state remains coordination/evidence, not downstream mutation authority.
+Pending queue work is semantic, not tied to the newest observation row. Unclaimed or retryable work remains recoverable across compatible snapshots while its full exact provider subject is still current. A newer subject makes the older frontier non-claimable. Historical terminal state acts as a tombstone for that semantic fingerprint, preventing resurrection from an older row. Queue state remains coordination/evidence, not downstream mutation authority.
 
 ## M6 queue reconciliation and read-only worker routing
 
