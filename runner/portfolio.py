@@ -29,10 +29,12 @@ from .models import (
     FrontierStatus,
     Observation,
     ProjectDefinition,
+    WorkerDefinition,
 )
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .work_units import WorkUnit, WorkUnitStatus
+from .worker_routing import worker_route_ready
 
 
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -439,6 +441,7 @@ def _validate_dependency_scope(
 def _apply_execution_target_readiness(
     frontiers: tuple[Frontier, ...],
     projects: tuple[ProjectDefinition, ...],
+    workers: tuple[WorkerDefinition, ...],
 ) -> tuple[Frontier, ...]:
     by_id = {project.id: project for project in projects}
     result: list[Frontier] = []
@@ -457,7 +460,11 @@ def _apply_execution_target_readiness(
                 ),
                 None,
             )
-        if target is not None:
+        if target is not None and project is not None and worker_route_ready(
+            project=project,
+            frontier=frontier,
+            workers=workers,
+        ):
             result.append(frontier)
             continue
         priority_inputs = dict(frontier.priority_inputs)
@@ -613,6 +620,7 @@ def collect_and_schedule_portfolio(
     *,
     projects: Iterable[ProjectDefinition],
     dependencies: Iterable[DependencyEdge],
+    workers: Iterable[WorkerDefinition] = (),
     registry_digest: str,
     dependency_digest: str,
     state_db: Path,
@@ -631,6 +639,7 @@ def collect_and_schedule_portfolio(
     _validate_digest(dependency_digest, label="dependency registry digest")
     project_tuple = tuple(projects)
     dependency_tuple = tuple(dependencies)
+    worker_tuple = tuple(workers)
     _validate_dependency_scope(project_tuple, dependency_tuple)
 
     now = float(clock())
@@ -691,6 +700,7 @@ def collect_and_schedule_portfolio(
             frontiers = _apply_execution_target_readiness(
                 frontiers,
                 project_tuple,
+                worker_tuple,
             )
             if private_collision_key is not None:
                 frontiers = tuple(
