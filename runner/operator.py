@@ -26,7 +26,7 @@ from .m6_github import (
     frontier_to_github_inspection_work,
 )
 from .models import ExactSubject, Frontier, FrontierStatus
-from .persistent_state import SqliteBudgetStore, SqliteLeaseStore
+from .persistent_state import SqliteLeaseStore
 from .recovery import load_recovery_snapshots
 from .recursive_state import SqliteRecursiveWorkStore
 from .work_units import WorkUnitStatus, work_unit_fingerprint
@@ -166,18 +166,13 @@ def run_durable_github_read_inspection(
         remaining_backend_jobs=2,
     )
 
-    budget_store = SqliteBudgetStore(state_db)
     lease_store = SqliteLeaseStore(state_db)
     recursive_store = SqliteRecursiveWorkStore(state_db)
     dispatch_store = SqliteDispatchAdmissionStore(state_db)
     try:
-        budget_generation = budget_store.put_initial(budget)
-        recursive_store.put_initial(
+        budget_generation, work_generation = dispatch_store.initialize_root(
+            budget=budget,
             work=work,
-            lineage_id=lineage_id,
-            budget_scope_id=budget.scope_id,
-            parent_fingerprint=None,
-            ancestry_fingerprints={fingerprint},
             effective_capabilities=effective_capabilities,
         )
 
@@ -186,7 +181,7 @@ def run_durable_github_read_inspection(
             work_fingerprint_value=fingerprint,
             budget_scope_id=budget.scope_id,
             expected_budget_generation=budget_generation,
-            expected_work_generation=1,
+            expected_work_generation=work_generation,
             holder=holder,
             now=clock(),
             ttl=lease_ttl,
@@ -277,7 +272,6 @@ def run_durable_github_read_inspection(
         dispatch_store.close()
         recursive_store.close()
         lease_store.close()
-        budget_store.close()
 
 
 def summarize_recovery_state(
