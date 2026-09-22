@@ -530,6 +530,7 @@ def consume_next_queued_inspection(
     clock: Callable[[], float] = time.time,
 ) -> QueueConsumptionResult:
     project_tuple = tuple(projects)
+    effective_transport = transport or GitHubRestTransport(token=token)
     store = SqliteQueueStore(Path(state_db))
     try:
         claim = store.claim_next(
@@ -553,7 +554,7 @@ def consume_next_queued_inspection(
                     repository=claim.target_repository,
                     ref=claim.target_ref,
                     token=token,
-                    transport=transport,
+                    transport=effective_transport,
                 )
                 claim = store.bind_target_head(
                     claim,
@@ -615,7 +616,7 @@ def consume_next_queued_inspection(
                     for repository in project.repositories
                 ),
                 token=token,
-                transport=transport,
+                transport=effective_transport,
                 clock=clock,
             )
             queue_state = _queue_state_for_operator(result.status)
