@@ -161,4 +161,4 @@ workers:
   reconstruction:
     repository: thebrazenbeard/project-runner
     path: runner/reference_worker.py
-    commit: 241ec6fa4fc0ebf24e147afdb022297b140ca5ab
+    commit: 50af885c961d78aef0e5f8a735f699a6108a42af
