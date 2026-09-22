@@ -36,6 +36,7 @@ from .queue_consumer import (
     reconcile_queue_item,
     summarize_queue_state,
 )
+from .reference_worker import run_reference_read_worker_once
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import (
@@ -735,6 +736,30 @@ def _claim_worker_route(args) -> int:
     return 0
 
 
+def _run_reference_worker(args) -> int:
+    worker_snapshot = _load_worker_registry_snapshot()
+    result = run_reference_read_worker_once(
+        state_db=args.state_db,
+        workers=worker_snapshot.workers,
+        worker_registry_digest=worker_snapshot.sha256,
+        holder=args.holder,
+        lease_ttl=args.lease_ttl,
+        token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+    )
+    print(json.dumps({
+        "mode": "M6_REFERENCE_READ_WORKER",
+        "claimed": result.claimed,
+        "route_id": result.route_id,
+        "delivery_fencing_token": result.delivery_fencing_token,
+        "receipt_class": result.receipt_class,
+        "receipt_sha256": result.receipt_sha256,
+        "reason": result.reason,
+    }, sort_keys=True))
+    if not result.claimed:
+        return 0
+    return 0 if result.receipt_class in {"SUCCEEDED", "SUPERSEDED"} else 2
+
+
 def _record_worker_receipt(args) -> int:
     route = InvocationRoute(args.route)
     store = SqliteWorkerRouteStore(args.state_db)
@@ -919,6 +944,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=Path(".project-runner/project-runner.sqlite3"),
     )
 
+    run_reference_worker = subparsers.add_parser("run-reference-worker")
+    run_reference_worker.add_argument(
+        "--holder",
+        default="project-runner-reference-read-worker",
+    )
+    run_reference_worker.add_argument(
+        "--lease-ttl",
+        type=float,
+        default=300.0,
+    )
+    run_reference_worker.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
     record_worker_receipt = subparsers.add_parser("record-worker-receipt")
     record_worker_receipt.add_argument("--route-id", required=True)
     record_worker_receipt.add_argument("--worker-id", required=True)
@@ -1008,6 +1049,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _claim_worker_route(args)
     if args.command == "record-worker-receipt":
         return _record_worker_receipt(args)
+    if args.command == "run-reference-worker":
+        return _run_reference_worker(args)
     if args.command == "reconcile-queue":
         return _reconcile_queue(args)
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
