@@ -752,3 +752,145 @@ projects:
     assert "private-provider" not in message
     assert "private-consumer" not in message
     assert "secret-owner" not in message
+
+
+
+def test_cli_portfolio_to_queue_consumption_round_trip(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from runner import portfolio as portfolio_module
+    from runner import queue_consumer as queue_module
+
+    class FakeTransport:
+        def __init__(self):
+            self.heads = {
+                ("thebrazenbeard/chat-communication-bus", "main"): "a" * 40,
+                ("thebrazenbeard/vera-control-plane", "main"): "b" * 40,
+                ("thebrazenbeard/project-runner", "main"): "c" * 40,
+            }
+
+        def read_ref(self, repository, ref):
+            return self.heads[(repository, ref)]
+
+        def read_file(self, repository, path, ref):
+            raise AssertionError("queue CLI is ref-read only")
+
+        def create_branch(self, repository, branch, sha):
+            raise AssertionError("queue CLI is read-only")
+
+        def put_file(
+            self,
+            repository,
+            path,
+            branch,
+            content,
+            message,
+            expected_blob_sha=None,
+        ):
+            raise AssertionError("queue CLI is read-only")
+
+    transport = FakeTransport()
+    monkeypatch.setattr(
+        portfolio_module,
+        "GitHubRestTransport",
+        lambda token=None: transport,
+    )
+    monkeypatch.setattr(
+        queue_module,
+        "GitHubRestTransport",
+        lambda token=None: transport,
+    )
+    state_db = tmp_path / "queue-cli.sqlite3"
+
+    assert main(["portfolio-cycle", "--state-db", str(state_db)]) == 0
+    baseline = json.loads(capsys.readouterr().out)
+    assert baseline["baseline"] is True
+
+    transport.heads[
+        ("thebrazenbeard/chat-communication-bus", "main")
+    ] = "d" * 40
+    assert main(["portfolio-cycle", "--state-db", str(state_db)]) == 0
+    scheduled = json.loads(capsys.readouterr().out)
+    assert scheduled["queued"] == 1
+
+    assert main(
+        [
+            "consume-queue",
+            "--state-db",
+            str(state_db),
+            "--holder",
+            "cli-test",
+            "--lease-ttl",
+            "60",
+        ]
+    ) == 0
+    consumed = json.loads(capsys.readouterr().out)
+    assert consumed["claimed"] is True
+    assert consumed["queue_state"] == "COMPLETE"
+    assert consumed["operator_status"] == "COMPLETE"
+    assert consumed["fencing_token"] == 1
+
+    assert main(["queue-status", "--state-db", str(state_db)]) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "claims": 1,
+        "states": {"COMPLETE": 1},
+    }
+
+
+def test_external_queue_consumption_redacts_private_dependency_failure(
+    tmp_path,
+    monkeypatch,
+):
+    registry = tmp_path / "private-queue.yaml"
+    registry.write_text(
+        """
+projects:
+- id: private-provider
+  name: Private Provider
+  visibility: private
+  repositories: [secret-owner/private-provider]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: private-provider-family
+  scheduling_state: SCHEDULABLE
+- id: private-consumer
+  name: Private Consumer
+  visibility: private
+  repositories: [secret-owner/private-consumer]
+  capabilities: [read, analyze]
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: private-consumer-family
+  scheduling_state: SCHEDULABLE
+  execution_targets:
+  - work_type: INSPECT
+    repository: secret-owner/private-consumer
+    ref: private-main
+""".lstrip(),
+        encoding="utf-8",
+    )
+    _pin_external_registry(registry, monkeypatch)
+    private_dependencies = tmp_path / "do-not-leak-private-queue-topology.yaml"
+
+    with pytest.raises(
+        ValueError,
+        match="external queue consumption is unavailable or structurally invalid",
+    ) as exc:
+        main(
+            [
+                "consume-queue",
+                "--dependencies",
+                str(private_dependencies),
+                "--state-db",
+                str(tmp_path / "private-state.sqlite3"),
+            ]
+        )
+
+    message = str(exc.value)
+    assert "do-not-leak" not in message
+    assert "private-provider" not in message
+    assert "private-consumer" not in message
+    assert "secret-owner" not in message
