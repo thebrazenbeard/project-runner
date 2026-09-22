@@ -73,6 +73,24 @@ This first operator route is intentionally read-only. A GitHub token's technical
 
 See docs/OPERATOR_EXECUTION_V1.md.
 
+## Durable portfolio currentness
+
+Project Runner can now collect registered dependency refs itself and persist the resulting scheduler state:
+
+    export PROJECT_RUNNER_GITHUB_TOKEN=<token-with-required-read-access>
+    project-runner portfolio-cycle \
+      --dependencies topology/dependencies.yaml \
+      --state-db .project-runner/project-runner.sqlite3
+
+The first cycle for an exact project-registry/dependency-registry digest pair establishes a baseline and schedules nothing. Later compatible cycles compare against that durable predecessor, derive invalidations/frontiers with the existing scheduling rules, and atomically persist the new snapshot plus READY/BLOCKED scheduler decisions.
+
+    project-runner portfolio-status \
+      --state-db .project-runner/project-runner.sqlite3
+
+Collection is read-only. Dependency selectors manufacture neither provider scope nor write authority: provider/consumer IDs must exist in the current project registry, selector repositories must belong to the declared provider, refs must be exact, and READ_REF grants are derived only after those checks. If any required read fails, the durable snapshot does not advance.
+
+The durable queue is not yet an execution loop. READY rows are scheduled evidence awaiting a separate fenced queue-consumption bridge; they do not automatically invoke workers or mutate downstream repositories.
+
 ## Private portfolio registry
 
 The committed `registry/projects.yaml` is a public-safe seed. It may name repositories that were already part of Project Runner's historical public baseline, but it must not expand the public repository with additional private project identifiers merely because those projects are relevant to orchestration.
