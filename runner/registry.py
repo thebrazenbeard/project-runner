@@ -22,6 +22,13 @@ class ProjectRegistrySnapshot:
 
 
 @dataclass(frozen=True)
+class WorkerRegistrySnapshot:
+    workers: tuple[WorkerDefinition, ...]
+    sha256: str
+    byte_length: int
+
+
+@dataclass(frozen=True)
 class DependencyRegistrySnapshot:
     dependencies: tuple[DependencyEdge, ...]
     sha256: str
@@ -45,12 +52,22 @@ def _reject_duplicate_ids(records: Iterable[T], kind: str) -> tuple[T, ...]:
     return tuple(result)
 
 
-def load_workers(path: Path) -> tuple[WorkerDefinition, ...]:
-    payload = _load_yaml(path)
+def load_worker_snapshot(path: Path) -> WorkerRegistrySnapshot:
+    raw = path.read_bytes()
+    text = raw.decode("utf-8", "strict")
+    payload = yaml.safe_load(text)
     validate_document("worker", payload)
     assert isinstance(payload, dict)
     workers = (WorkerDefinition.from_mapping(item) for item in payload["workers"])
-    return _reject_duplicate_ids(workers, "worker")
+    return WorkerRegistrySnapshot(
+        workers=_reject_duplicate_ids(workers, "worker"),
+        sha256=hashlib.sha256(raw).hexdigest(),
+        byte_length=len(raw),
+    )
+
+
+def load_workers(path: Path) -> tuple[WorkerDefinition, ...]:
+    return load_worker_snapshot(path).workers
 
 
 def _project_snapshot_from_bytes(
