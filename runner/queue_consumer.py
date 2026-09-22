@@ -246,12 +246,15 @@ class SqliteQueueStore:
                 previous_token = 0 if row[5] is None else int(row[5])
                 token = previous_token + 1
                 expires_at = now + ttl
-                lineage = (
-                    str(row[11])
-                    if row[11] is not None
-                    else f"queue:{snapshot_id}:{fingerprint}"
-                )
+                expected_lineage = f"queue:{snapshot_id}:{fingerprint}"
+                if row[11] is not None and str(row[11]) != expected_lineage:
+                    raise ValueError(
+                        "persisted queue lineage diverges from durable queue identity"
+                    )
+                lineage = expected_lineage
                 target_head = None if row[10] is None else str(row[10])
+                if target_head is not None and _SHA40.fullmatch(target_head) is None:
+                    raise ValueError("persisted queue target head is structurally invalid")
 
                 if row[5] is None:
                     self.connection.execute(
@@ -512,7 +515,23 @@ def _operator_record(
     fingerprint = work_unit_fingerprint(work)
     store = SqliteRecursiveWorkStore(state_db)
     try:
-        return store.get(claim.operator_lineage, fingerprint)
+        record = store.get(claim.operator_lineage, fingerprint)
+        if record is not None:
+            return record
+        unexpected = store.connection.execute(
+            """
+            SELECT work_fingerprint
+            FROM recursive_work_state
+            WHERE lineage_id = ?
+            LIMIT 1
+            """,
+            (claim.operator_lineage,),
+        ).fetchone()
+        if unexpected is not None:
+            raise ValueError(
+                "operator lineage contains an unexpected durable work identity"
+            )
+        return None
     finally:
         store.close()
 
