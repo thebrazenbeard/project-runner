@@ -82,7 +82,7 @@ Project Runner can now collect registered dependency refs itself and persist the
       --dependencies topology/dependencies.yaml \
       --state-db .project-runner/project-runner.sqlite3
 
-The first cycle for an exact project-registry/dependency-registry digest pair establishes a baseline and schedules nothing. Later compatible cycles compare against that durable predecessor, derive invalidations/frontiers with the existing scheduling rules, and atomically persist the new snapshot plus READY/BLOCKED scheduler decisions.
+The first cycle for an exact project-registry/dependency-registry/worker-registry digest tuple establishes a baseline and schedules nothing. Later compatible cycles compare against that durable predecessor, derive invalidations/frontiers with the existing scheduling rules, and atomically persist the new snapshot plus READY/BLOCKED scheduler decisions.
 
     project-runner portfolio-status \
       --state-db .project-runner/project-runner.sqlite3
@@ -95,12 +95,30 @@ The durable queue now has a bounded read-only consumer. Projects declare exact `
       --dependencies topology/dependencies.yaml \
       --state-db .project-runner/project-runner.sqlite3
 
-Queue claims use monotonic fencing and collision-domain exclusion. The consumer binds the declared target ref to an exact current commit, persists that binding, and hands only INSPECT work to the durable read-only operator route. Reclaimed claims reconcile existing terminal operator state without re-execution; nonterminal durable operator state becomes `OUTCOME_UNKNOWN` rather than being blindly retried.
+Queue claims use monotonic fencing and collision-domain exclusion. The consumer binds the declared target ref to an exact current commit and persists that binding. INSPECT may use the built-in durable GitHub read operator. Other supported read-only work types require an explicitly bound worker whose exact route is VERIFIED and whose route contract is READ_ONLY. Reclaimed INSPECT claims reconcile existing terminal operator state without re-execution; nonterminal durable operator state becomes `OUTCOME_UNKNOWN` rather than being blindly retried.
 
     project-runner queue-status \
       --state-db .project-runner/project-runner.sqlite3
 
-The committed public registry currently binds only Project Runner's own `INSPECT` target. Other work remains blocked until its target is explicitly declared; Project Runner does not infer `main`, choose the first repository, or manufacture routing authority.
+Read-only worker handoffs are persisted in a digest-bound outbox and can be summarized without invoking a worker:
+
+    project-runner worker-route-status \
+      --state-db .project-runner/project-runner.sqlite3
+
+Ambiguous or routed queue items retain their collision reservation until explicit evidence-bound reconciliation:
+
+    project-runner reconcile-queue \
+      --snapshot-id <id> \
+      --frontier-fingerprint <sha256> \
+      --expected-fencing-token <token> \
+      --resolution CONFIRM_COMPLETE \
+      --evidence-sha256 <sha256> \
+      --reconciler <identity> \
+      --state-db .project-runner/project-runner.sqlite3
+
+A read-only retry release is allowed only where the route's declared replay policy is SAFE. It advances the durable attempt generation and uses a new deterministic lineage.
+
+The committed public registry currently binds only Project Runner's own `INSPECT` target. The twelve committed worker records remain REGISTERED with UNVERIFIED routes, so none is silently activated. Other work remains blocked until its target and qualified worker route are explicitly declared; Project Runner does not infer `main`, choose the first repository, or manufacture routing authority.
 
 ## Private portfolio registry
 
