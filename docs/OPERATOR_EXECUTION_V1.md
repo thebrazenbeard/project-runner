@@ -47,6 +47,27 @@ The existing external registry digest and private collision-key requirements rem
 
 These are design references, not runtime dependencies.
 
-## Next frontier
+## Durable portfolio currentness and scheduler V1
 
-After this operator path is exact-head qualified, the next useful layer is a durable portfolio currentness collector and scheduler so operators do not have to hand-supply observation snapshots. Mutation execution should remain a separate gated frontier with explicit effect authority and postcondition reconciliation.
+`project-runner portfolio-cycle` removes the requirement to hand-author before/after observation snapshots for registered dependency refs. It:
+
+1. loads one exact project-registry snapshot and one exact dependency-registry snapshot, each digest-bound;
+2. validates that every dependency provider/consumer exists and that each selector repository belongs to its declared provider;
+3. requires an exact dependency ref;
+4. derives exact READ_REF grants from those validated selectors and performs only read-only GitHub ref reads;
+5. writes a complete currentness snapshot only after every required read succeeds;
+6. treats the first cycle for an exact project-registry + dependency-registry digest pair as a baseline;
+7. compares later compatible cycles to their latest durable predecessor;
+8. derives invalidations, frontiers, scheduling eligibility, and priority using the existing M6 logic;
+9. commits the new snapshot and all scheduler decisions in one `BEGIN IMMEDIATE` transaction with a predecessor CAS;
+10. queues READY frontiers and persists blocked frontiers without executing either.
+
+A failure during collection does not advance durable currentness. A concurrent cycle that advances the same configuration first causes the stale cycle to fail rather than overwrite or double-schedule from an obsolete predecessor.
+
+Path-prefix dependencies are conservative in V1: currentness is collected at the exact ref head and the selector path-prefix is bound into the observation locus. A ref-head change can therefore over-invalidate a path-scoped dependency, but it cannot silently treat a changed Git commit as unchanged.
+
+`project-runner portfolio-status` is count/digest oriented and does not dump portfolio subjects. The scheduler queue is durable evidence, not a standing execution grant.
+
+## Current ceiling and next frontier
+
+Portfolio V1 still does not consume scheduled rows, resolve a target subject automatically, invoke `run-inspection`, mutate downstream repositories, or mark queued work complete. The next bounded frontier is a durable queue-consumption bridge that claims one READY scheduled frontier under fencing/currentness checks, resolves its exact authorized consumer target, and hands only read-only INSPECT work to the already-qualified operator path. Mutation execution remains a separate gated frontier with explicit effect authority and postcondition reconciliation.
