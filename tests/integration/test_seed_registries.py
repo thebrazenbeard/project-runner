@@ -33,6 +33,24 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "vera-control-plane",
     }
 
-    assert len(workers) == 12
-    assert all(w.lifecycle.value == "REGISTERED" for w in workers)
-    assert all(w.reconstruction is None for w in workers)
+    assert len(workers) == 13
+    custom_gpts = tuple(
+        worker
+        for worker in workers
+        if worker.worker_type.value == "CHATGPT_CUSTOM_GPT"
+    )
+    assert len(custom_gpts) == 12
+    assert all(worker.lifecycle.value == "REGISTERED" for worker in custom_gpts)
+    assert all(worker.reconstruction is None for worker in custom_gpts)
+
+    reference = next(
+        worker
+        for worker in workers
+        if worker.id == "project-runner-reference-read-worker"
+    )
+    assert reference.lifecycle.value == "EXECUTABLE"
+    assert reference.worker_type.value == "GITHUB_ACTION"
+    assert reference.routes[
+        next(route for route in reference.routes if route.value == "RUNNER_ACTION_PULL")
+    ].value == "VERIFIED"
+    assert reference.reconstruction is not None
