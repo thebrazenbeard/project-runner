@@ -515,3 +515,54 @@ def test_verified_worker_route_wakes_existing_waiting_authority_frontier(
     assert awakened.frontier_count == 1
     assert awakened.ready_count == 1
     assert awakened.queued_count == 1
+
+
+
+def test_portfolio_status_deduplicates_carried_queue_history(tmp_path: Path):
+    db = tmp_path / "portfolio-status-dedup.sqlite3"
+    transport = FakeTransport(
+        {("example/provider", "main"): "a" * 40}
+    )
+    projects = (
+        _project("provider", "example/provider"),
+        _project("consumer", "example/consumer"),
+    )
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    changed = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    assert changed.queued_count == 1
+
+    carried = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert carried.queued_count == 1
+
+    summary = summarize_portfolio_state(db)
+    assert summary["snapshots"] == 3
+    assert summary["queued_total"] == 1
