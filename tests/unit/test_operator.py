@@ -92,6 +92,7 @@ def test_durable_operator_executes_real_read_route_and_finalizes(tmp_path: Path)
         lease_ttl=60.0,
         registry_digest="d" * 64,
         authorized_target_repositories=("example/consumer",),
+        authorized_provider_repositories=("example/provider",),
         token=None,
         transport=transport,
         clock=_clock,
@@ -138,12 +139,6 @@ def test_durable_operator_fails_closed_when_exact_target_moved(tmp_path: Path):
             ("example/consumer", "main"): "c" * 40,
         }
     )
-    backend = build_github_read_backend(
-        (PROVIDER, TARGET),
-        token=None,
-        transport=transport,
-    )
-
     result = run_durable_github_read_inspection(
         frontier=_frontier(),
         target_subject=TARGET,
@@ -153,6 +148,7 @@ def test_durable_operator_fails_closed_when_exact_target_moved(tmp_path: Path):
         lease_ttl=60.0,
         registry_digest="e" * 64,
         authorized_target_repositories=("example/consumer",),
+        authorized_provider_repositories=("example/provider",),
         token=None,
         transport=transport,
         clock=_clock,
@@ -180,6 +176,7 @@ def test_durable_operator_does_not_silently_restart_existing_lineage(tmp_path: P
         lease_ttl=60.0,
         registry_digest="f" * 64,
         authorized_target_repositories=("example/consumer",),
+        authorized_provider_repositories=("example/provider",),
         token=None,
         transport=transport,
         clock=_clock,
@@ -279,6 +276,40 @@ def test_durable_operator_rejects_target_outside_frontier_project_scope(
             lease_ttl=60.0,
             registry_digest="2" * 64,
             authorized_target_repositories=("example/other",),
+            token=None,
+            transport=transport,
+            clock=_clock,
+        )
+
+    assert transport.calls == []
+    assert not db.exists()
+
+
+def test_durable_operator_rejects_unregistered_provider_before_transport(
+    tmp_path: Path,
+):
+    db = tmp_path / "operator-provider-authority.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "b" * 40,
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="provider repository is not registered",
+    ):
+        run_durable_github_read_inspection(
+            frontier=_frontier(),
+            target_subject=TARGET,
+            state_db=db,
+            lineage_id="operator-provider-authority",
+            holder="unit-test",
+            lease_ttl=60.0,
+            registry_digest="3" * 64,
+            authorized_target_repositories=("example/consumer",),
+            authorized_provider_repositories=("example/other-provider",),
             token=None,
             transport=transport,
             clock=_clock,
