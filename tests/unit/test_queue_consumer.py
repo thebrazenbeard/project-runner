@@ -741,7 +741,7 @@ def test_reconciliation_requires_exact_fencing_token(tmp_path: Path):
         )
 
 
-def _read_only_worker_fixture():
+def _read_only_worker_fixture(*, replay_policy: str = "SAFE"):
     return WorkerDefinition.from_mapping(
         {
             "id": "reviewer",
@@ -754,7 +754,7 @@ def _read_only_worker_fixture():
             "route_contracts": {
                 "OPENAI_AGENT_API": {
                     "effect_class": "READ_ONLY",
-                    "replay_policy": "SAFE",
+                    "replay_policy": replay_policy,
                 }
             },
             "reconstruction": {
@@ -1636,3 +1636,122 @@ def test_routed_success_receipt_cannot_complete_after_target_head_moves(
             transport=transport,
             clock=lambda: 4.0,
         )
+
+
+
+@pytest.mark.parametrize(
+    ("replay_policy", "retry_allowed"),
+    [
+        ("RECONCILE_REQUIRED", True),
+        ("NEVER", False),
+    ],
+)
+def test_ambiguous_worker_delivery_respects_replay_policy(
+    tmp_path: Path,
+    replay_policy: str,
+    retry_allowed: bool,
+):
+    db = tmp_path / f"queue-worker-{replay_policy.lower()}.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(replay_policy=replay_policy),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    routed = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert routed.queue_state == "ROUTED"
+
+    route_store = SqliteWorkerRouteStore(db)
+    delivery = route_store.claim_next(
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
+        holder="worker-delivery",
+        now=3.1,
+        ttl=1.0,
+        worker_registry_digest="3" * 64,
+    )
+    assert delivery is not None
+    reclaimed = route_store.claim_next(
+        worker_id="reviewer",
+        invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
+        holder="worker-two",
+        now=5.0,
+        ttl=10.0,
+        worker_registry_digest="3" * 64,
+    )
+    assert reclaimed is None
+    state = route_store.connection.execute(
+        "SELECT state FROM worker_route_outbox WHERE route_id = ?",
+        (routed.route_id,),
+    ).fetchone()
+    assert state == ("OUTCOME_UNKNOWN",)
+    route_store.close()
+
+    if retry_allowed:
+        result = reconcile_queue_item(
+            state_db=db,
+            snapshot_id=routed.snapshot_id,
+            frontier_fingerprint_value=routed.frontier_fingerprint,
+            expected_fencing_token=routed.fencing_token,
+            resolution="RELEASE_RETRY_READ_ONLY",
+            evidence_sha256="7" * 64,
+            reconciler="test-reconciler",
+            clock=lambda: 6.0,
+        )
+        assert result.final_state == "FAILED_RETRYABLE"
+        assert result.attempt_generation == 2
+    else:
+        with pytest.raises(ValueError, match="not qualified"):
+            reconcile_queue_item(
+                state_db=db,
+                snapshot_id=routed.snapshot_id,
+                frontier_fingerprint_value=routed.frontier_fingerprint,
+                expected_fencing_token=routed.fencing_token,
+                resolution="RELEASE_RETRY_READ_ONLY",
+                evidence_sha256="7" * 64,
+                reconciler="test-reconciler",
+                clock=lambda: 6.0,
+            )
