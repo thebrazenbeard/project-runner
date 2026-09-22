@@ -1,0 +1,684 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+import json
+from pathlib import Path
+import re
+import sqlite3
+import time
+from typing import Callable, Iterable
+
+from .dedup import frontier_fingerprint
+from .github_backend import (
+    GitHubBackend,
+    GitHubOperation,
+    GitHubRestTransport,
+    GitHubTransport,
+    TargetAuthorityGrant,
+)
+from .m6_github import frontier_to_github_inspection_work
+from .models import ExactSubject, Frontier, ProjectDefinition, ProjectExecutionTarget
+from .operator import InspectionRunResult, run_durable_github_read_inspection
+from .recursive_state import SqliteRecursiveWorkStore
+from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
+
+
+_SHA40 = re.compile(r"^[0-9a-f]{40}$")
+_TERMINAL_QUEUE_STATES = frozenset(
+    {"COMPLETE", "FAILED_DETERMINISTIC", "SUPERSEDED", "OUTCOME_UNKNOWN"}
+)
+
+
+@dataclass(frozen=True)
+class QueueClaim:
+    snapshot_id: int
+    frontier_fingerprint: str
+    frontier: Frontier
+    holder: str
+    fencing_token: int
+    expires_at: float
+    target_repository: str
+    target_ref: str
+    target_head: str | None
+    operator_lineage: str
+
+
+@dataclass(frozen=True)
+class QueueConsumptionResult:
+    claimed: bool
+    queue_state: str
+    snapshot_id: int | None = None
+    frontier_fingerprint: str | None = None
+    fencing_token: int | None = None
+    operator_status: str | None = None
+    reason: str | None = None
+
+
+_SCHEMA = """
+CREATE TABLE IF NOT EXISTS portfolio_queue_claims (
+    snapshot_id INTEGER NOT NULL,
+    frontier_fingerprint TEXT NOT NULL,
+    holder TEXT,
+    fencing_token INTEGER NOT NULL,
+    expires_at REAL NOT NULL,
+    state TEXT NOT NULL,
+    target_repository TEXT NOT NULL,
+    target_ref TEXT NOT NULL,
+    target_head TEXT,
+    operator_lineage TEXT NOT NULL,
+    reason TEXT,
+    updated_at REAL NOT NULL,
+    PRIMARY KEY (snapshot_id, frontier_fingerprint),
+    FOREIGN KEY (snapshot_id, frontier_fingerprint)
+        REFERENCES portfolio_frontiers(snapshot_id, frontier_fingerprint)
+        ON DELETE CASCADE
+);
+"""
+
+
+def _canonical_collision_keys(raw: str) -> frozenset[str]:
+    value = json.loads(raw)
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError("queued frontier collision keys are structurally invalid")
+    return frozenset(value)
+
+
+def _execution_target(
+    projects: tuple[ProjectDefinition, ...],
+    frontier: Frontier,
+) -> ProjectExecutionTarget:
+    project = next((item for item in projects if item.id == frontier.project), None)
+    if project is None:
+        raise ValueError("queued frontier project is absent from current registry")
+    matches = tuple(
+        item
+        for item in project.execution_targets
+        if item.work_type == frontier.work_type
+    )
+    if len(matches) != 1:
+        raise ValueError("queued frontier lacks one exact execution target")
+    return matches[0]
+
+
+class SqliteQueueStore:
+    def __init__(self, path: Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.connection = sqlite3.connect(
+            self.path,
+            timeout=5.0,
+            isolation_level=None,
+        )
+        self.connection.execute("PRAGMA journal_mode=WAL")
+        self.connection.execute("PRAGMA foreign_keys=ON")
+        self.connection.executescript(_SCHEMA)
+
+    def close(self) -> None:
+        self.connection.close()
+
+    def _claim_row(self, row, *, projects: tuple[ProjectDefinition, ...]) -> tuple[Frontier, ProjectExecutionTarget]:
+        frontier_json = row[3]
+        if frontier_json is None:
+            raise ValueError("queued frontier predates reconstructable frontier state")
+        raw = json.loads(str(frontier_json))
+        if not isinstance(raw, dict):
+            raise ValueError("queued frontier payload is structurally invalid")
+        frontier = Frontier.from_mapping(raw)
+        if frontier_fingerprint(frontier) != str(row[0]):
+            raise ValueError("queued frontier fingerprint does not match durable payload")
+        target = _execution_target(projects, frontier)
+        return frontier, target
+
+    def claim_next(
+        self,
+        *,
+        projects: Iterable[ProjectDefinition],
+        registry_digest: str,
+        dependency_digest: str,
+        holder: str,
+        now: float,
+        ttl: float,
+        supported_work_types: frozenset[str] = frozenset({"INSPECT"}),
+    ) -> QueueClaim | None:
+        if not holder.strip():
+            raise ValueError("queue lease holder is required")
+        if ttl <= 0:
+            raise ValueError("queue lease ttl must be positive")
+        project_tuple = tuple(projects)
+
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            snapshot = self.connection.execute(
+                """
+                SELECT snapshot_id
+                FROM portfolio_snapshots
+                WHERE registry_digest = ? AND dependency_digest = ?
+                ORDER BY snapshot_id DESC
+                LIMIT 1
+                """,
+                (registry_digest, dependency_digest),
+            ).fetchone()
+            if snapshot is None:
+                self.connection.commit()
+                return None
+            snapshot_id = int(snapshot[0])
+
+            active_rows = self.connection.execute(
+                """
+                SELECT pf.frontier_fingerprint, pf.collision_keys_json
+                FROM portfolio_queue_claims qc
+                JOIN portfolio_frontiers pf
+                  ON pf.snapshot_id = qc.snapshot_id
+                 AND pf.frontier_fingerprint = qc.frontier_fingerprint
+                WHERE qc.state = 'CLAIMED' AND qc.expires_at > ?
+                """,
+                (now,),
+            ).fetchall()
+            active_collisions = {
+                str(item)
+                for _fingerprint, raw_keys in active_rows
+                for item in _canonical_collision_keys(str(raw_keys))
+            }
+
+            candidates = self.connection.execute(
+                """
+                SELECT
+                    pf.frontier_fingerprint,
+                    pf.work_type,
+                    pf.collision_keys_json,
+                    pf.frontier_json,
+                    qc.holder,
+                    qc.fencing_token,
+                    qc.expires_at,
+                    qc.state,
+                    qc.target_repository,
+                    qc.target_ref,
+                    qc.target_head,
+                    qc.operator_lineage
+                FROM portfolio_frontiers pf
+                LEFT JOIN portfolio_queue_claims qc
+                  ON qc.snapshot_id = pf.snapshot_id
+                 AND qc.frontier_fingerprint = pf.frontier_fingerprint
+                WHERE pf.snapshot_id = ? AND pf.queue_state = 'QUEUED'
+                ORDER BY pf.priority_score DESC, pf.frontier_fingerprint
+                """,
+                (snapshot_id,),
+            ).fetchall()
+
+            for row in candidates:
+                fingerprint = str(row[0])
+                work_type = str(row[1])
+                if work_type not in supported_work_types:
+                    continue
+                prior_state = None if row[7] is None else str(row[7])
+                if prior_state in _TERMINAL_QUEUE_STATES:
+                    continue
+                if prior_state == "CLAIMED" and now < float(row[6]):
+                    continue
+
+                collision_keys = _canonical_collision_keys(str(row[2]))
+                own_live = (
+                    prior_state == "CLAIMED"
+                    and now < float(row[6])
+                )
+                conflicts = collision_keys & active_collisions
+                if conflicts and not own_live:
+                    continue
+
+                frontier, target = self._claim_row(row, projects=project_tuple)
+                if target.repository not in {
+                    repo
+                    for project in project_tuple
+                    if project.id == frontier.project
+                    for repo in project.repositories
+                }:
+                    raise ValueError("execution target escaped project repository scope")
+
+                previous_token = 0 if row[5] is None else int(row[5])
+                token = previous_token + 1
+                expires_at = now + ttl
+                lineage = (
+                    str(row[11])
+                    if row[11] is not None
+                    else f"queue:{snapshot_id}:{fingerprint}"
+                )
+                target_head = None if row[10] is None else str(row[10])
+
+                if row[5] is None:
+                    self.connection.execute(
+                        """
+                        INSERT INTO portfolio_queue_claims(
+                            snapshot_id, frontier_fingerprint, holder,
+                            fencing_token, expires_at, state,
+                            target_repository, target_ref, target_head,
+                            operator_lineage, reason, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, 'CLAIMED', ?, ?, ?, ?, NULL, ?)
+                        """,
+                        (
+                            snapshot_id,
+                            fingerprint,
+                            holder,
+                            token,
+                            expires_at,
+                            target.repository,
+                            target.ref,
+                            target_head,
+                            lineage,
+                            now,
+                        ),
+                    )
+                else:
+                    self.connection.execute(
+                        """
+                        UPDATE portfolio_queue_claims
+                        SET holder = ?, fencing_token = ?, expires_at = ?,
+                            state = 'CLAIMED', reason = NULL, updated_at = ?
+                        WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                        """,
+                        (
+                            holder,
+                            token,
+                            expires_at,
+                            now,
+                            snapshot_id,
+                            fingerprint,
+                        ),
+                    )
+
+                self.connection.commit()
+                return QueueClaim(
+                    snapshot_id=snapshot_id,
+                    frontier_fingerprint=fingerprint,
+                    frontier=frontier,
+                    holder=holder,
+                    fencing_token=token,
+                    expires_at=expires_at,
+                    target_repository=target.repository,
+                    target_ref=target.ref,
+                    target_head=target_head,
+                    operator_lineage=lineage,
+                )
+
+            self.connection.commit()
+            return None
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def bind_target_head(
+        self,
+        claim: QueueClaim,
+        *,
+        target_head: str,
+        now: float,
+    ) -> QueueClaim:
+        if _SHA40.fullmatch(target_head) is None:
+            raise ValueError("queue target head must be lowercase 40-hex")
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.connection.execute(
+                """
+                SELECT holder, fencing_token, expires_at, state, target_head
+                FROM portfolio_queue_claims
+                WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                """,
+                (claim.snapshot_id, claim.frontier_fingerprint),
+            ).fetchone()
+            if row is None:
+                raise ValueError("queue claim disappeared")
+            if (
+                str(row[0]) != claim.holder
+                or int(row[1]) != claim.fencing_token
+                or str(row[3]) != "CLAIMED"
+                or now >= float(row[2])
+            ):
+                raise ValueError("queue fence no longer authorizes target binding")
+            existing = None if row[4] is None else str(row[4])
+            if existing is not None and existing != target_head:
+                raise ValueError("queue target head is already bound differently")
+            if existing is None:
+                self.connection.execute(
+                    """
+                    UPDATE portfolio_queue_claims
+                    SET target_head = ?, updated_at = ?
+                    WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                    """,
+                    (
+                        target_head,
+                        now,
+                        claim.snapshot_id,
+                        claim.frontier_fingerprint,
+                    ),
+                )
+            self.connection.commit()
+            return QueueClaim(
+                **{
+                    **claim.__dict__,
+                    "target_head": existing or target_head,
+                }
+            )
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def finalize(
+        self,
+        claim: QueueClaim,
+        *,
+        state: str,
+        reason: str,
+        now: float,
+    ) -> None:
+        allowed = _TERMINAL_QUEUE_STATES | {"FAILED_RETRYABLE"}
+        if state not in allowed:
+            raise ValueError("unsupported queue terminal state")
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.connection.execute(
+                """
+                SELECT holder, fencing_token, state
+                FROM portfolio_queue_claims
+                WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                """,
+                (claim.snapshot_id, claim.frontier_fingerprint),
+            ).fetchone()
+            if row is None:
+                raise ValueError("queue claim disappeared")
+            if (
+                str(row[0]) != claim.holder
+                or int(row[1]) != claim.fencing_token
+                or str(row[2]) != "CLAIMED"
+            ):
+                raise ValueError("queue fence no longer authorizes finalization")
+            self.connection.execute(
+                """
+                UPDATE portfolio_queue_claims
+                SET state = ?, reason = ?, expires_at = 0, updated_at = ?
+                WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                """,
+                (
+                    state,
+                    reason,
+                    now,
+                    claim.snapshot_id,
+                    claim.frontier_fingerprint,
+                ),
+            )
+            self.connection.commit()
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def summary(self) -> dict[str, object]:
+        rows = self.connection.execute(
+            """
+            SELECT state, COUNT(*)
+            FROM portfolio_queue_claims
+            GROUP BY state
+            ORDER BY state
+            """
+        ).fetchall()
+        states = {str(state): int(count) for state, count in rows}
+        return {
+            "claims": sum(states.values()),
+            "states": states,
+        }
+
+
+def _read_ref_work(repository: str, ref: str) -> WorkUnit:
+    return WorkUnit(
+        id="queue-target-read",
+        root_frontier_id="queue-target-read",
+        parent_work_id=None,
+        inputs=(),
+        operation="GITHUB",
+        required_capabilities=("github.read_ref",),
+        collision_keys=(),
+        recursion_depth=0,
+        budget_allocation={
+            "children": 0,
+            "active": 0,
+            "retries": 0,
+            "backend_jobs": 0,
+        },
+        expected_outputs=("github-ref-head",),
+        completion_criteria=("github-readback-verified",),
+        status=WorkUnitStatus.RUNNING,
+        payload={
+            "github": {
+                "operation": GitHubOperation.READ_REF.value,
+                "repository": repository,
+                "ref": ref,
+            }
+        },
+    )
+
+
+def _resolve_target_head(
+    *,
+    repository: str,
+    ref: str,
+    token: str | None,
+    transport: GitHubTransport | None,
+) -> str:
+    backend = GitHubBackend(
+        transport=transport or GitHubRestTransport(token=token),
+        route_capabilities=("github.read_ref",),
+        grants=(
+            TargetAuthorityGrant(
+                repository=repository,
+                operations=(GitHubOperation.READ_REF,),
+                ref_prefixes=(ref,),
+            ),
+        ),
+    )
+    result = backend.execute(_read_ref_work(repository, ref))
+    if not result.succeeded or len(result.outputs) != 1:
+        raise RuntimeError("execution target currentness read failed")
+    head = result.outputs[0]
+    if _SHA40.fullmatch(head) is None:
+        raise ValueError("execution target currentness is not an exact commit")
+    return head
+
+
+def _operator_record(
+    *,
+    state_db: Path,
+    claim: QueueClaim,
+    registry_digest: str,
+):
+    if claim.target_head is None:
+        return None
+    target = ExactSubject(
+        repository=claim.target_repository,
+        ref=claim.target_ref,
+        commit=claim.target_head,
+    )
+    work = frontier_to_github_inspection_work(
+        claim.frontier,
+        target,
+        registry_digest=registry_digest,
+    )
+    fingerprint = work_unit_fingerprint(work)
+    store = SqliteRecursiveWorkStore(state_db)
+    try:
+        return store.get(claim.operator_lineage, fingerprint)
+    finally:
+        store.close()
+
+
+def _queue_state_for_operator(status: WorkUnitStatus) -> str:
+    if status is WorkUnitStatus.COMPLETE:
+        return "COMPLETE"
+    if status is WorkUnitStatus.FAILED_DETERMINISTIC:
+        return "FAILED_DETERMINISTIC"
+    if status is WorkUnitStatus.SUPERSEDED:
+        return "SUPERSEDED"
+    return "OUTCOME_UNKNOWN"
+
+
+def consume_next_queued_inspection(
+    *,
+    projects: Iterable[ProjectDefinition],
+    registry_digest: str,
+    dependency_digest: str,
+    state_db: Path,
+    holder: str,
+    lease_ttl: float,
+    token: str | None,
+    transport: GitHubTransport | None = None,
+    clock: Callable[[], float] = time.time,
+) -> QueueConsumptionResult:
+    project_tuple = tuple(projects)
+    store = SqliteQueueStore(Path(state_db))
+    try:
+        claim = store.claim_next(
+            projects=project_tuple,
+            registry_digest=registry_digest,
+            dependency_digest=dependency_digest,
+            holder=holder,
+            now=clock(),
+            ttl=lease_ttl,
+        )
+        if claim is None:
+            return QueueConsumptionResult(
+                claimed=False,
+                queue_state="NO_WORK",
+                reason="no READY queued INSPECT frontier for the current configuration",
+            )
+
+        try:
+            if claim.target_head is None:
+                head = _resolve_target_head(
+                    repository=claim.target_repository,
+                    ref=claim.target_ref,
+                    token=token,
+                    transport=transport,
+                )
+                claim = store.bind_target_head(
+                    claim,
+                    target_head=head,
+                    now=clock(),
+                )
+
+            existing = _operator_record(
+                state_db=Path(state_db),
+                claim=claim,
+                registry_digest=registry_digest,
+            )
+            if existing is not None:
+                state = _queue_state_for_operator(existing.work.status)
+                if state == "OUTCOME_UNKNOWN":
+                    reason = (
+                        "durable operator state already exists but is nonterminal; "
+                        "backend re-execution was not attempted"
+                    )
+                else:
+                    reason = (
+                        "queue reconciled from existing durable operator terminal state"
+                    )
+                store.finalize(
+                    claim,
+                    state=state,
+                    reason=reason,
+                    now=clock(),
+                )
+                return QueueConsumptionResult(
+                    claimed=True,
+                    queue_state=state,
+                    snapshot_id=claim.snapshot_id,
+                    frontier_fingerprint=claim.frontier_fingerprint,
+                    fencing_token=claim.fencing_token,
+                    operator_status=existing.work.status.value,
+                    reason=reason,
+                )
+
+            target = ExactSubject(
+                repository=claim.target_repository,
+                ref=claim.target_ref,
+                commit=claim.target_head,
+            )
+            result: InspectionRunResult = run_durable_github_read_inspection(
+                frontier=claim.frontier,
+                target_subject=target,
+                state_db=Path(state_db),
+                lineage_id=claim.operator_lineage,
+                holder=holder,
+                lease_ttl=lease_ttl,
+                registry_digest=registry_digest,
+                authorized_target_repositories=(
+                    claim.target_repository,
+                ),
+                authorized_provider_repositories=tuple(
+                    repository
+                    for project in project_tuple
+                    for repository in project.repositories
+                ),
+                token=token,
+                transport=transport,
+                clock=clock,
+            )
+            queue_state = _queue_state_for_operator(result.status)
+            store.finalize(
+                claim,
+                state=queue_state,
+                reason=result.reason,
+                now=clock(),
+            )
+            return QueueConsumptionResult(
+                claimed=True,
+                queue_state=queue_state,
+                snapshot_id=claim.snapshot_id,
+                frontier_fingerprint=claim.frontier_fingerprint,
+                fencing_token=claim.fencing_token,
+                operator_status=result.status.value,
+                reason=result.reason,
+            )
+        except Exception:
+            existing = _operator_record(
+                state_db=Path(state_db),
+                claim=claim,
+                registry_digest=registry_digest,
+            )
+            if existing is None:
+                store.finalize(
+                    claim,
+                    state="FAILED_RETRYABLE",
+                    reason="queue execution failed before durable operator state existed",
+                    now=clock(),
+                )
+            elif existing.work.status in {
+                WorkUnitStatus.COMPLETE,
+                WorkUnitStatus.FAILED_DETERMINISTIC,
+                WorkUnitStatus.SUPERSEDED,
+            }:
+                store.finalize(
+                    claim,
+                    state=_queue_state_for_operator(existing.work.status),
+                    reason="queue recovered terminal operator state after execution error",
+                    now=clock(),
+                )
+            else:
+                store.finalize(
+                    claim,
+                    state="OUTCOME_UNKNOWN",
+                    reason=(
+                        "durable operator state is nonterminal after execution error; "
+                        "backend re-execution requires reconciliation"
+                    ),
+                    now=clock(),
+                )
+            raise
+    finally:
+        store.close()
+
+
+def summarize_queue_state(state_db: Path) -> dict[str, object]:
+    state_db = Path(state_db)
+    if not state_db.exists():
+        return {"claims": 0, "states": {}}
+    store = SqliteQueueStore(state_db)
+    try:
+        return store.summary()
+    finally:
+        store.close()
