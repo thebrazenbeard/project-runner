@@ -1074,7 +1074,13 @@ def test_cli_worker_route_pull_and_receipt_round_trip(
 ):
     from types import SimpleNamespace
 
-    from runner.models import Frontier, ProjectDefinition, WorkerDefinition
+    from runner.models import (
+        Frontier,
+        Observation,
+        ProjectDefinition,
+        WorkerDefinition,
+    )
+    from runner.portfolio import SqlitePortfolioStore
     from runner.worker_routing import (
         SqliteWorkerRouteStore,
         resolve_read_only_worker_route,
@@ -1161,9 +1167,40 @@ def test_cli_worker_route_pull_and_receipt_round_trip(
     assert route is not None
 
     state_db = tmp_path / "worker-cli.sqlite3"
+    portfolio = SqlitePortfolioStore(state_db)
+    snapshot_id = portfolio.commit_cycle(
+        registry_digest="0" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="1" * 64,
+        snapshot_digest="3" * 64,
+        observed_at=1.0,
+        baseline=True,
+        observations=(
+            Observation.from_mapping(
+                {
+                    "target": "provider",
+                    "evidence_class": "AUTHORITATIVE",
+                    "subject": {
+                        "repository": "example/provider",
+                        "ref": "main",
+                        "commit": "b" * 40,
+                    },
+                    "observed_value": "b" * 40,
+                    "observed_at": "test",
+                    "observer": "test",
+                }
+            ),
+        ),
+        changed_count=0,
+        ranked_frontiers=(),
+        expected_previous_snapshot_id=None,
+        expected_previous_dependency_snapshot_id=None,
+    )
+    portfolio.close()
+
     store = SqliteWorkerRouteStore(state_db)
     envelope = store.enqueue(
-        snapshot_id=2,
+        snapshot_id=snapshot_id,
         frontier_fingerprint="a" * 64,
         queue_fencing_token=3,
         worker_registry_digest="1" * 64,
