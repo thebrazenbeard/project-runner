@@ -696,14 +696,31 @@ def _claim_worker_route(args) -> int:
         }, sort_keys=True))
         return 0
 
-    payload_out = args.payload_out.expanduser()
+    payload_out = args.payload_out.expanduser().resolve()
+    if _external_project_registry_selected():
+        root = ROOT.resolve()
+        if payload_out == root or root in payload_out.parents:
+            raise ValueError(
+                "private worker payload must be written outside the public checkout"
+            )
     payload_out.parent.mkdir(parents=True, exist_ok=True)
     temporary = payload_out.with_name(payload_out.name + ".tmp")
-    temporary.write_text(
-        json.dumps(claim.payload, sort_keys=True) + "\n",
-        encoding="utf-8",
+    descriptor = os.open(
+        temporary,
+        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+        0o600,
     )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(claim.payload, sort_keys=True) + "\n")
+    except BaseException:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+        raise
     os.replace(temporary, payload_out)
+    os.chmod(payload_out, 0o600)
 
     print(json.dumps({
         "mode": "M6_WORKER_ROUTE_PULL",
