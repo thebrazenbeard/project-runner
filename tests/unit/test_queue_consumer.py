@@ -260,7 +260,9 @@ def test_queue_claim_is_fenced_and_reclaim_increments_token(tmp_path: Path):
         store.close()
 
 
-def test_newer_snapshot_without_queue_supersedes_old_queue_visibility(tmp_path: Path):
+def test_unchanged_newer_snapshot_does_not_erase_pending_queue_work(
+    tmp_path: Path,
+):
     db = tmp_path / "queue-current-snapshot.sqlite3"
     transport = FakeTransport(
         {
@@ -268,8 +270,8 @@ def test_newer_snapshot_without_queue_supersedes_old_queue_visibility(tmp_path: 
             ("example/consumer", "main"): "c" * 40,
         }
     )
-    projects, _changed = _schedule(db, transport)
-    collect_and_schedule_portfolio(
+    projects, changed = _schedule(db, transport)
+    unchanged = collect_and_schedule_portfolio(
         projects=projects,
         dependencies=(_dependency(),),
         registry_digest="1" * 64,
@@ -279,6 +281,7 @@ def test_newer_snapshot_without_queue_supersedes_old_queue_visibility(tmp_path: 
         transport=transport,
         clock=lambda: 3.0,
     )
+    assert unchanged.frontier_count == 0
     transport.calls.clear()
 
     result = consume_next_queued_inspection(
@@ -293,9 +296,51 @@ def test_newer_snapshot_without_queue_supersedes_old_queue_visibility(tmp_path: 
         clock=lambda: 4.0,
     )
 
-    assert result.claimed is False
-    assert result.queue_state == "NO_WORK"
-    assert transport.calls == []
+    assert result.claimed is True
+    assert result.queue_state == "COMPLETE"
+    assert result.snapshot_id == changed.snapshot_id
+
+
+def test_newer_provider_subject_supersedes_old_unclaimed_queue_candidate(
+    tmp_path: Path,
+):
+    db = tmp_path / "queue-newer-subject.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "d" * 40,
+        }
+    )
+    projects, first_change = _schedule(db, transport)
+    transport.heads[("example/provider", "main")] = "c" * 40
+    newer = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert newer.queued_count == 1
+    assert newer.snapshot_id != first_change.snapshot_id
+
+    result = consume_next_queued_inspection(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        state_db=db,
+        holder="queue-test",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 4.0,
+    )
+
+    assert result.claimed is True
+    assert result.queue_state == "COMPLETE"
+    assert result.snapshot_id == newer.snapshot_id
 
 
 def test_reclaimed_queue_reconciles_terminal_operator_without_reexecution(
