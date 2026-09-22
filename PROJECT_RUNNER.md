@@ -110,9 +110,9 @@ The default state database is local SQLite. Its durability is scoped to the file
 
 Portfolio currentness is a separate read-only durability boundary from execution admission.
 
-A portfolio cycle must use one exact project-registry snapshot and one exact dependency-registry snapshot. Dependency edges may create READ_REF target grants only after the provider and consumer exist in that project snapshot, the selector repository is registered to the declared provider, and the selector has an exact ref.
+A portfolio cycle must use one exact project-registry snapshot, one exact dependency-registry snapshot, and one exact worker-registry snapshot. Dependency edges may create READ_REF target grants only after the provider and consumer exist in that project snapshot, the selector repository is registered to the declared provider, and the selector has an exact ref.
 
-The first successful cycle for an exact pair of registry digests establishes a baseline. Configuration changes do not silently compare unlike topologies; a new digest pair establishes a new baseline.
+The first successful cycle for an exact project/dependency/worker registry digest tuple establishes a baseline. Configuration or worker-route changes do not silently compare unlike scheduling authority; a new digest tuple establishes a new baseline.
 
 All required ref reads must succeed before a snapshot can advance. Snapshot persistence and scheduler decisions are one SQLite transaction. The transaction rechecks the exact latest compatible predecessor under `BEGIN IMMEDIATE`; a stale concurrent collector must fail rather than overwrite or double-schedule from an obsolete predecessor.
 
@@ -120,13 +120,23 @@ READY frontiers are persisted as `QUEUED`; non-ready frontiers are persisted as 
 
 ## M6 fenced queue consumption
 
-Queue consumption is separately fenced from operator execution. A consumer may claim only a READY supported work item from the latest snapshot whose project/dependency digests equal the current configuration. Claims use monotonic fencing tokens and respect live collision domains across snapshots.
+Queue consumption is separately fenced from operator execution. A consumer may claim only a READY supported work item from the latest snapshot whose project/dependency/worker digests equal the current configuration. Claims use monotonic fencing tokens and respect live collision domains across snapshots.
 
 The exact declared target repository/ref is stored with the queue claim. Its resolved exact head is persisted before operator execution and remains stable across reclaim; a reclaimed attempt cannot silently select a newer target head.
 
 The queue derives a deterministic operator lineage from durable snapshot/frontier identity. Before execution it reconstructs the exact expected operator work fingerprint. Existing terminal operator state is reconciliation evidence and must be consumed without backend re-execution. Existing nonterminal state is ambiguous and must become queue `OUTCOME_UNKNOWN`; it does not authorize blind replay.
 
 A newer compatible portfolio snapshot supersedes visibility of older unclaimed queues. Queue state remains coordination/evidence, not downstream mutation authority.
+
+## M6 queue reconciliation and read-only worker routing
+
+A project may bind an execution target to a worker ID and exact invocation route. That binding becomes runnable only when the exact worker-registry snapshot contains one matching worker that is `EXECUTABLE`, the target route is `VERIFIED`, and the same route has an explicit `READ_ONLY` effect contract. Worker registration, locator presence, connected state, or a verified different route does not qualify the target route.
+
+Qualified non-INSPECT work is handed off through a durable worker-route outbox. Queue transition to `ROUTED` and outbox insertion are one transaction. The outbox payload binds worker-registry digest, queue fencing token, worker/route identity, replay policy, exact target head, and exact frontier payload. Creating the envelope is routing evidence, not proof that an external worker ran.
+
+`ROUTED` and `OUTCOME_UNKNOWN` reserve their collision domains until explicit reconciliation. Reconciliation requires the exact queue subject/fence plus an evidence SHA-256 and reconciler identity. A terminal confirmation updates queue state and any matching routed outbox in the same transaction. A retry release is valid only for a route/operator path whose replay policy is explicitly SAFE; it increments attempt generation and derives a new deterministic lineage. Reconciliation never reuses the old execution identity as a fresh attempt.
+
+The evidence digest binds the operator's reconciliation record; it is not independently self-authenticating proof of the external event.
 
 ## Current effect ceiling
 
