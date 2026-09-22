@@ -928,3 +928,57 @@ def test_routed_worker_reconciliation_closes_outbox_and_releases_retry(
     finally:
         store.close()
     assert outbox == ("RECONCILED_RETRY",)
+
+
+
+def test_queue_visibility_requires_matching_worker_registry_digest(tmp_path: Path):
+    db = tmp_path / "queue-worker-digest.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "c" * 40,
+        }
+    )
+    projects = _projects()
+    dependency = (_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="6" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    changed = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="6" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    assert changed.queued_count == 1
+
+    result = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=(),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="7" * 64,
+        state_db=db,
+        holder="wrong-worker-registry",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert result.claimed is False
+    assert result.queue_state == "NO_WORK"
