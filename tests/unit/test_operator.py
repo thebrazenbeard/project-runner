@@ -83,12 +83,6 @@ def test_durable_operator_executes_real_read_route_and_finalizes(tmp_path: Path)
             ("example/consumer", "main"): "b" * 40,
         }
     )
-    backend = build_github_read_backend(
-        (PROVIDER, TARGET),
-        token=None,
-        transport=transport,
-    )
-
     result = run_durable_github_read_inspection(
         frontier=_frontier(),
         target_subject=TARGET,
@@ -97,7 +91,9 @@ def test_durable_operator_executes_real_read_route_and_finalizes(tmp_path: Path)
         holder="unit-test",
         lease_ttl=60.0,
         registry_digest="d" * 64,
-        backend=backend,
+        authorized_target_repositories=("example/consumer",),
+        token=None,
+        transport=transport,
         clock=_clock,
     )
 
@@ -156,7 +152,9 @@ def test_durable_operator_fails_closed_when_exact_target_moved(tmp_path: Path):
         holder="unit-test",
         lease_ttl=60.0,
         registry_digest="e" * 64,
-        backend=backend,
+        authorized_target_repositories=("example/consumer",),
+        token=None,
+        transport=transport,
         clock=_clock,
     )
 
@@ -173,12 +171,6 @@ def test_durable_operator_does_not_silently_restart_existing_lineage(tmp_path: P
             ("example/consumer", "main"): "b" * 40,
         }
     )
-    backend = build_github_read_backend(
-        (PROVIDER, TARGET),
-        token=None,
-        transport=transport,
-    )
-
     kwargs = dict(
         frontier=_frontier(),
         target_subject=TARGET,
@@ -187,7 +179,9 @@ def test_durable_operator_does_not_silently_restart_existing_lineage(tmp_path: P
         holder="unit-test",
         lease_ttl=60.0,
         registry_digest="f" * 64,
-        backend=backend,
+        authorized_target_repositories=("example/consumer",),
+        token=None,
+        transport=transport,
         clock=_clock,
     )
     first = run_durable_github_read_inspection(**kwargs)
@@ -259,3 +253,36 @@ def test_atomic_root_initialization_rolls_back_budget_when_work_insert_collides(
     with pytest.raises(KeyError):
         budgets.get("atomic-root")
     budgets.close()
+
+
+def test_durable_operator_rejects_target_outside_frontier_project_scope(
+    tmp_path: Path,
+):
+    db = tmp_path / "operator-authority.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "b" * 40,
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="target repository is not authorized",
+    ):
+        run_durable_github_read_inspection(
+            frontier=_frontier(),
+            target_subject=TARGET,
+            state_db=db,
+            lineage_id="operator-authority",
+            holder="unit-test",
+            lease_ttl=60.0,
+            registry_digest="2" * 64,
+            authorized_target_repositories=("example/other",),
+            token=None,
+            transport=transport,
+            clock=_clock,
+        )
+
+    assert transport.calls == []
+    assert not db.exists()
