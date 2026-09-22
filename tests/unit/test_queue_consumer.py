@@ -20,6 +20,7 @@ from runner.queue_consumer import (
     summarize_queue_state,
 )
 from runner.work_units import WorkUnitStatus
+from runner.worker_routing import resolve_read_only_worker_route
 
 
 class FakeTransport:
@@ -986,3 +987,147 @@ def test_queue_visibility_requires_matching_worker_registry_digest(tmp_path: Pat
     )
     assert result.claimed is False
     assert result.queue_state == "NO_WORK"
+
+
+
+def test_worker_route_digest_must_match_scheduling_snapshot(tmp_path: Path):
+    db = tmp_path / "queue-worker-route-digest.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+
+    store = SqliteQueueStore(db)
+    claim = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        holder="route-holder",
+        now=3.0,
+        ttl=60.0,
+    )
+    assert claim is not None
+    claim = store.bind_target_head(
+        claim,
+        target_head="c" * 40,
+        now=3.1,
+    )
+    route = resolve_read_only_worker_route(
+        project=projects[1],
+        frontier=claim.frontier,
+        workers=workers,
+    )
+    assert route is not None
+
+    with pytest.raises(ValueError, match="diverges from scheduling snapshot"):
+        store.route_worker_claim(
+            claim,
+            worker_registry_digest="4" * 64,
+            route=route,
+            now=3.2,
+        )
+    store.close()
+
+
+def test_routed_reconciliation_requires_exact_outbox_envelope(tmp_path: Path):
+    db = tmp_path / "queue-route-envelope-integrity.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "review"): "c" * 40,
+        }
+    )
+    projects = _rereview_projects()
+    workers = (_read_only_worker_fixture(),)
+    dependency = (_rereview_dependency(),)
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=dependency,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+    routed = consume_next_queued_read_only_work(
+        projects=projects,
+        workers=workers,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=db,
+        holder="route-holder",
+        lease_ttl=60.0,
+        token=None,
+        transport=transport,
+        clock=lambda: 3.0,
+    )
+    assert routed.queue_state == "ROUTED"
+
+    store = SqliteQueueStore(db)
+    store.connection.execute(
+        "DELETE FROM worker_route_outbox WHERE route_id = ?",
+        (routed.route_id,),
+    )
+    store.close()
+
+    with pytest.raises(ValueError, match="lacks its durable worker-route envelope"):
+        reconcile_queue_item(
+            state_db=db,
+            snapshot_id=routed.snapshot_id,
+            frontier_fingerprint_value=routed.frontier_fingerprint,
+            expected_fencing_token=routed.fencing_token,
+            resolution="CONFIRM_COMPLETE",
+            evidence_sha256="a" * 64,
+            reconciler="test-reconciler",
+            clock=lambda: 4.0,
+        )
