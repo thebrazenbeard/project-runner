@@ -186,3 +186,175 @@ def test_worker_route_outbox_is_idempotent_for_exact_queue_fence(tmp_path: Path)
 
     assert first.route_id == second.route_id
     assert second.state == "PENDING"
+
+
+
+def _enqueued_store(tmp_path: Path):
+    db = tmp_path / "worker-delivery.sqlite3"
+    store = SqliteWorkerRouteStore(db)
+    route = resolve_read_only_worker_route(
+        project=_project(),
+        frontier=_frontier(),
+        workers=(_worker(),),
+    )
+    assert route is not None
+    envelope = store.enqueue(
+        snapshot_id=2,
+        frontier_fingerprint="f" * 64,
+        queue_fencing_token=3,
+        worker_registry_digest="1" * 64,
+        route=route,
+        target_repository="example/consumer",
+        target_ref="main",
+        target_head="c" * 40,
+        frontier_json='{"id":"frontier-review","project":"consumer"}',
+        now=10.0,
+    )
+    return store, envelope
+
+
+def test_worker_delivery_claim_is_fenced_and_reclaim_increments_token(
+    tmp_path: Path,
+):
+    store, envelope = _enqueued_store(tmp_path)
+    try:
+        first = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-one",
+            now=11.0,
+            ttl=10.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert first is not None
+        assert first.route_id == envelope.route_id
+        assert first.fencing_token == 1
+        assert first.payload["target_head"] == "c" * 40
+
+        blocked = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-two",
+            now=12.0,
+            ttl=10.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert blocked is None
+
+        reclaimed = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-two",
+            now=22.0,
+            ttl=10.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert reclaimed is not None
+        assert reclaimed.route_id == envelope.route_id
+        assert reclaimed.fencing_token == 2
+    finally:
+        store.close()
+
+
+def test_worker_delivery_requires_current_worker_registry_digest(tmp_path: Path):
+    store, envelope = _enqueued_store(tmp_path)
+    try:
+        claim = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-one",
+            now=11.0,
+            ttl=10.0,
+            worker_registry_digest="2" * 64,
+        )
+        assert claim is None
+    finally:
+        store.close()
+
+
+def test_stale_delivery_fence_cannot_record_receipt(tmp_path: Path):
+    store, envelope = _enqueued_store(tmp_path)
+    try:
+        first = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-one",
+            now=11.0,
+            ttl=5.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert first is not None
+        second = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-two",
+            now=17.0,
+            ttl=10.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert second is not None
+
+        with pytest.raises(ValueError, match="delivery fence"):
+            store.record_receipt(
+                route_id=envelope.route_id,
+                worker_id="reviewer",
+                invocation_route=envelope.invocation_route,
+                holder="worker-one",
+                expected_fencing_token=first.fencing_token,
+                receipt_class="SUCCEEDED",
+                receipt_sha256="a" * 64,
+                now=18.0,
+            )
+    finally:
+        store.close()
+
+
+def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path):
+    store, envelope = _enqueued_store(tmp_path)
+    try:
+        claim = store.claim_next(
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-one",
+            now=11.0,
+            ttl=10.0,
+            worker_registry_digest="1" * 64,
+        )
+        assert claim is not None
+
+        first = store.record_receipt(
+            route_id=envelope.route_id,
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-one",
+            expected_fencing_token=claim.fencing_token,
+            receipt_class="SUCCEEDED",
+            receipt_sha256="a" * 64,
+            now=12.0,
+        )
+        second = store.record_receipt(
+            route_id=envelope.route_id,
+            worker_id="reviewer",
+            invocation_route=envelope.invocation_route,
+            holder="worker-one",
+            expected_fencing_token=claim.fencing_token,
+            receipt_class="SUCCEEDED",
+            receipt_sha256="a" * 64,
+            now=13.0,
+        )
+        assert first == second
+        assert second.state == "RECEIPT_RECORDED"
+
+        with pytest.raises(ValueError, match="different receipt"):
+            store.record_receipt(
+                route_id=envelope.route_id,
+                worker_id="reviewer",
+                invocation_route=envelope.invocation_route,
+                holder="worker-one",
+                expected_fencing_token=claim.fencing_token,
+                receipt_class="FAILED_RETRYABLE",
+                receipt_sha256="b" * 64,
+                now=14.0,
+            )
+    finally:
+        store.close()
