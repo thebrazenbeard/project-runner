@@ -89,7 +89,18 @@ The first cycle for an exact project-registry/dependency-registry digest pair es
 
 Collection is read-only. Dependency selectors manufacture neither provider scope nor write authority: provider/consumer IDs must exist in the current project registry, selector repositories must belong to the declared provider, refs must be exact, and READ_REF grants are derived only after those checks. If any required read fails, the durable snapshot does not advance.
 
-The durable queue is not yet an execution loop. READY rows are scheduled evidence awaiting a separate fenced queue-consumption bridge; they do not automatically invoke workers or mutate downstream repositories.
+The durable queue now has a bounded read-only consumer. Projects declare exact `execution_targets` by work type; without one, otherwise-runnable work becomes `WAITING_AUTHORITY`.
+
+    project-runner consume-queue \
+      --dependencies topology/dependencies.yaml \
+      --state-db .project-runner/project-runner.sqlite3
+
+Queue claims use monotonic fencing and collision-domain exclusion. The consumer binds the declared target ref to an exact current commit, persists that binding, and hands only INSPECT work to the durable read-only operator route. Reclaimed claims reconcile existing terminal operator state without re-execution; nonterminal durable operator state becomes `OUTCOME_UNKNOWN` rather than being blindly retried.
+
+    project-runner queue-status \
+      --state-db .project-runner/project-runner.sqlite3
+
+The committed public registry currently binds only Project Runner's own `INSPECT` target. Other work remains blocked until its target is explicitly declared; Project Runner does not infer `main`, choose the first repository, or manufacture routing authority.
 
 ## Private portfolio registry
 
