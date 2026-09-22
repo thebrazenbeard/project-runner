@@ -358,3 +358,45 @@ def test_schedulable_consumer_without_execution_target_waits_for_authority(
     finally:
         store.close()
     assert row == ("WAITING_AUTHORITY", "BLOCKED")
+
+
+
+def test_worker_registry_digest_change_establishes_new_baseline(tmp_path: Path):
+    db = tmp_path / "portfolio-worker-digest.sqlite3"
+    transport = FakeTransport(
+        {("example/provider", "main"): "a" * 40}
+    )
+    projects = (
+        _project("provider", "example/provider"),
+        _project("consumer", "example/consumer"),
+    )
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="6" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+
+    reset = collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(_dependency(),),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="7" * 64,
+        state_db=db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+
+    assert reset.baseline is True
+    assert reset.changed_count == 0
+    assert reset.frontier_count == 0
+    assert reset.queued_count == 0
