@@ -65,3 +65,23 @@ def test_shared_provider_evidence_does_not_create_cross_consumer_collision():
         },
     )
     assert set(frontiers[0].collision_keys).isdisjoint(frontiers[1].collision_keys)
+
+
+def test_scheduling_hold_is_distinct_from_missing_capability():
+    frontiers = derive_frontiers(
+        (_invalidation(),),
+        capability_lookup={"vera": {"read", "analyze"}},
+        scheduling_lookup={"vera": False},
+    )
+    assert frontiers[0].status is FrontierStatus.WAITING_SCHEDULING
+    assert frontiers[0].priority_inputs["scheduling_eligible"] == 0
+    assert frontiers[0].priority_inputs["authority_available"] == 1
+
+
+def test_unknown_project_remains_authority_blocked_when_scheduling_lookup_is_supplied():
+    frontiers = derive_frontiers(
+        (_invalidation(),),
+        capability_lookup={},
+        scheduling_lookup={},
+    )
+    assert frontiers[0].status is FrontierStatus.WAITING_AUTHORITY

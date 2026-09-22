@@ -88,6 +88,9 @@ def test_valid_distinct_child_is_admitted_with_narrowed_caps_and_lineage_budget(
 
     assert result.effective_capabilities == ("analyze", "read")
     assert result.child_budget.lineage_id == "run-1"
+    assert result.child_budget.scope_id == (
+        "work:" + work_unit_fingerprint(result.work)
+    )
     assert result.child_budget.depth == 1
     assert work_unit_fingerprint(result.work) in result.ancestry_fingerprints
 
@@ -111,3 +114,53 @@ def test_child_depth_must_follow_parent():
     child = _work("b", parent="a", depth=2, operation="RETEST", subject=_subject("b" * 40))
     with pytest.raises(ValueError, match="depth"):
         _admit(parent, child)
+
+
+def test_changing_subject_oscillation_is_bounded_by_max_depth():
+    root_budget = BudgetEnvelope(
+        lineage_id="oscillation-lineage",
+        max_depth=2,
+        depth=0,
+        remaining_children=2,
+        remaining_active=2,
+        remaining_retries=2,
+        remaining_backend_jobs=2,
+    )
+    a = _work("a", subject=_subject("a" * 40))
+    b = _work(
+        "b",
+        parent="a",
+        depth=1,
+        operation="RETEST",
+        subject=_subject("b" * 40),
+    )
+    admitted_b = _admit(a, b, budget=root_budget)
+
+    c = _work(
+        "c",
+        parent="b",
+        depth=2,
+        operation="REREVIEW",
+        subject=_subject("c" * 40),
+    )
+    admitted_c = _admit(
+        admitted_b.work,
+        c,
+        budget=admitted_b.child_budget,
+        ancestry=admitted_b.ancestry_fingerprints,
+    )
+
+    d = _work(
+        "d",
+        parent="c",
+        depth=3,
+        operation="RETEST",
+        subject=_subject("d" * 40),
+    )
+    with pytest.raises(ValueError, match="depth exhausted"):
+        _admit(
+            admitted_c.work,
+            d,
+            budget=admitted_c.child_budget,
+            ancestry=admitted_c.ancestry_fingerprints,
+        )

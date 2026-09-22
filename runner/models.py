@@ -42,6 +42,7 @@ class InvocationRoute(str, Enum):
 
 
 _GPT_ID_RE = re.compile(r"^g-[A-Za-z0-9]+$")
+_REPOSITORY_RE = re.compile(r"^[^/\s]+/[^/\s]+$")
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,7 @@ class WorkerDefinition:
     locators: Mapping[str, str]
     roles: tuple[str, ...]
     routes: Mapping[InvocationRoute, RouteState]
+    reconstruction: Mapping[str, str] | None
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, object]) -> "WorkerDefinition":
@@ -60,12 +62,33 @@ class WorkerDefinition:
         lifecycle = WorkerLifecycle(str(data["lifecycle"]))
         raw_locators = data.get("locators", {})
         raw_routes = data.get("routes", {})
+        raw_reconstruction = data.get("reconstruction")
         if not isinstance(raw_locators, Mapping):
             raise ValueError("locators must be a mapping")
         if not isinstance(raw_routes, Mapping):
             raise ValueError("routes must be a mapping")
 
         locators = {str(k): str(v) for k, v in raw_locators.items()}
+
+        reconstruction = None
+        if raw_reconstruction is not None:
+            if not isinstance(raw_reconstruction, Mapping):
+                raise ValueError("reconstruction must be a mapping")
+            if set(raw_reconstruction) != {"repository", "path", "commit"}:
+                raise ValueError(
+                    "reconstruction requires exactly repository, path, and commit"
+                )
+            reconstruction = {
+                key: str(raw_reconstruction[key]).strip()
+                for key in ("repository", "path", "commit")
+            }
+            if _REPOSITORY_RE.fullmatch(reconstruction["repository"]) is None:
+                raise ValueError("reconstruction repository must be owner/repo without whitespace")
+            if not reconstruction["path"]:
+                raise ValueError("reconstruction path is required")
+            if re.fullmatch(r"[0-9a-f]{40}", reconstruction["commit"]) is None:
+                raise ValueError("reconstruction commit must be exact 40-hex Git commit")
+
         if worker_type is WorkerType.CHATGPT_CUSTOM_GPT:
             gpt_id = locators.get("gpt_id")
             if gpt_id is None or _GPT_ID_RE.fullmatch(gpt_id) is None:
@@ -82,6 +105,14 @@ class WorkerDefinition:
             raise ValueError("CONNECTED worker requires a connected or verified route")
         if lifecycle is WorkerLifecycle.EXECUTABLE and RouteState.VERIFIED not in route_states:
             raise ValueError("EXECUTABLE worker requires at least one VERIFIED route")
+        if lifecycle in {
+            WorkerLifecycle.PROFILED,
+            WorkerLifecycle.CONNECTED,
+            WorkerLifecycle.EXECUTABLE,
+        } and reconstruction is None:
+            raise ValueError(
+                f"{lifecycle.value} worker requires durable reconstruction evidence"
+            )
 
         raw_roles = data.get("roles", [])
         if not isinstance(raw_roles, list):
@@ -95,7 +126,32 @@ class WorkerDefinition:
             locators=locators,
             roles=tuple(str(role) for role in raw_roles),
             routes=routes,
+            reconstruction=reconstruction,
         )
+
+
+class ProjectAssignmentScope(str, Enum):
+    NONE = "NONE"
+    BT2_ASSIGNMENT = "BT2_ASSIGNMENT"
+    EXTERNAL_BOUNDED = "EXTERNAL_BOUNDED"
+
+
+class ProjectReviewScope(str, Enum):
+    NONE = "NONE"
+    STANDING = "STANDING"
+
+
+class ProjectSchedulingState(str, Enum):
+    SCHEDULABLE = "SCHEDULABLE"
+    HELD = "HELD"
+    ARCHIVED = "ARCHIVED"
+    DORMANT = "DORMANT"
+    SENSITIVE_HELD = "SENSITIVE_HELD"
+    DECISION_HELD = "DECISION_HELD"
+
+    @property
+    def schedulable(self) -> bool:
+        return self is ProjectSchedulingState.SCHEDULABLE
 
 
 @dataclass(frozen=True)
@@ -105,6 +161,11 @@ class ProjectDefinition:
     visibility: str
     repositories: tuple[str, ...]
     capabilities: tuple[str, ...]
+    assignment_scope: ProjectAssignmentScope
+    review_scope: ProjectReviewScope
+    scheduling_state: ProjectSchedulingState
+    family_id: str
+    scope_note: str | None = None
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, object]) -> "ProjectDefinition":
@@ -117,12 +178,33 @@ class ProjectDefinition:
         visibility = str(data["visibility"])
         if visibility not in {"public", "private"}:
             raise ValueError("visibility must be public or private")
+        project_id = str(data["id"])
+        family_id = str(data.get("family_id", project_id)).strip()
+        if not family_id:
+            raise ValueError("family_id must not be empty")
+        scope_note = data.get("scope_note")
         return cls(
-            id=str(data["id"]),
+            id=project_id,
             name=str(data["name"]),
             visibility=visibility,
             repositories=tuple(str(repo) for repo in raw_repositories),
             capabilities=tuple(str(capability) for capability in raw_capabilities),
+            assignment_scope=ProjectAssignmentScope(
+                str(data.get("assignment_scope", ProjectAssignmentScope.NONE.value))
+            ),
+            review_scope=ProjectReviewScope(
+                str(data.get("review_scope", ProjectReviewScope.NONE.value))
+            ),
+            scheduling_state=ProjectSchedulingState(
+                str(
+                    data.get(
+                        "scheduling_state",
+                        ProjectSchedulingState.SCHEDULABLE.value,
+                    )
+                )
+            ),
+            family_id=family_id,
+            scope_note=str(scope_note) if scope_note is not None else None,
         )
 
 
@@ -240,6 +322,7 @@ class FrontierStatus(str, Enum):
     READY = "READY"
     WAITING_DEPENDENCY = "WAITING_DEPENDENCY"
     WAITING_AUTHORITY = "WAITING_AUTHORITY"
+    WAITING_SCHEDULING = "WAITING_SCHEDULING"
     RUNNING = "RUNNING"
     VERIFYING = "VERIFYING"
     COMPLETE = "COMPLETE"

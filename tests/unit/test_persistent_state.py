@@ -76,3 +76,58 @@ def test_sqlite_lease_nonexpired_claim_is_atomic(tmp_path: Path):
 
     a.close()
     b.close()
+
+
+def test_child_budget_scope_requires_atomic_recursive_admission(tmp_path: Path):
+    store = SqliteBudgetStore(tmp_path / "state.db")
+    child = BudgetEnvelope(
+        lineage_id="recursive-lineage",
+        max_depth=3,
+        depth=1,
+        remaining_children=1,
+        remaining_active=1,
+        remaining_retries=0,
+        remaining_backend_jobs=1,
+        scope_id="work:" + ("a" * 64),
+    )
+
+    with pytest.raises(ValueError, match="atomic recursive admission"):
+        store.put_initial(child)
+    store.close()
+
+def test_budget_store_migrates_legacy_lineage_row_to_root_scope(tmp_path: Path):
+    db = tmp_path / "legacy.db"
+    connection = sqlite3.connect(db)
+    connection.executescript(
+        """
+        CREATE TABLE lineage_budgets (
+            lineage_id TEXT PRIMARY KEY,
+            max_depth INTEGER NOT NULL,
+            depth INTEGER NOT NULL,
+            remaining_children INTEGER NOT NULL,
+            remaining_active INTEGER NOT NULL,
+            remaining_retries INTEGER NOT NULL,
+            remaining_backend_jobs INTEGER NOT NULL,
+            generation INTEGER NOT NULL
+        );
+        INSERT INTO lineage_budgets VALUES (
+            'legacy-lineage', 4, 0, 5, 3, 2, 4, 7
+        );
+        """
+    )
+    connection.commit()
+    connection.close()
+
+    store = SqliteBudgetStore(db)
+    observed, generation = store.get("legacy-lineage")
+    assert observed.scope_id == "root"
+    assert observed.lineage_id == "legacy-lineage"
+    assert observed.remaining_backend_jobs == 4
+    assert generation == 7
+
+    columns = {
+        row[1]
+        for row in store.connection.execute("PRAGMA table_info(lineage_budgets)")
+    }
+    assert "scope_id" in columns
+    store.close()

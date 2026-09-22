@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .backends import BackendResult, ExecutionBackend
 from .budgets import BudgetEnvelope
@@ -62,6 +62,7 @@ def dispatch_ready(
     holder: str,
     now: float,
     lease_ttl: float,
+    work_factory: Callable[[Frontier, int], WorkUnit] | None = None,
 ) -> DispatchBatch:
     deduped = deduplicate_frontiers(frontiers)
     ranked = rank_frontiers(deduped)
@@ -80,7 +81,11 @@ def dispatch_ready(
         if remaining.remaining_active <= 0 or remaining.remaining_backend_jobs <= 0:
             break
 
-        work = frontier_to_work_unit(frontier, depth=remaining.depth)
+        work = (
+            frontier_to_work_unit(frontier, depth=remaining.depth)
+            if work_factory is None
+            else work_factory(frontier, remaining.depth)
+        )
         fingerprint = work_unit_fingerprint(work)
         lease = lease_store.claim(
             fingerprint,

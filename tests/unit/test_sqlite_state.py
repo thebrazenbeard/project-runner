@@ -113,3 +113,20 @@ def test_sqlite_completed_work_stays_unclaimable_after_restart():
 
         reopened = SQLiteLeaseStore(db)
         assert reopened.claim("fp", holder="b", now=100.0, ttl=10.0) is None
+
+
+def test_lineage_wide_store_rejects_child_budget_scope():
+    with tempfile.TemporaryDirectory() as td:
+        store = SQLiteLineageBudgetStore(Path(td) / "state.sqlite3")
+        child = BudgetEnvelope(
+            lineage_id="lineage-1",
+            max_depth=4,
+            depth=1,
+            remaining_children=1,
+            remaining_active=1,
+            remaining_retries=0,
+            remaining_backend_jobs=1,
+            scope_id="work:" + ("a" * 64),
+        )
+        with pytest.raises(ValueError, match="root budget scope"):
+            store.create(child)

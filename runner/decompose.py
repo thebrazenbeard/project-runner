@@ -49,6 +49,7 @@ def admit_child_work(
 
     parent_after, child_budget = allocate_child_budget(
         parent_budget,
+        child_scope_id=f"work:{child_fingerprint}",
         child_children=child_children,
         child_active=child_active,
         child_retries=child_retries,

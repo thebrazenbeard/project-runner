@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+import hashlib
 from enum import Enum
 import json
 from typing import Iterable, Mapping, Protocol
@@ -13,12 +14,14 @@ from .work_units import WorkUnit, work_unit_fingerprint
 
 class GitHubOperation(str, Enum):
     READ_REF = "READ_REF"
+    READ_FILE = "READ_FILE"
     CREATE_BRANCH = "CREATE_BRANCH"
     PUT_FILE = "PUT_FILE"
 
 
 _ROUTE_CAPABILITY = {
     GitHubOperation.READ_REF: "github.read_ref",
+    GitHubOperation.READ_FILE: "github.read_file",
     GitHubOperation.CREATE_BRANCH: "github.create_branch",
     GitHubOperation.PUT_FILE: "github.put_file",
 }
@@ -76,7 +79,7 @@ class TargetAuthorityGrant:
             return False
         if not any(_scope_match(req.ref, item) for item in self.ref_prefixes):
             return False
-        if req.operation is GitHubOperation.PUT_FILE:
+        if req.operation in {GitHubOperation.READ_FILE, GitHubOperation.PUT_FILE}:
             if req.path is None or not self.path_prefixes:
                 return False
             if not any(_path_scope_match(req.path, item) for item in self.path_prefixes):
@@ -234,29 +237,54 @@ class GitHubBackend:
             return _failure(fingerprint, "ROUTE_UNAVAILABLE", route_capability)
 
         if not any(grant.allows(req) for grant in self.grants):
-            return _failure(fingerprint, "AUTHORITY_DENIED", req.repository)
+            return _failure(fingerprint, "AUTHORITY_DENIED", "target authority denied")
 
         try:
             if req.operation is GitHubOperation.READ_REF:
                 return self._read_ref(fingerprint, req)
+            if req.operation is GitHubOperation.READ_FILE:
+                return self._read_file(fingerprint, req)
             if req.operation is GitHubOperation.CREATE_BRANCH:
                 return self._create_branch(fingerprint, req)
             if req.operation is GitHubOperation.PUT_FILE:
                 return self._put_file(fingerprint, req)
-        except (KeyError, RuntimeError, ValueError) as exc:
-            return _failure(fingerprint, "TRANSPORT_FAILED", str(exc))
+        except (KeyError, RuntimeError, ValueError):
+            return _failure(fingerprint, "TRANSPORT_FAILED", "github transport failed")
 
         return _failure(fingerprint, "INVALID_REQUEST", "unsupported operation")
 
     def _read_ref(self, fingerprint: str, req: GitHubRequest) -> BackendResult:
         observed = self.transport.read_ref(req.repository, req.ref)
         if req.expected_head is not None and observed != req.expected_head:
-            return _failure(fingerprint, "PRECONDITION_FAILED", f"head={observed}")
+            return _failure(fingerprint, "PRECONDITION_FAILED", "exact ref precondition failed")
         return BackendResult(
             work_fingerprint=fingerprint,
             succeeded=True,
             outputs=(observed,),
-            evidence=(f"github:ref:{req.repository}@{req.ref}={observed}", "github:readback-verified"),
+            evidence=("github:read-ref", "github:readback-verified"),
+            classification="SUCCEEDED",
+        )
+
+    def _read_file(self, fingerprint: str, req: GitHubRequest) -> BackendResult:
+        if req.path is None:
+            return _failure(fingerprint, "INVALID_REQUEST", "read file requires path")
+        read_ref = req.ref
+        if req.expected_head is not None:
+            observed_head = self.transport.read_ref(req.repository, req.ref)
+            if observed_head != req.expected_head:
+                return _failure(fingerprint, "PRECONDITION_FAILED", "exact ref precondition failed")
+            read_ref = req.expected_head
+        observed = self.transport.read_file(req.repository, req.path, read_ref)
+        if observed is None:
+            return _failure(fingerprint, "NOT_FOUND", "file not found")
+        if req.expected_blob_sha is not None and observed.sha != req.expected_blob_sha:
+            return _failure(fingerprint, "PRECONDITION_FAILED", "blob mismatch")
+        content_digest = hashlib.sha256(observed.content.encode("utf-8")).hexdigest()
+        return BackendResult(
+            work_fingerprint=fingerprint,
+            succeeded=True,
+            outputs=(observed.sha, content_digest),
+            evidence=("github:file-read", "github:readback-verified"),
             classification="SUCCEEDED",
         )
 
@@ -265,18 +293,17 @@ class GitHubBackend:
             return _failure(fingerprint, "INVALID_REQUEST", "create branch requires source_ref and expected_head")
         observed_source = self.transport.read_ref(req.repository, req.source_ref)
         if observed_source != req.expected_head:
-            return _failure(fingerprint, "PRECONDITION_FAILED", f"source_head={observed_source}")
+            return _failure(fingerprint, "PRECONDITION_FAILED", "source ref precondition failed")
         self.transport.create_branch(req.repository, req.ref, req.expected_head)
         readback = self.transport.read_ref(req.repository, req.ref)
         if readback != req.expected_head:
-            return _failure(fingerprint, "READBACK_FAILED", f"branch_head={readback}")
+            return _failure(fingerprint, "READBACK_FAILED", "branch readback failed")
         return BackendResult(
             work_fingerprint=fingerprint,
             succeeded=True,
             outputs=(readback,),
             evidence=(
-                f"github:create-branch:{req.repository}@{req.ref}",
-                f"github:source:{req.source_ref}@{req.expected_head}",
+                "github:create-branch",
                 "github:readback-verified",
             ),
             classification="SUCCEEDED",
@@ -287,15 +314,14 @@ class GitHubBackend:
             return _failure(fingerprint, "INVALID_REQUEST", "put file requires path/content/message/expected_head")
         observed_head = self.transport.read_ref(req.repository, req.ref)
         if observed_head != req.expected_head:
-            return _failure(fingerprint, "PRECONDITION_FAILED", f"head={observed_head}")
+            return _failure(fingerprint, "PRECONDITION_FAILED", "target ref precondition failed")
 
         existing = self.transport.read_file(req.repository, req.path, req.ref)
         if existing is not None and req.expected_blob_sha is None:
             return _failure(fingerprint, "PRECONDITION_FAILED", "existing file requires expected_blob_sha")
         if req.expected_blob_sha is not None:
             if existing is None or existing.sha != req.expected_blob_sha:
-                observed = None if existing is None else existing.sha
-                return _failure(fingerprint, "PRECONDITION_FAILED", f"blob={observed}")
+                return _failure(fingerprint, "PRECONDITION_FAILED", "target blob precondition failed")
 
         commit_sha = self.transport.put_file(
             req.repository,
@@ -308,15 +334,13 @@ class GitHubBackend:
         readback_head = self.transport.read_ref(req.repository, req.ref)
         readback_file = self.transport.read_file(req.repository, req.path, req.ref)
         if readback_head != commit_sha or readback_file is None or readback_file.content != req.content:
-            return _failure(fingerprint, "READBACK_FAILED", f"commit={commit_sha};head={readback_head}")
+            return _failure(fingerprint, "READBACK_FAILED", "file mutation readback failed")
         return BackendResult(
             work_fingerprint=fingerprint,
             succeeded=True,
             outputs=(commit_sha, readback_file.sha),
             evidence=(
-                f"github:put-file:{req.repository}:{req.path}@{req.ref}",
-                f"github:commit:{commit_sha}",
-                f"github:blob:{readback_file.sha}",
+                "github:put-file",
                 "github:readback-verified",
             ),
             classification="SUCCEEDED",

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from dataclasses import replace
+import hmac
 import json
 import os
 from pathlib import Path
@@ -16,10 +18,10 @@ from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .leases import InMemoryLeaseStore
-from .models import FrontierStatus
+from .models import FrontierStatus, ProjectSchedulingState
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
-from .registry import load_dependencies, load_observations, load_projects, load_workers
+from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
 from .verify import verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
@@ -27,8 +29,88 @@ from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _project_registry_path() -> Path:
+    override = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY")
+    if override is None:
+        return ROOT / "registry" / "projects.yaml"
+
+    path = Path(override).expanduser()
+    if not path.is_absolute():
+        raise ValueError("external project registry requires an absolute path")
+
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError:
+        raise ValueError("external project registry is unavailable") from None
+
+    root = ROOT.resolve()
+    if resolved == root or root in resolved.parents:
+        raise ValueError(
+            "external project registry must be outside the Project Runner checkout"
+        )
+    if not resolved.is_file():
+        raise ValueError("external project registry is unavailable")
+    return resolved
+
+
+def _external_project_registry_selected() -> bool:
+    return os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY") is not None
+
+
+def _external_project_registry_expected_sha256() -> str:
+    expected = os.environ.get("PROJECT_RUNNER_PROJECT_REGISTRY_SHA256", "")
+    if (
+        len(expected) != 64
+        or any(character not in "0123456789abcdef" for character in expected)
+    ):
+        raise ValueError(
+            "external project registry requires an expected lowercase SHA-256"
+        )
+    return expected
+
+
+def _external_private_collision_key() -> str:
+    key = os.environ.get("PROJECT_RUNNER_PRIVATE_COLLISION_KEY", "")
+    if (
+        len(key) != 64
+        or any(character not in "0123456789abcdef" for character in key)
+    ):
+        raise ValueError(
+            "external project registry requires a private collision key"
+        )
+    return key
+
+
+def _load_project_registry_snapshot():
+    external = _external_project_registry_selected()
+    path = _project_registry_path()
+    expected = (
+        _external_project_registry_expected_sha256()
+        if external
+        else None
+    )
+    snapshot = load_project_snapshot(
+        path,
+        require_scope_metadata=external,
+    )
+    if expected is not None and not hmac.compare_digest(snapshot.sha256, expected):
+        raise ValueError("external project registry digest mismatch")
+    return snapshot
+
+
+def _load_project_registry():
+    return _load_project_registry_snapshot().projects
+
+
+def _require_public_safe_reporting() -> None:
+    if _external_project_registry_selected():
+        raise ValueError(
+            "detailed reports are disabled with an external project registry"
+        )
+
+
 def _load_all():
-    projects = load_projects(ROOT / "registry" / "projects.yaml")
+    projects = _load_project_registry()
     workers = load_workers(ROOT / "registry" / "workers.yaml")
     return projects, workers
 
@@ -60,6 +142,7 @@ def _subject_payload(subject) -> dict[str, str | None]:
 
 
 def _evaluate_change(before: Path, after: Path, dependencies: Path) -> int:
+    _require_public_safe_reporting()
     previous = load_observations(before)
     current = load_observations(after)
     edges = load_dependencies(dependencies)
@@ -125,19 +208,75 @@ def _frontier_payload(frontier) -> dict[str, object]:
     }
 
 
+def _private_collision_key(key: str, private_collision_key: str) -> str:
+    digest = hmac.new(
+        bytes.fromhex(private_collision_key),
+        key.encode("utf-8"),
+        digestmod="sha256",
+    ).hexdigest()
+    return f"private:{digest}"
+
+
 def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
     previous = load_observations(before)
     current = load_observations(after)
     edges = load_dependencies(dependencies)
-    projects = load_projects(ROOT / "registry" / "projects.yaml")
-    capability_lookup = {project.id: set(project.capabilities) for project in projects}
+    snapshot = _load_project_registry_snapshot()
+    projects = snapshot.projects
+    capability_lookup = {
+        project.id: set(project.capabilities)
+        for project in projects
+    }
+    scheduling_lookup = {
+        project.id: project.scheduling_state.schedulable
+        for project in projects
+    }
 
     invalidations = derive_invalidations(previous, current, edges)
-    derived = derive_frontiers(invalidations, capability_lookup=capability_lookup)
+    derived = derive_frontiers(
+        invalidations,
+        capability_lookup=capability_lookup,
+        scheduling_lookup=scheduling_lookup,
+    )
+    if _external_project_registry_selected():
+        private_collision_key = _external_private_collision_key()
+        derived = tuple(
+            replace(
+                frontier,
+                collision_keys=tuple(
+                    _private_collision_key(key, private_collision_key)
+                    for key in frontier.collision_keys
+                ),
+            )
+            for frontier in derived
+        )
     return deduplicate_frontiers(derived)
 
 
+def _frontier_summary(before: Path, after: Path, dependencies: Path) -> int:
+    try:
+        frontiers = _derive_frontier_set(before, after, dependencies)
+    except Exception:
+        if _external_project_registry_selected():
+            raise ValueError(
+                "external frontier summary is unavailable or structurally invalid"
+            ) from None
+        raise
+
+    status_counts = Counter(frontier.status.value for frontier in frontiers)
+    ready = status_counts.get(FrontierStatus.READY.value, 0)
+    payload = {
+        "total": len(frontiers),
+        "ready": ready,
+        "blocked": len(frontiers) - ready,
+        "statuses": dict(sorted(status_counts.items())),
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
+    _require_public_safe_reporting()
     frontiers = _derive_frontier_set(before, after, dependencies)
     ordered_frontiers = tuple(sorted(frontiers, key=frontier_fingerprint))
     collision_groups = partition_collision_groups(ordered_frontiers)
@@ -166,6 +305,7 @@ def _frontier_report(before: Path, after: Path, dependencies: Path) -> int:
 
 
 def _dispatch_report(before: Path, after: Path, dependencies: Path) -> int:
+    _require_public_safe_reporting()
     frontiers = _derive_frontier_set(before, after, dependencies)
     blocked = tuple(
         sorted(
@@ -302,6 +442,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     evaluate.add_argument("--after", type=Path, required=True)
     evaluate.add_argument("--dependencies", type=Path, required=True)
 
+    frontier_summary = subparsers.add_parser("frontier-summary")
+    frontier_summary.add_argument("--before", type=Path, required=True)
+    frontier_summary.add_argument("--after", type=Path, required=True)
+    frontier_summary.add_argument("--dependencies", type=Path, required=True)
+
     frontier_report = subparsers.add_parser("frontier-report")
     frontier_report.add_argument("--before", type=Path, required=True)
     frontier_report.add_argument("--after", type=Path, required=True)
@@ -324,6 +469,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _inventory()
     if args.command == "evaluate-change":
         return _evaluate_change(args.before, args.after, args.dependencies)
+    if args.command == "frontier-summary":
+        return _frontier_summary(args.before, args.after, args.dependencies)
     if args.command == "frontier-report":
         return _frontier_report(args.before, args.after, args.dependencies)
     if args.command == "dispatch-report":

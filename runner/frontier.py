@@ -40,6 +40,8 @@ def _collision_keys(invalidation: Invalidation) -> tuple[str, ...]:
 def derive_frontiers(
     invalidations: Iterable[Invalidation],
     capability_lookup: Mapping[str, Collection[str]],
+    *,
+    scheduling_lookup: Mapping[str, bool] | None = None,
 ) -> tuple[Frontier, ...]:
     result: list[Frontier] = []
     for invalidation in invalidations:
@@ -48,8 +50,19 @@ def derive_frontiers(
 
         required = _REQUIRED_CAPABILITIES[invalidation.reaction]
         available = set(capability_lookup.get(invalidation.consumer, ()))
+        scheduling_known = (
+            scheduling_lookup is not None
+            and invalidation.consumer in scheduling_lookup
+        )
+        schedulable = (
+            bool(scheduling_lookup[invalidation.consumer])
+            if scheduling_known
+            else True
+        )
         if invalidation.reaction is DependencyReaction.BLOCK:
             status = FrontierStatus.WAITING_DEPENDENCY
+        elif not schedulable:
+            status = FrontierStatus.WAITING_SCHEDULING
         elif not set(required).issubset(available):
             status = FrontierStatus.WAITING_AUTHORITY
         else:
@@ -77,6 +90,7 @@ def derive_frontiers(
                     "declared_priority": 0,
                     "cost": 1,
                     "authority_available": int(status is not FrontierStatus.WAITING_AUTHORITY),
+                    "scheduling_eligible": int(status is not FrontierStatus.WAITING_SCHEDULING),
                     "executable_now": int(status is FrontierStatus.READY),
                 },
                 status=status,
