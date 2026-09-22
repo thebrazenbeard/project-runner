@@ -21,6 +21,13 @@ class ProjectRegistrySnapshot:
     byte_length: int
 
 
+@dataclass(frozen=True)
+class DependencyRegistrySnapshot:
+    dependencies: tuple[DependencyEdge, ...]
+    sha256: str
+    byte_length: int
+
+
 def _load_yaml(path: Path) -> object:
     with path.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
@@ -57,7 +64,12 @@ def _project_snapshot_from_bytes(
     assert isinstance(payload, dict)
 
     if require_scope_metadata:
-        required_scope_fields = {"assignment_scope", "review_scope", "family_id", "scheduling_state"}
+        required_scope_fields = {
+            "assignment_scope",
+            "review_scope",
+            "family_id",
+            "scheduling_state",
+        }
         if any(
             not required_scope_fields.issubset(item)
             for item in payload["projects"]
@@ -114,16 +126,38 @@ def load_projects(
     ).projects
 
 
-def load_dependencies(path: Path) -> tuple[DependencyEdge, ...]:
-    payload = _load_yaml(path)
+def _dependency_snapshot_from_bytes(
+    raw: bytes,
+) -> DependencyRegistrySnapshot:
+    text = raw.decode("utf-8", "strict")
+    payload = yaml.safe_load(text)
     validate_document("dependency", payload)
     assert isinstance(payload, dict)
-    edges = (DependencyEdge.from_mapping(item) for item in payload["dependencies"])
-    return _reject_duplicate_ids(edges, "dependency")
+    edges = (
+        DependencyEdge.from_mapping(item)
+        for item in payload["dependencies"]
+    )
+    return DependencyRegistrySnapshot(
+        dependencies=_reject_duplicate_ids(edges, "dependency"),
+        sha256=hashlib.sha256(raw).hexdigest(),
+        byte_length=len(raw),
+    )
+
+
+def load_dependency_snapshot(path: Path) -> DependencyRegistrySnapshot:
+    raw = path.read_bytes()
+    return _dependency_snapshot_from_bytes(raw)
+
+
+def load_dependencies(path: Path) -> tuple[DependencyEdge, ...]:
+    return load_dependency_snapshot(path).dependencies
 
 
 def load_observations(path: Path) -> tuple[Observation, ...]:
     payload = _load_yaml(path)
     validate_document("observation", payload)
     assert isinstance(payload, dict)
-    return tuple(Observation.from_mapping(item) for item in payload["observations"])
+    return tuple(
+        Observation.from_mapping(item)
+        for item in payload["observations"]
+    )
