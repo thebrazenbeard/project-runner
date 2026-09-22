@@ -105,7 +105,7 @@ Read-only worker handoffs are persisted in a digest-bound outbox and can be summ
     project-runner worker-route-status \
       --state-db .project-runner/project-runner.sqlite3
 
-A qualified worker route uses a fenced pull/receipt protocol. The packet is written to a file rather than echoed to ordinary logs:
+A qualified worker route uses a fenced pull/receipt protocol. Delivery rechecks the current worker/route qualification and the provider exact subject; superseded provider work is retired before a worker can pull it. The packet is written to a `0600` owner-only file rather than echoed to ordinary logs. With an external/private project registry, the packet must be written outside the public checkout:
 
     project-runner claim-worker-route \
       --worker-id <worker-id> \
