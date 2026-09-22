@@ -98,8 +98,16 @@ CI retains `contents: read`. The live smoke test is connectivity/currentness evi
 - stale output becomes SUPERSEDED rather than COMPLETE;
 - unresolved currentness or fencing becomes bounded OUTCOME_UNKNOWN.
 
+## M6 operator route
+
+The ordinary CLI exposes a bounded real operator route through run-inspection. It accepts only an already-derived READY/INSPECT frontier, binds an exact target repository/ref/head and the current project-registry digest into durable work identity, persists budget/work/lease/journal state, uses the real GitHub read backend, independently rechecks exact subject currentness, and atomically finalizes terminal verification evidence.
+
+operator-status reports unresolved durable recovery classes without re-executing backend work. An ADMITTED attempt with no recorded result remains an ambiguous-effect state and is never blindly retried.
+
+The default state database is local SQLite. Its durability is scoped to the filesystem retaining that database; ephemeral CI storage is not cross-run persistence.
+
 ## Current effect ceiling
 
-M5 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission.
+M6 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission. The first operator route is intentionally read-only.
 
 The twelve Custom GPT records remain registrations with UNVERIFIED routes until an end-to-end executable path is independently demonstrated.
