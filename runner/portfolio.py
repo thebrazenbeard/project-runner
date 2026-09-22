@@ -492,19 +492,44 @@ class SqlitePortfolioStore:
             """
             SELECT
                 snapshot_id, snapshot_digest, baseline, observation_count,
-                changed_count, frontier_count, ready_count, blocked_count
+                changed_count, frontier_count, ready_count, blocked_count,
+                dependency_digest
             FROM portfolio_snapshots
             ORDER BY snapshot_id DESC
             LIMIT 1
             """
         ).fetchone()
-        queued = int(
-            self.connection.execute(
-                "SELECT COUNT(*) FROM portfolio_frontiers WHERE queue_state = 'QUEUED'"
-            ).fetchone()[0]
-        )
         if latest is None:
             return _empty_summary()
+
+        latest_snapshot_id = int(latest[0])
+        current_subjects = {
+            (
+                str(repository),
+                str(ref),
+                str(commit_sha),
+                str(path) or None,
+                None if digest is None else str(digest),
+            )
+            for repository, ref, path, commit_sha, digest
+            in self.connection.execute(
+                """
+                SELECT repository, ref, path, commit_sha, digest
+                FROM portfolio_observations
+                WHERE snapshot_id = ?
+                """,
+                (latest_snapshot_id,),
+            ).fetchall()
+        }
+        unresolved = self.load_unresolved_frontiers_for_dependency(
+            dependency_digest=str(latest[8])
+        )
+        queued = sum(
+            1
+            for frontier in unresolved
+            if frontier.status is FrontierStatus.READY
+            and frontier.subject.identity() in current_subjects
+        )
 
         snapshots = int(
             self.connection.execute(
@@ -513,7 +538,7 @@ class SqlitePortfolioStore:
         )
         return {
             "snapshots": snapshots,
-            "latest_snapshot_id": int(latest[0]),
+            "latest_snapshot_id": latest_snapshot_id,
             "latest_snapshot_digest": str(latest[1]),
             "baseline": bool(latest[2]),
             "observations": int(latest[3]),
