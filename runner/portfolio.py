@@ -221,6 +221,80 @@ class SqlitePortfolioStore:
         ).fetchone()
         return None if row is None else int(row[0])
 
+    def latest_snapshot_id_for_dependency(
+        self,
+        *,
+        dependency_digest: str,
+    ) -> int | None:
+        row = self.connection.execute(
+            """
+            SELECT snapshot_id
+            FROM portfolio_snapshots
+            WHERE dependency_digest = ?
+            ORDER BY snapshot_id DESC
+            LIMIT 1
+            """,
+            (dependency_digest,),
+        ).fetchone()
+        return None if row is None else int(row[0])
+
+    def load_unresolved_frontiers(
+        self,
+        snapshot_id: int,
+    ) -> tuple[Frontier, ...]:
+        has_claim_table = self.connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type = 'table' AND name = 'portfolio_queue_claims'
+            """
+        ).fetchone() is not None
+        if has_claim_table:
+            rows = self.connection.execute(
+                """
+                SELECT
+                    pf.frontier_fingerprint,
+                    pf.frontier_json,
+                    qc.state
+                FROM portfolio_frontiers pf
+                LEFT JOIN portfolio_queue_claims qc
+                  ON qc.snapshot_id = pf.snapshot_id
+                 AND qc.frontier_fingerprint = pf.frontier_fingerprint
+                WHERE pf.snapshot_id = ?
+                ORDER BY pf.frontier_fingerprint
+                """,
+                (snapshot_id,),
+            ).fetchall()
+        else:
+            rows = self.connection.execute(
+                """
+                SELECT frontier_fingerprint, frontier_json, NULL
+                FROM portfolio_frontiers
+                WHERE snapshot_id = ?
+                ORDER BY frontier_fingerprint
+                """,
+                (snapshot_id,),
+            ).fetchall()
+
+        result: list[Frontier] = []
+        for fingerprint, frontier_json, queue_state in rows:
+            if queue_state is not None and str(queue_state) not in {
+                "FAILED_RETRYABLE",
+            }:
+                continue
+            if frontier_json is None:
+                continue
+            raw = json.loads(str(frontier_json))
+            if not isinstance(raw, dict):
+                raise ValueError("stored frontier payload is structurally invalid")
+            frontier = Frontier.from_mapping(raw)
+            if frontier_fingerprint(frontier) != str(fingerprint):
+                raise ValueError(
+                    "stored frontier fingerprint does not match durable payload"
+                )
+            result.append(frontier)
+        return tuple(result)
+
     def load_observations(self, snapshot_id: int) -> tuple[Observation, ...]:
         rows = self.connection.execute(
             """
@@ -476,7 +550,7 @@ def _validate_dependency_scope(
             raise ValueError("portfolio currentness requires an exact dependency ref")
 
 
-def _apply_execution_target_readiness(
+def _reevaluate_frontier_readiness(
     frontiers: tuple[Frontier, ...],
     projects: tuple[ProjectDefinition, ...],
     workers: tuple[WorkerDefinition, ...],
@@ -484,38 +558,64 @@ def _apply_execution_target_readiness(
     by_id = {project.id: project for project in projects}
     result: list[Frontier] = []
     for frontier in frontiers:
-        if frontier.status is not FrontierStatus.READY:
+        if frontier.status is FrontierStatus.WAITING_DEPENDENCY:
             result.append(frontier)
             continue
+
         project = by_id.get(frontier.project)
-        target = None
-        if project is not None:
-            target = next(
-                (
-                    item
-                    for item in project.execution_targets
-                    if item.work_type == frontier.work_type
-                ),
-                None,
+        capabilities_ok = (
+            project is not None
+            and set(frontier.required_capabilities).issubset(
+                set(project.capabilities)
             )
-        if target is not None and project is not None and worker_route_ready(
-            project=project,
-            frontier=frontier,
-            workers=workers,
-        ):
-            result.append(frontier)
-            continue
+        )
+        scheduling_ok = (
+            project is not None
+            and project.scheduling_state.schedulable
+        )
+        route_ok = (
+            project is not None
+            and worker_route_ready(
+                project=project,
+                frontier=frontier,
+                workers=workers,
+            )
+        )
+
+        if not scheduling_ok:
+            status = FrontierStatus.WAITING_SCHEDULING
+        elif not capabilities_ok or not route_ok:
+            status = FrontierStatus.WAITING_AUTHORITY
+        else:
+            status = FrontierStatus.READY
+
         priority_inputs = dict(frontier.priority_inputs)
-        priority_inputs["authority_available"] = 0
-        priority_inputs["executable_now"] = 0
+        priority_inputs["authority_available"] = int(
+            capabilities_ok and route_ok
+        )
+        priority_inputs["scheduling_eligible"] = int(scheduling_ok)
+        priority_inputs["executable_now"] = int(
+            status is FrontierStatus.READY
+        )
         result.append(
             replace(
                 frontier,
-                status=FrontierStatus.WAITING_AUTHORITY,
+                status=status,
                 priority_inputs=priority_inputs,
             )
         )
     return tuple(result)
+
+
+def _frontier_is_current(
+    frontier: Frontier,
+    current_observations: tuple[Observation, ...],
+) -> bool:
+    current_identities = {
+        observation.subject.identity()
+        for observation in current_observations
+    }
+    return frontier.subject.identity() in current_identities
 
 
 def _private_collision_key(key: str, secret_hex: str) -> str:
@@ -703,17 +803,24 @@ def collect_and_schedule_portfolio(
 
     store = SqlitePortfolioStore(Path(state_db))
     try:
-        previous_snapshot_id = store.latest_compatible_snapshot_id(
+        previous_config_snapshot_id = store.latest_compatible_snapshot_id(
             registry_digest=registry_digest,
             dependency_digest=dependency_digest,
             worker_registry_digest=worker_registry_digest,
         )
-        baseline = previous_snapshot_id is None
+        previous_dependency_snapshot_id = (
+            store.latest_snapshot_id_for_dependency(
+                dependency_digest=dependency_digest,
+            )
+        )
+        baseline = previous_dependency_snapshot_id is None
         if baseline:
             changed_count = 0
             ranked = ()
         else:
-            previous = store.load_observations(previous_snapshot_id)
+            previous = store.load_observations(
+                previous_dependency_snapshot_id
+            )
             previous_by_locus = {
                 observation_locus(item): item
                 for item in previous
@@ -739,13 +846,27 @@ def collect_and_schedule_portfolio(
                 project.id: project.scheduling_state.schedulable
                 for project in project_tuple
             }
-            frontiers = derive_frontiers(
+            derived = derive_frontiers(
                 invalidations,
                 capability_lookup=capability_lookup,
                 scheduling_lookup=scheduling_lookup,
             )
-            frontiers = _apply_execution_target_readiness(
-                frontiers,
+
+            current_dependency_ids = {
+                dependency.id for dependency in dependency_tuple
+            }
+            carried = tuple(
+                frontier
+                for frontier in store.load_unresolved_frontiers(
+                    previous_dependency_snapshot_id
+                )
+                if _frontier_is_current(frontier, current)
+                and set(frontier.dependencies).issubset(
+                    current_dependency_ids
+                )
+            )
+            frontiers = _reevaluate_frontier_readiness(
+                tuple(derived) + carried,
                 project_tuple,
                 worker_tuple,
             )
@@ -753,12 +874,11 @@ def collect_and_schedule_portfolio(
                 frontiers = tuple(
                     replace(
                         frontier,
-                        collision_keys=tuple(
+                        collision_keys=(
                             _private_collision_key(
-                                key,
+                                f"project:{frontier.project}",
                                 private_collision_key,
-                            )
-                            for key in frontier.collision_keys
+                            ),
                         ),
                     )
                     for frontier in frontiers
@@ -777,7 +897,7 @@ def collect_and_schedule_portfolio(
             observations=current,
             changed_count=changed_count,
             ranked_frontiers=ranked,
-            expected_previous_snapshot_id=previous_snapshot_id,
+            expected_previous_snapshot_id=previous_config_snapshot_id,
         )
         ready_count = sum(
             1
