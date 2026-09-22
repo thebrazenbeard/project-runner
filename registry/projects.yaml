@@ -14,6 +14,10 @@ projects:
   - comment
   - request_review
   - merge
+  execution_targets:
+  - work_type: INSPECT
+    repository: thebrazenbeard/project-runner
+    ref: main
 - id: chat-communication-bus
   name: Chat Communication Bus
   visibility: private
