@@ -1336,3 +1336,250 @@ def test_private_worker_packet_cannot_be_written_inside_public_checkout(
 
     assert not state_db.exists()
     assert not payload_out.exists()
+
+
+def test_worker_route_pull_inside_checkout_skips_private_and_claims_public(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from types import SimpleNamespace
+
+    from runner.models import (
+        Frontier,
+        Observation,
+        ProjectDefinition,
+        WorkerDefinition,
+    )
+    from runner.portfolio import SqlitePortfolioStore
+    from runner.worker_routing import (
+        SqliteWorkerRouteStore,
+        resolve_read_only_worker_route,
+    )
+
+    worker = WorkerDefinition.from_mapping(
+        {
+            "id": "reviewer",
+            "name": "Reviewer",
+            "worker_type": "OPENAI_AGENT",
+            "lifecycle": "EXECUTABLE",
+            "locators": {"model": "reviewer-model"},
+            "roles": ["review"],
+            "routes": {"OPENAI_AGENT_API": "VERIFIED"},
+            "route_contracts": {
+                "OPENAI_AGENT_API": {
+                    "effect_class": "READ_ONLY",
+                    "replay_policy": "SAFE",
+                }
+            },
+            "reconstruction": {
+                "repository": "example/workers",
+                "path": "reviewer.md",
+                "commit": "f" * 40,
+            },
+        }
+    )
+    project = ProjectDefinition.from_mapping(
+        {
+            "id": "consumer",
+            "name": "Consumer",
+            "visibility": "public",
+            "repositories": ["example/consumer"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "consumer",
+            "scheduling_state": "SCHEDULABLE",
+            "execution_targets": [
+                {
+                    "work_type": "REREVIEW",
+                    "repository": "example/consumer",
+                    "ref": "review",
+                    "worker_id": "reviewer",
+                    "worker_route": "OPENAI_AGENT_API",
+                }
+            ],
+        }
+    )
+    frontier = Frontier.from_mapping(
+        {
+            "id": "frontier-review",
+            "project": "consumer",
+            "subject": {
+                "repository": "example/provider",
+                "ref": "main",
+                "commit": "b" * 40,
+            },
+            "work_type": "REREVIEW",
+            "reason": "provider changed",
+            "dependencies": ["provider-review"],
+            "required_capabilities": ["analyze"],
+            "collision_keys": ["project:consumer"],
+            "cost_class": "SMALL",
+            "priority_inputs": {
+                "fanout": 1,
+                "blocked_downstream": 0,
+                "staleness_risk": 1,
+                "failure_severity": 0,
+                "declared_priority": 0,
+                "cost": 1,
+                "authority_available": 1,
+                "scheduling_eligible": 1,
+                "executable_now": 1,
+            },
+            "status": "READY",
+        }
+    )
+    route = resolve_read_only_worker_route(
+        project=project,
+        frontier=frontier,
+        workers=(worker,),
+    )
+    assert route is not None
+
+    state_db = tmp_path / "worker-cli-private-filter.sqlite3"
+    portfolio = SqlitePortfolioStore(state_db)
+    snapshot_id = portfolio.commit_cycle(
+        registry_digest="0" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="1" * 64,
+        snapshot_digest="3" * 64,
+        observed_at=1.0,
+        baseline=True,
+        observations=(
+            Observation.from_mapping(
+                {
+                    "target": "provider",
+                    "evidence_class": "AUTHORITATIVE",
+                    "subject": {
+                        "repository": "example/provider",
+                        "ref": "main",
+                        "commit": "b" * 40,
+                    },
+                    "observed_value": "b" * 40,
+                    "observed_at": "test",
+                    "observer": "test",
+                }
+            ),
+        ),
+        changed_count=0,
+        ranked_frontiers=(),
+        expected_previous_snapshot_id=None,
+        expected_previous_dependency_snapshot_id=None,
+    )
+    portfolio.close()
+
+    frontier_json = json.dumps(
+        {
+            "id": frontier.id,
+            "project": frontier.project,
+            "subject": {
+                "repository": frontier.subject.repository,
+                "ref": frontier.subject.ref,
+                "commit": frontier.subject.commit,
+                "path": frontier.subject.path,
+                "digest": frontier.subject.digest,
+            },
+            "work_type": frontier.work_type,
+            "reason": frontier.reason,
+            "dependencies": list(frontier.dependencies),
+            "required_capabilities": list(frontier.required_capabilities),
+            "collision_keys": list(frontier.collision_keys),
+            "cost_class": frontier.cost_class.value,
+            "priority_inputs": dict(frontier.priority_inputs),
+            "status": frontier.status.value,
+        },
+        sort_keys=True,
+    )
+
+    store = SqliteWorkerRouteStore(state_db)
+    private_envelope = store.enqueue(
+        snapshot_id=snapshot_id,
+        frontier_fingerprint="a" * 64,
+        queue_fencing_token=1,
+        worker_registry_digest="1" * 64,
+        route=route,
+        target_repository="example/consumer",
+        target_ref="review",
+        target_head="c" * 40,
+        frontier_json=frontier_json,
+        now=1.0,
+        packet_sensitivity="PRIVATE",
+    )
+    public_envelope = store.enqueue(
+        snapshot_id=snapshot_id,
+        frontier_fingerprint="b" * 64,
+        queue_fencing_token=2,
+        worker_registry_digest="1" * 64,
+        route=route,
+        target_repository="example/consumer",
+        target_ref="review",
+        target_head="c" * 40,
+        frontier_json=frontier_json,
+        now=2.0,
+        packet_sensitivity="PUBLIC",
+    )
+    store.close()
+
+    monkeypatch.delenv("PROJECT_RUNNER_PROJECT_REGISTRY", raising=False)
+    monkeypatch.setattr(
+        cli_module,
+        "_load_worker_registry_snapshot",
+        lambda: SimpleNamespace(
+            workers=(worker,),
+            sha256="1" * 64,
+        ),
+    )
+    checkout = tmp_path / "public-checkout"
+    checkout.mkdir()
+    monkeypatch.setattr(cli_module, "ROOT", checkout)
+    payload_out = checkout / ".project-runner" / "worker-packet.json"
+
+    assert main(
+        [
+            "claim-worker-route",
+            "--worker-id",
+            "reviewer",
+            "--route",
+            "OPENAI_AGENT_API",
+            "--holder",
+            "cli-worker",
+            "--lease-ttl",
+            "60",
+            "--payload-out",
+            str(payload_out),
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+
+    claimed = json.loads(capsys.readouterr().out)
+    assert claimed["claimed"] is True
+    assert claimed["route_id"] == public_envelope.route_id
+    assert payload_out.exists()
+    packet = json.loads(payload_out.read_text(encoding="utf-8"))
+    assert packet["packet_sensitivity"] == "PUBLIC"
+
+    store = SqliteWorkerRouteStore(state_db)
+    try:
+        private_state = store.connection.execute(
+            """
+            SELECT state, delivery_fencing_token
+            FROM worker_route_outbox
+            WHERE route_id = ?
+            """,
+            (private_envelope.route_id,),
+        ).fetchone()
+        public_state = store.connection.execute(
+            """
+            SELECT state, delivery_fencing_token
+            FROM worker_route_outbox
+            WHERE route_id = ?
+            """,
+            (public_envelope.route_id,),
+        ).fetchone()
+    finally:
+        store.close()
+
+    assert private_state == ("PENDING", 0)
+    assert public_state == ("CLAIMED", 1)
