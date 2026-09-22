@@ -142,4 +142,4 @@ The evidence digest binds the operator's reconciliation record; it is not indepe
 
 M6 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission. The first operator route is intentionally read-only.
 
-The twelve Custom GPT records remain registrations with UNVERIFIED routes until an end-to-end executable path is independently demonstrated.
+The twelve Custom GPT records remain registrations with UNVERIFIED routes until an end-to-end executable path is independently demonstrated. They are not promoted by the reference worker. Project Runner separately owns one GITHUB_ACTION reference read worker whose `RUNNER_ACTION_PULL` route is VERIFIED only at the READ_ONLY/SAFE ceiling and whose exact-head CI proof must live-read the configured GitHub ref and persist a fenced receipt.
