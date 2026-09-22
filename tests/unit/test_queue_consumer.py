@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from runner.budgets import BudgetEnvelope
 from runner.durable_dispatch import SqliteDispatchAdmissionStore
 from runner.m6_github import frontier_to_github_inspection_work
@@ -487,3 +489,92 @@ def test_ambiguous_old_claim_blocks_newer_colliding_frontier(tmp_path: Path):
     assert result.claimed is False
     assert result.queue_state == "NO_WORK"
     assert transport.calls == []
+
+
+
+def test_reclaim_rejects_persisted_lineage_divergence(tmp_path: Path):
+    db = tmp_path / "queue-lineage-tamper.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "c" * 40,
+        }
+    )
+    projects, _changed = _schedule(db, transport)
+
+    store = SqliteQueueStore(db)
+    claim = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        holder="first-holder",
+        now=3.0,
+        ttl=5.0,
+    )
+    assert claim is not None
+    store.connection.execute(
+        """
+        UPDATE portfolio_queue_claims
+        SET operator_lineage = 'tampered-lineage'
+        WHERE snapshot_id = ? AND frontier_fingerprint = ?
+        """,
+        (claim.snapshot_id, claim.frontier_fingerprint),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="lineage diverges",
+    ):
+        store.claim_next(
+            projects=projects,
+            registry_digest="1" * 64,
+            dependency_digest="2" * 64,
+            holder="second-holder",
+            now=9.0,
+            ttl=5.0,
+        )
+    store.close()
+
+
+def test_reclaim_rejects_persisted_target_binding_divergence(tmp_path: Path):
+    db = tmp_path / "queue-target-tamper.sqlite3"
+    transport = FakeTransport(
+        {
+            ("example/provider", "main"): "a" * 40,
+            ("example/consumer", "main"): "c" * 40,
+        }
+    )
+    projects, _changed = _schedule(db, transport)
+
+    store = SqliteQueueStore(db)
+    claim = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        holder="first-holder",
+        now=3.0,
+        ttl=5.0,
+    )
+    assert claim is not None
+    store.connection.execute(
+        """
+        UPDATE portfolio_queue_claims
+        SET target_ref = 'tampered-ref'
+        WHERE snapshot_id = ? AND frontier_fingerprint = ?
+        """,
+        (claim.snapshot_id, claim.frontier_fingerprint),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="target diverges",
+    ):
+        store.claim_next(
+            projects=projects,
+            registry_digest="1" * 64,
+            dependency_digest="2" * 64,
+            holder="second-holder",
+            now=9.0,
+            ttl=5.0,
+        )
+    store.close()
