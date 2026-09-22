@@ -967,6 +967,7 @@ def test_routed_worker_reconciliation_closes_outbox_and_releases_retry(
     delivery = route_store.claim_next(
         worker_id="reviewer",
         invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
         holder="worker-delivery",
         now=3.1,
         ttl=30.0,
@@ -977,6 +978,7 @@ def test_routed_worker_reconciliation_closes_outbox_and_releases_retry(
         route_id=routed.route_id,
         worker_id="reviewer",
         invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
         holder="worker-delivery",
         expected_fencing_token=delivery.fencing_token,
         receipt_class="FAILED_RETRYABLE",
@@ -1255,6 +1257,7 @@ def test_routed_reconciliation_rejects_incompatible_receipt_class(
     delivery = route_store.claim_next(
         worker_id="reviewer",
         invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
         holder="worker-delivery",
         now=3.1,
         ttl=30.0,
@@ -1265,6 +1268,7 @@ def test_routed_reconciliation_rejects_incompatible_receipt_class(
         route_id=routed.route_id,
         worker_id="reviewer",
         invocation_route=InvocationRoute.OPENAI_AGENT_API,
+        workers=workers,
         holder="worker-delivery",
         expected_fencing_token=delivery.fencing_token,
         receipt_class="FAILED_RETRYABLE",
