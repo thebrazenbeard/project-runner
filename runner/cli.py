@@ -26,7 +26,11 @@ from .operator import (
     summarize_recovery_state,
 )
 from .portfolio import collect_and_schedule_portfolio, summarize_portfolio_state
-from .queue_consumer import consume_next_queued_inspection, summarize_queue_state
+from .queue_consumer import (
+    consume_next_queued_read_only_work,
+    reconcile_queue_item,
+    summarize_queue_state,
+)
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import (
@@ -34,8 +38,10 @@ from .registry import (
     load_dependency_snapshot,
     load_observations,
     load_project_snapshot,
+    load_worker_snapshot,
     load_workers,
 )
+from .worker_routing import summarize_worker_routes
 from .verify import verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
@@ -123,9 +129,13 @@ def _require_public_safe_reporting() -> None:
         )
 
 
+def _load_worker_registry_snapshot():
+    return load_worker_snapshot(ROOT / "registry" / "workers.yaml")
+
+
 def _load_all():
     projects = _load_project_registry()
-    workers = load_workers(ROOT / "registry" / "workers.yaml")
+    workers = _load_worker_registry_snapshot().workers
     return projects, workers
 
 
@@ -555,6 +565,7 @@ def _portfolio_cycle(args) -> int:
     try:
         registry_snapshot = _load_project_registry_snapshot()
         dependency_snapshot = load_dependency_snapshot(args.dependencies)
+        worker_snapshot = _load_worker_registry_snapshot()
         collision_key = (
             _external_private_collision_key()
             if external
@@ -563,6 +574,7 @@ def _portfolio_cycle(args) -> int:
         result = collect_and_schedule_portfolio(
             projects=registry_snapshot.projects,
             dependencies=dependency_snapshot.dependencies,
+            workers=worker_snapshot.workers,
             registry_digest=registry_snapshot.sha256,
             dependency_digest=dependency_snapshot.sha256,
             state_db=args.state_db,
@@ -606,10 +618,13 @@ def _consume_queue(args) -> int:
     try:
         registry_snapshot = _load_project_registry_snapshot()
         dependency_snapshot = load_dependency_snapshot(args.dependencies)
-        result = consume_next_queued_inspection(
+        worker_snapshot = _load_worker_registry_snapshot()
+        result = consume_next_queued_read_only_work(
             projects=registry_snapshot.projects,
+            workers=worker_snapshot.workers,
             registry_digest=registry_snapshot.sha256,
             dependency_digest=dependency_snapshot.sha256,
+            worker_registry_digest=worker_snapshot.sha256,
             state_db=args.state_db,
             holder=args.holder,
             lease_ttl=args.lease_ttl,
@@ -623,22 +638,64 @@ def _consume_queue(args) -> int:
         raise
 
     payload = {
-        "mode": "M6_FENCED_QUEUE_CONSUMPTION",
+        "mode": "M6_FENCED_READ_ONLY_QUEUE_CONSUMPTION",
         "claimed": result.claimed,
         "queue_state": result.queue_state,
         "snapshot_id": result.snapshot_id,
         "fencing_token": result.fencing_token,
         "operator_status": result.operator_status,
+        "route_id": result.route_id,
         "reason": result.reason,
     }
     if not external:
         payload["frontier_fingerprint"] = result.frontier_fingerprint
     print(json.dumps(payload, sort_keys=True))
-    return 0 if result.queue_state in {"NO_WORK", "COMPLETE", "SUPERSEDED"} else 2
+    return 0 if result.queue_state in {
+        "NO_WORK", "COMPLETE", "SUPERSEDED", "ROUTED"
+    } else 2
 
 
 def _queue_status(args) -> int:
     print(json.dumps(summarize_queue_state(args.state_db), sort_keys=True))
+    return 0
+
+
+def _worker_route_status(args) -> int:
+    print(json.dumps(summarize_worker_routes(args.state_db), sort_keys=True))
+    return 0
+
+
+def _reconcile_queue(args) -> int:
+    external = _external_project_registry_selected()
+    try:
+        result = reconcile_queue_item(
+            state_db=args.state_db,
+            snapshot_id=args.snapshot_id,
+            frontier_fingerprint_value=args.frontier_fingerprint,
+            expected_fencing_token=args.expected_fencing_token,
+            resolution=args.resolution,
+            evidence_sha256=args.evidence_sha256,
+            reconciler=args.reconciler,
+        )
+    except Exception:
+        if external:
+            raise ValueError(
+                "external queue reconciliation is unavailable or structurally invalid"
+            ) from None
+        raise
+
+    payload = {
+        "mode": "M6_QUEUE_RECONCILIATION",
+        "snapshot_id": result.snapshot_id,
+        "previous_state": result.previous_state,
+        "final_state": result.final_state,
+        "fencing_token": result.fencing_token,
+        "attempt_generation": result.attempt_generation,
+        "resolution": result.resolution,
+    }
+    if not external:
+        payload["frontier_fingerprint"] = result.frontier_fingerprint
+    print(json.dumps(payload, sort_keys=True))
     return 0
 
 
@@ -739,6 +796,39 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=Path(".project-runner/project-runner.sqlite3"),
     )
 
+    worker_route_status = subparsers.add_parser("worker-route-status")
+    worker_route_status.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
+    reconcile_queue = subparsers.add_parser("reconcile-queue")
+    reconcile_queue.add_argument("--snapshot-id", type=int, required=True)
+    reconcile_queue.add_argument("--frontier-fingerprint", required=True)
+    reconcile_queue.add_argument(
+        "--expected-fencing-token",
+        type=int,
+        required=True,
+    )
+    reconcile_queue.add_argument(
+        "--resolution",
+        choices=(
+            "CONFIRM_COMPLETE",
+            "CONFIRM_SUPERSEDED",
+            "CONFIRM_FAILED_DETERMINISTIC",
+            "RELEASE_RETRY_READ_ONLY",
+        ),
+        required=True,
+    )
+    reconcile_queue.add_argument("--evidence-sha256", required=True)
+    reconcile_queue.add_argument("--reconciler", required=True)
+    reconcile_queue.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
     args = parser.parse_args(argv)
     if args.command == "validate":
         return _validate()
@@ -764,6 +854,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _consume_queue(args)
     if args.command == "queue-status":
         return _queue_status(args)
+    if args.command == "worker-route-status":
+        return _worker_route_status(args)
+    if args.command == "reconcile-queue":
+        return _reconcile_queue(args)
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
 
