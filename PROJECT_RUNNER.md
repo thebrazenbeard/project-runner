@@ -106,6 +106,18 @@ operator-status reports unresolved durable recovery classes without re-executing
 
 The default state database is local SQLite. Its durability is scoped to the filesystem retaining that database; ephemeral CI storage is not cross-run persistence.
 
+## M6 durable portfolio currentness
+
+Portfolio currentness is a separate read-only durability boundary from execution admission.
+
+A portfolio cycle must use one exact project-registry snapshot and one exact dependency-registry snapshot. Dependency edges may create READ_REF target grants only after the provider and consumer exist in that project snapshot, the selector repository is registered to the declared provider, and the selector has an exact ref.
+
+The first successful cycle for an exact pair of registry digests establishes a baseline. Configuration changes do not silently compare unlike topologies; a new digest pair establishes a new baseline.
+
+All required ref reads must succeed before a snapshot can advance. Snapshot persistence and scheduler decisions are one SQLite transaction. The transaction rechecks the exact latest compatible predecessor under `BEGIN IMMEDIATE`; a stale concurrent collector must fail rather than overwrite or double-schedule from an obsolete predecessor.
+
+READY frontiers are persisted as `QUEUED`; non-ready frontiers are persisted as `BLOCKED`. This queue is coordination/evidence state only. It is not worker authority, target mutation authority, completion evidence, or permission to consume the row.
+
 ## Current effect ceiling
 
 M6 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission. The first operator route is intentionally read-only.
