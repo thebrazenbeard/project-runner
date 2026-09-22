@@ -68,6 +68,32 @@ Path-prefix dependencies are conservative in V1: currentness is collected at the
 
 `project-runner portfolio-status` is count/digest oriented and does not dump portfolio subjects. The scheduler queue is durable evidence, not a standing execution grant.
 
+## Fenced queue consumption and exact target resolution V1
+
+Projects may now declare explicit `execution_targets` by work type. A target contains an exact repository and ref; its repository must already belong to the project. Target declaration is routing authority for the read-only operator bridge, not mutation authority.
+
+Scheduler readiness now includes target availability. A schedulable/capable frontier without one declared target for its work type is persisted as `WAITING_AUTHORITY`, never `QUEUED`.
+
+`project-runner consume-queue` consumes only READY `INSPECT` rows from the latest snapshot matching the current project-registry and dependency-registry digests. The queue bridge:
+
+1. claims one row with a monotonic fencing token;
+2. refuses collision domains already held by another live queue claim, including claims from older snapshots;
+3. binds the declared consumer repository/ref and resolves its exact current head through a grant-limited READ_REF;
+4. persists that target head so a reclaimed attempt cannot silently retarget;
+5. derives a deterministic operator lineage from the durable snapshot/frontier identity;
+6. reconstructs the exact M6 inspection work identity before any possible re-execution;
+7. if matching durable operator state is already terminal, reconciles the queue from it without backend re-execution;
+8. if matching durable operator state exists but is nonterminal, records `OUTCOME_UNKNOWN` and refuses blind re-execution;
+9. otherwise invokes the existing durable read-only inspection operator and persists the queue outcome under the exact queue fence.
+
+A new currentness snapshot supersedes older unclaimed queue visibility: queue consumption selects work only from the latest compatible snapshot. This prevents an old queued invalidation from running after a later snapshot has already established newer portfolio truth.
+
+`project-runner queue-status` exposes aggregate claim states. External/private queue failures collapse to generic errors rather than echoing private registry or topology details.
+
+The committed public-safe registry intentionally contains only the explicit execution targets already justified by public Project Runner state. Missing targets in other projects are not guessed.
+
 ## Current ceiling and next frontier
 
-Portfolio V1 still does not consume scheduled rows, resolve a target subject automatically, invoke `run-inspection`, mutate downstream repositories, or mark queued work complete. The next bounded frontier is a durable queue-consumption bridge that claims one READY scheduled frontier under fencing/currentness checks, resolves its exact authorized consumer target, and hands only read-only INSPECT work to the already-qualified operator path. Mutation execution remains a separate gated frontier with explicit effect authority and postcondition reconciliation.
+The scheduler/consumer bridge is still read-only and currently consumes `INSPECT` only. It does not manufacture targets for RETEST/REREVIEW/REQUALIFY, invoke external workers, write branches/files, open or merge PRs, deploy, install, or change providers/credentials/permissions.
+
+The next bounded frontier is durable queue lifecycle/reconciliation tooling plus a read-only worker-routing abstraction for additional explicitly bound work types. Any mutation path remains a separate authority-gated frontier with expected-state checks and independent postcondition verification.
