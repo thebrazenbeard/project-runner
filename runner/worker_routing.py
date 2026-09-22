@@ -54,6 +54,7 @@ class WorkerRouteEnvelope:
     frontier_fingerprint: str
     queue_fencing_token: int
     worker_registry_digest: str
+    packet_sensitivity: str
     worker_id: str
     invocation_route: InvocationRoute
     replay_policy: ReplayPolicy
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS worker_route_outbox (
     frontier_fingerprint TEXT NOT NULL,
     queue_fencing_token INTEGER NOT NULL,
     worker_registry_digest TEXT NOT NULL,
+    packet_sensitivity TEXT NOT NULL DEFAULT 'PRIVATE_UNKNOWN',
     worker_id TEXT NOT NULL,
     invocation_route TEXT NOT NULL,
     replay_policy TEXT NOT NULL,
@@ -168,6 +170,7 @@ def _route_payload(
     frontier_fingerprint: str,
     queue_fencing_token: int,
     worker_registry_digest: str,
+    packet_sensitivity: str,
     route: ReadOnlyWorkerRoute,
     target_repository: str,
     target_ref: str,
@@ -179,6 +182,7 @@ def _route_payload(
         "frontier_fingerprint": frontier_fingerprint,
         "queue_fencing_token": queue_fencing_token,
         "worker_registry_digest": worker_registry_digest,
+        "packet_sensitivity": packet_sensitivity,
         "worker_id": route.worker_id,
         "invocation_route": route.invocation_route.value,
         "replay_policy": route.replay_policy.value,
@@ -196,6 +200,7 @@ def ensure_worker_route_schema(connection: sqlite3.Connection) -> None:
         for row in connection.execute("PRAGMA table_info(worker_route_outbox)")
     }
     migrations = {
+        "packet_sensitivity": "TEXT NOT NULL DEFAULT 'PRIVATE_UNKNOWN'",
         "delivery_holder": "TEXT",
         "delivery_fencing_token": "INTEGER NOT NULL DEFAULT 0",
         "delivery_expires_at": "REAL NOT NULL DEFAULT 0",
@@ -216,6 +221,7 @@ def enqueue_worker_route_record(
     frontier_fingerprint: str,
     queue_fencing_token: int,
     worker_registry_digest: str,
+    packet_sensitivity: str,
     route: ReadOnlyWorkerRoute,
     target_repository: str,
     target_ref: str,
@@ -223,11 +229,14 @@ def enqueue_worker_route_record(
     frontier_json: str,
     now: float,
 ) -> WorkerRouteEnvelope:
+    if packet_sensitivity not in {"PUBLIC", "PRIVATE"}:
+        raise ValueError("worker packet sensitivity must be PUBLIC or PRIVATE")
     payload = _route_payload(
         snapshot_id=snapshot_id,
         frontier_fingerprint=frontier_fingerprint,
         queue_fencing_token=queue_fencing_token,
         worker_registry_digest=worker_registry_digest,
+        packet_sensitivity=packet_sensitivity,
         route=route,
         target_repository=target_repository,
         target_ref=target_ref,
@@ -259,6 +268,7 @@ def enqueue_worker_route_record(
             frontier_fingerprint=frontier_fingerprint,
             queue_fencing_token=queue_fencing_token,
             worker_registry_digest=worker_registry_digest,
+            packet_sensitivity=packet_sensitivity,
             worker_id=route.worker_id,
             invocation_route=route.invocation_route,
             replay_policy=route.replay_policy,
@@ -269,12 +279,12 @@ def enqueue_worker_route_record(
         """
         INSERT INTO worker_route_outbox(
             route_id, snapshot_id, frontier_fingerprint,
-            queue_fencing_token, worker_registry_digest,
+            queue_fencing_token, worker_registry_digest, packet_sensitivity,
             worker_id, invocation_route, replay_policy,
             target_repository, target_ref, target_head,
             frontier_json, payload_sha256, state,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?)
         """,
         (
             route_id,
@@ -282,6 +292,7 @@ def enqueue_worker_route_record(
             frontier_fingerprint,
             queue_fencing_token,
             worker_registry_digest,
+            packet_sensitivity,
             route.worker_id,
             route.invocation_route.value,
             route.replay_policy.value,
@@ -300,6 +311,7 @@ def enqueue_worker_route_record(
         frontier_fingerprint=frontier_fingerprint,
         queue_fencing_token=queue_fencing_token,
         worker_registry_digest=worker_registry_digest,
+        packet_sensitivity=packet_sensitivity,
         worker_id=route.worker_id,
         invocation_route=route.invocation_route,
         replay_policy=route.replay_policy,
@@ -336,6 +348,7 @@ class SqliteWorkerRouteStore:
         target_head: str,
         frontier_json: str,
         now: float,
+        packet_sensitivity: str = "PUBLIC",
     ) -> WorkerRouteEnvelope:
         self.connection.execute("BEGIN IMMEDIATE")
         try:
@@ -345,6 +358,7 @@ class SqliteWorkerRouteStore:
                 frontier_fingerprint=frontier_fingerprint,
                 queue_fencing_token=queue_fencing_token,
                 worker_registry_digest=worker_registry_digest,
+                packet_sensitivity=packet_sensitivity,
                 route=route,
                 target_repository=target_repository,
                 target_ref=target_ref,
@@ -471,6 +485,7 @@ class SqliteWorkerRouteStore:
         now: float,
         ttl: float,
         worker_registry_digest: str,
+        allow_private: bool = True,
     ) -> WorkerRouteDeliveryClaim | None:
         if not worker_id.strip():
             raise ValueError("worker_id is required")
@@ -494,7 +509,7 @@ class SqliteWorkerRouteStore:
                     worker_registry_digest, target_repository, target_ref,
                     target_head, frontier_json, snapshot_id,
                     frontier_fingerprint, queue_fencing_token,
-                    replay_policy
+                    replay_policy, packet_sensitivity
                 FROM worker_route_outbox
                 WHERE worker_id = ? AND invocation_route = ?
                   AND state IN ('PENDING', 'CLAIMED')
@@ -509,6 +524,15 @@ class SqliteWorkerRouteStore:
                 if str(row[13]) != replay_policy.value:
                     raise ValueError(
                         "worker route replay policy diverges from current registry"
+                    )
+                packet_sensitivity = str(row[14])
+                if packet_sensitivity not in {"PUBLIC", "PRIVATE"}:
+                    raise ValueError(
+                        "worker packet sensitivity is missing or invalid"
+                    )
+                if packet_sensitivity == "PRIVATE" and not allow_private:
+                    raise ValueError(
+                        "private worker packet requires private-safe destination"
                     )
                 if not self._provider_subject_current(
                     snapshot_id=int(row[10]),
@@ -561,6 +585,7 @@ class SqliteWorkerRouteStore:
                     "frontier_fingerprint": str(row[11]),
                     "queue_fencing_token": int(row[12]),
                     "worker_registry_digest": str(row[5]),
+                    "packet_sensitivity": packet_sensitivity,
                     "worker_id": worker_id,
                     "invocation_route": invocation_route.value,
                     "replay_policy": str(row[13]),
