@@ -350,6 +350,18 @@ def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path
                 route_id=envelope.route_id,
                 worker_id="reviewer",
                 invocation_route=envelope.invocation_route,
+                holder="different-holder",
+                expected_fencing_token=claim.fencing_token,
+                receipt_class="SUCCEEDED",
+                receipt_sha256="a" * 64,
+                now=13.5,
+            )
+
+        with pytest.raises(ValueError, match="different receipt"):
+            store.record_receipt(
+                route_id=envelope.route_id,
+                worker_id="reviewer",
+                invocation_route=envelope.invocation_route,
                 holder="worker-one",
                 expected_fencing_token=claim.fencing_token,
                 receipt_class="FAILED_RETRYABLE",
