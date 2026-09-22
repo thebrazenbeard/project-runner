@@ -351,6 +351,7 @@ class SqlitePortfolioStore:
         changed_count: int,
         ranked_frontiers,
         expected_previous_snapshot_id: int | None,
+        expected_previous_dependency_snapshot_id: int | None,
     ) -> int:
         ready_count = sum(
             1
@@ -381,7 +382,30 @@ class SqlitePortfolioStore:
             actual_previous = None if row is None else int(row[0])
             if actual_previous != expected_previous_snapshot_id:
                 raise RuntimeError(
-                    "portfolio currentness changed concurrently; retry from fresh state"
+                    "portfolio configuration currentness changed concurrently; "
+                    "retry from fresh state"
+                )
+
+            dependency_row = self.connection.execute(
+                """
+                SELECT snapshot_id
+                FROM portfolio_snapshots
+                WHERE dependency_digest = ?
+                ORDER BY snapshot_id DESC
+                LIMIT 1
+                """,
+                (dependency_digest,),
+            ).fetchone()
+            actual_dependency_previous = (
+                None if dependency_row is None else int(dependency_row[0])
+            )
+            if (
+                actual_dependency_previous
+                != expected_previous_dependency_snapshot_id
+            ):
+                raise RuntimeError(
+                    "portfolio topology currentness changed concurrently; "
+                    "retry from fresh state"
                 )
 
             cursor = self.connection.execute(
@@ -936,6 +960,9 @@ def collect_and_schedule_portfolio(
             changed_count=changed_count,
             ranked_frontiers=ranked,
             expected_previous_snapshot_id=previous_config_snapshot_id,
+            expected_previous_dependency_snapshot_id=(
+                previous_dependency_snapshot_id
+            ),
         )
         ready_count = sum(
             1
