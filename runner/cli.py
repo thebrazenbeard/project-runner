@@ -672,6 +672,15 @@ def _worker_route_status(args) -> int:
 
 
 def _claim_worker_route(args) -> int:
+    payload_out = args.payload_out.expanduser().resolve()
+    if _external_project_registry_selected():
+        root = ROOT.resolve()
+        if payload_out == root or root in payload_out.parents:
+            raise ValueError(
+                "private worker payload must be written outside the public checkout"
+            )
+    payload_out.parent.mkdir(parents=True, exist_ok=True)
+
     worker_snapshot = _load_worker_registry_snapshot()
     route = InvocationRoute(args.route)
     store = SqliteWorkerRouteStore(args.state_db)
@@ -696,14 +705,6 @@ def _claim_worker_route(args) -> int:
         }, sort_keys=True))
         return 0
 
-    payload_out = args.payload_out.expanduser().resolve()
-    if _external_project_registry_selected():
-        root = ROOT.resolve()
-        if payload_out == root or root in payload_out.parents:
-            raise ValueError(
-                "private worker payload must be written outside the public checkout"
-            )
-    payload_out.parent.mkdir(parents=True, exist_ok=True)
     temporary = payload_out.with_name(payload_out.name + ".tmp")
     descriptor = os.open(
         temporary,
