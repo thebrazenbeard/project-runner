@@ -1231,6 +1231,7 @@ def test_cli_worker_route_pull_and_receipt_round_trip(
     assert claimed["route_id"] == envelope.route_id
     assert claimed["delivery_fencing_token"] == 1
     packet = json.loads(payload_out.read_text(encoding="utf-8"))
+    assert payload_out.stat().st_mode & 0o777 == 0o600
     assert packet["target_repository"] == "example/consumer"
     assert packet["target_ref"] == "review"
     assert packet["target_head"] == "c" * 40
@@ -1261,3 +1262,39 @@ def test_cli_worker_route_pull_and_receipt_round_trip(
     assert receipt["state"] == "RECEIPT_RECORDED"
     assert receipt["receipt_class"] == "SUCCEEDED"
     assert receipt["receipt_sha256"] == "d" * 64
+
+
+
+def test_private_worker_packet_cannot_be_written_inside_public_checkout(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "PROJECT_RUNNER_PROJECT_REGISTRY",
+        str(tmp_path / "external-projects.yaml"),
+    )
+    state_db = tmp_path / "private-worker-state.sqlite3"
+    payload_out = cli_module.ROOT / ".project-runner" / "private-packet.json"
+
+    with pytest.raises(
+        ValueError,
+        match="outside the public checkout",
+    ):
+        main(
+            [
+                "claim-worker-route",
+                "--worker-id",
+                "reviewer",
+                "--route",
+                "OPENAI_AGENT_API",
+                "--holder",
+                "private-worker",
+                "--payload-out",
+                str(payload_out),
+                "--state-db",
+                str(state_db),
+            ]
+        )
+
+    assert not state_db.exists()
+    assert not payload_out.exists()
