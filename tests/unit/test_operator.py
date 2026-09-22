@@ -276,6 +276,7 @@ def test_durable_operator_rejects_target_outside_frontier_project_scope(
             lease_ttl=60.0,
             registry_digest="2" * 64,
             authorized_target_repositories=("example/other",),
+            authorized_provider_repositories=("example/provider",),
             token=None,
             transport=transport,
             clock=_clock,
