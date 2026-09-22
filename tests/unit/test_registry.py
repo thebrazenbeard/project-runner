@@ -222,3 +222,59 @@ projects:
         match="work_type must be unique",
     ):
         load_projects(path)
+
+
+
+def test_worker_route_contract_is_bound_to_declared_route(tmp_path: Path):
+    path = tmp_path / "workers.yaml"
+    path.write_text(
+        """
+workers:
+  - id: reviewer
+    name: Reviewer
+    worker_type: OPENAI_AGENT
+    lifecycle: EXECUTABLE
+    locators: {model: reviewer-model}
+    roles: [review]
+    routes:
+      OPENAI_AGENT_API: VERIFIED
+    route_contracts:
+      OPENAI_AGENT_API:
+        effect_class: READ_ONLY
+        replay_policy: SAFE
+    reconstruction:
+      repository: owner/workers
+      path: workers/reviewer.md
+      commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+""".lstrip(),
+        encoding="utf-8",
+    )
+    worker = load_workers(path)[0]
+    contract = worker.route_contracts[next(iter(worker.route_contracts))]
+    assert contract.effect_class.value == "READ_ONLY"
+    assert contract.replay_policy.value == "SAFE"
+
+
+def test_worker_route_contract_cannot_name_undeclared_route(tmp_path: Path):
+    path = tmp_path / "workers.yaml"
+    path.write_text(
+        """
+workers:
+  - id: reviewer
+    name: Reviewer
+    worker_type: OPENAI_AGENT
+    lifecycle: REGISTERED
+    locators: {model: reviewer-model}
+    roles: [review]
+    routes:
+      OPENAI_AGENT_API: UNVERIFIED
+    route_contracts:
+      GITHUB_ACTION:
+        effect_class: READ_ONLY
+        replay_policy: SAFE
+""".lstrip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="requires a declared worker route"):
+        load_workers(path)
