@@ -26,6 +26,7 @@ from .operator import (
     summarize_recovery_state,
 )
 from .portfolio import collect_and_schedule_portfolio, summarize_portfolio_state
+from .queue_consumer import consume_next_queued_inspection, summarize_queue_state
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import (
@@ -600,6 +601,47 @@ def _portfolio_status(args) -> int:
     return 0
 
 
+def _consume_queue(args) -> int:
+    external = _external_project_registry_selected()
+    try:
+        registry_snapshot = _load_project_registry_snapshot()
+        dependency_snapshot = load_dependency_snapshot(args.dependencies)
+        result = consume_next_queued_inspection(
+            projects=registry_snapshot.projects,
+            registry_digest=registry_snapshot.sha256,
+            dependency_digest=dependency_snapshot.sha256,
+            state_db=args.state_db,
+            holder=args.holder,
+            lease_ttl=args.lease_ttl,
+            token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+        )
+    except Exception:
+        if external:
+            raise ValueError(
+                "external queue consumption is unavailable or structurally invalid"
+            ) from None
+        raise
+
+    payload = {
+        "mode": "M6_FENCED_QUEUE_CONSUMPTION",
+        "claimed": result.claimed,
+        "queue_state": result.queue_state,
+        "snapshot_id": result.snapshot_id,
+        "fencing_token": result.fencing_token,
+        "operator_status": result.operator_status,
+        "reason": result.reason,
+    }
+    if not external:
+        payload["frontier_fingerprint"] = result.frontier_fingerprint
+    print(json.dumps(payload, sort_keys=True))
+    return 0 if result.queue_state in {"NO_WORK", "COMPLETE", "SUPERSEDED"} else 2
+
+
+def _queue_status(args) -> int:
+    print(json.dumps(summarize_queue_state(args.state_db), sort_keys=True))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="project-runner")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -676,6 +718,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=Path(".project-runner/project-runner.sqlite3"),
     )
 
+    consume_queue = subparsers.add_parser("consume-queue")
+    consume_queue.add_argument(
+        "--dependencies",
+        type=Path,
+        default=ROOT / "topology" / "dependencies.yaml",
+    )
+    consume_queue.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+    consume_queue.add_argument("--holder", default="project-runner-queue")
+    consume_queue.add_argument("--lease-ttl", type=float, default=300.0)
+
+    queue_status = subparsers.add_parser("queue-status")
+    queue_status.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
     args = parser.parse_args(argv)
     if args.command == "validate":
         return _validate()
@@ -697,6 +760,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _portfolio_cycle(args)
     if args.command == "portfolio-status":
         return _portfolio_status(args)
+    if args.command == "consume-queue":
+        return _consume_queue(args)
+    if args.command == "queue-status":
+        return _queue_status(args)
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
 
