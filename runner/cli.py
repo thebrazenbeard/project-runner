@@ -674,12 +674,14 @@ def _worker_route_status(args) -> int:
 
 def _claim_worker_route(args) -> int:
     payload_out = args.payload_out.expanduser().resolve()
-    if _external_project_registry_selected():
-        root = ROOT.resolve()
-        if payload_out == root or root in payload_out.parents:
-            raise ValueError(
-                "private worker payload must be written outside the public checkout"
-            )
+    root = ROOT.resolve()
+    payload_inside_public_checkout = (
+        payload_out == root or root in payload_out.parents
+    )
+    if _external_project_registry_selected() and payload_inside_public_checkout:
+        raise ValueError(
+            "private worker payload must be written outside the public checkout"
+        )
     payload_out.parent.mkdir(parents=True, exist_ok=True)
 
     worker_snapshot = _load_worker_registry_snapshot()
@@ -694,6 +696,7 @@ def _claim_worker_route(args) -> int:
             now=time.time(),
             ttl=args.lease_ttl,
             worker_registry_digest=worker_snapshot.sha256,
+            allow_private=not payload_inside_public_checkout,
         )
     finally:
         store.close()
