@@ -401,14 +401,29 @@ class SqliteWorkerRouteStore:
             ).fetchall()
             for row in rows:
                 state = str(row[1])
-                if state == "CLAIMED" and now < float(row[4]):
-                    continue
                 if str(row[5]) != worker_registry_digest:
                     continue
                 if str(row[13]) != replay_policy.value:
                     raise ValueError(
                         "worker route replay policy diverges from current registry"
                     )
+                if state == "CLAIMED" and now < float(row[4]):
+                    continue
+                if (
+                    state == "CLAIMED"
+                    and replay_policy is not ReplayPolicy.SAFE
+                ):
+                    self.connection.execute(
+                        """
+                        UPDATE worker_route_outbox
+                        SET state = 'OUTCOME_UNKNOWN',
+                            delivery_expires_at = 0,
+                            updated_at = ?
+                        WHERE route_id = ?
+                        """,
+                        (now, str(row[0])),
+                    )
+                    continue
 
                 token = int(row[3]) + 1
                 expires_at = now + ttl
