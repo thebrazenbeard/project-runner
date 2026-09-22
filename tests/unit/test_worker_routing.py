@@ -44,6 +44,19 @@ def _worker(
     effect_class: str = "READ_ONLY",
     replay_policy: str = "SAFE",
 ):
+    routes = {"OPENAI_AGENT_API": route_state}
+    route_contracts = {
+        "OPENAI_AGENT_API": {
+            "effect_class": effect_class,
+            "replay_policy": replay_policy,
+        }
+    }
+    if route_state != "VERIFIED":
+        routes["GITHUB_ACTION"] = "VERIFIED"
+        route_contracts["GITHUB_ACTION"] = {
+            "effect_class": "READ_ONLY",
+            "replay_policy": "SAFE",
+        }
     return WorkerDefinition.from_mapping(
         {
             "id": "reviewer",
@@ -52,13 +65,8 @@ def _worker(
             "lifecycle": "EXECUTABLE",
             "locators": {"model": "reviewer-model"},
             "roles": ["review"],
-            "routes": {"OPENAI_AGENT_API": route_state},
-            "route_contracts": {
-                "OPENAI_AGENT_API": {
-                    "effect_class": effect_class,
-                    "replay_policy": replay_policy,
-                }
-            },
+            "routes": routes,
+            "route_contracts": route_contracts,
             "reconstruction": {
                 "repository": "example/worker-definitions",
                 "path": "workers/reviewer.md",
