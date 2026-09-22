@@ -105,6 +105,27 @@ Read-only worker handoffs are persisted in a digest-bound outbox and can be summ
     project-runner worker-route-status \
       --state-db .project-runner/project-runner.sqlite3
 
+A qualified worker route uses a fenced pull/receipt protocol. The packet is written to a file rather than echoed to ordinary logs:
+
+    project-runner claim-worker-route \
+      --worker-id <worker-id> \
+      --route <verified-route> \
+      --holder <claimant-id> \
+      --payload-out /secure/path/packet.json \
+      --state-db .project-runner/project-runner.sqlite3
+
+    project-runner record-worker-receipt \
+      --route-id <route-id> \
+      --worker-id <worker-id> \
+      --route <verified-route> \
+      --holder <same-claimant-id> \
+      --expected-fencing-token <delivery-fence> \
+      --receipt-class SUCCEEDED \
+      --receipt-sha256 <sha256> \
+      --state-db .project-runner/project-runner.sqlite3
+
+SAFE routes may reclaim expired delivery claims. RECONCILE_REQUIRED routes freeze expired claims into ambiguity until explicit reconciliation; NEVER routes are not replay-releasable.
+
 Ambiguous or routed queue items retain their collision reservation until explicit evidence-bound reconciliation:
 
     project-runner reconcile-queue \
@@ -116,7 +137,7 @@ Ambiguous or routed queue items retain their collision reservation until explici
       --reconciler <identity> \
       --state-db .project-runner/project-runner.sqlite3
 
-A read-only retry release is allowed only where the route's declared replay policy is SAFE. It advances the durable attempt generation and uses a new deterministic lineage.
+A read-only retry release advances the durable attempt generation and uses a new deterministic lineage. SAFE routes permit automatic expired-claim replay and explicit retry release; RECONCILE_REQUIRED permits retry only through explicit reconciliation; NEVER does not permit retry release. Routed `CONFIRM_COMPLETE` also re-reads both the provider ref and bound consumer target ref live—worker success alone is not completion.
 
 The committed public registry currently binds only Project Runner's own `INSPECT` target. The twelve committed worker records remain REGISTERED with UNVERIFIED routes, so none is silently activated. Other work remains blocked until its target and qualified worker route are explicitly declared; Project Runner does not infer `main`, choose the first repository, or manufacture routing authority.
 
