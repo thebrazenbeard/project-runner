@@ -223,11 +223,17 @@ def _private_collision_key(key: str, private_collision_key: str) -> str:
     return f"private:{digest}"
 
 
-def _derive_frontier_set(before: Path, after: Path, dependencies: Path):
+def _derive_frontier_set(
+    before: Path,
+    after: Path,
+    dependencies: Path,
+    *,
+    project_snapshot=None,
+):
     previous = load_observations(before)
     current = load_observations(after)
     edges = load_dependencies(dependencies)
-    snapshot = _load_project_registry_snapshot()
+    snapshot = project_snapshot or _load_project_registry_snapshot()
     projects = snapshot.projects
     capability_lookup = {
         project.id: set(project.capabilities)
@@ -457,10 +463,12 @@ def _select_ready_inspection(frontiers, *, project: str, frontier_id: str | None
 
 
 def _run_inspection(args) -> int:
+    registry_snapshot = _load_project_registry_snapshot()
     frontiers = _derive_frontier_set(
         args.before,
         args.after,
         args.dependencies,
+        project_snapshot=registry_snapshot,
     )
     frontier = _select_ready_inspection(
         frontiers,
@@ -472,7 +480,6 @@ def _run_inspection(args) -> int:
         ref=args.target_ref,
         commit=args.target_head,
     )
-    registry_snapshot = _load_project_registry_snapshot()
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     project = next(
         (
@@ -499,6 +506,11 @@ def _run_inspection(args) -> int:
         lease_ttl=args.lease_ttl,
         registry_digest=registry_snapshot.sha256,
         authorized_target_repositories=project.repositories,
+        authorized_provider_repositories=tuple(
+            repository
+            for item in registry_snapshot.projects
+            for repository in item.repositories
+        ),
         token=token,
     )
     payload = {
