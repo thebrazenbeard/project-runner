@@ -19,7 +19,12 @@ from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .leases import InMemoryLeaseStore
-from .models import ExactSubject, FrontierStatus, ProjectSchedulingState
+from .models import (
+    ExactSubject,
+    FrontierStatus,
+    InvocationRoute,
+    ProjectSchedulingState,
+)
 from .operator import (
     build_github_read_backend,
     run_durable_github_read_inspection,
@@ -41,7 +46,7 @@ from .registry import (
     load_worker_snapshot,
     load_workers,
 )
-from .worker_routing import summarize_worker_routes
+from .worker_routing import SqliteWorkerRouteStore, summarize_worker_routes
 from .verify import verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
@@ -666,6 +671,80 @@ def _worker_route_status(args) -> int:
     return 0
 
 
+def _claim_worker_route(args) -> int:
+    worker_snapshot = _load_worker_registry_snapshot()
+    route = InvocationRoute(args.route)
+    store = SqliteWorkerRouteStore(args.state_db)
+    try:
+        claim = store.claim_next(
+            worker_id=args.worker_id,
+            invocation_route=route,
+            holder=args.holder,
+            now=time.time(),
+            ttl=args.lease_ttl,
+            worker_registry_digest=worker_snapshot.sha256,
+        )
+    finally:
+        store.close()
+
+    if claim is None:
+        print(json.dumps({
+            "mode": "M6_WORKER_ROUTE_PULL",
+            "claimed": False,
+            "state": "NO_WORK",
+        }, sort_keys=True))
+        return 0
+
+    payload_out = args.payload_out.expanduser()
+    payload_out.parent.mkdir(parents=True, exist_ok=True)
+    temporary = payload_out.with_name(payload_out.name + ".tmp")
+    temporary.write_text(
+        json.dumps(claim.payload, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temporary, payload_out)
+
+    print(json.dumps({
+        "mode": "M6_WORKER_ROUTE_PULL",
+        "claimed": True,
+        "route_id": claim.route_id,
+        "worker_id": claim.worker_id,
+        "invocation_route": claim.invocation_route.value,
+        "delivery_fencing_token": claim.fencing_token,
+        "expires_at": claim.expires_at,
+    }, sort_keys=True))
+    return 0
+
+
+def _record_worker_receipt(args) -> int:
+    route = InvocationRoute(args.route)
+    store = SqliteWorkerRouteStore(args.state_db)
+    try:
+        receipt = store.record_receipt(
+            route_id=args.route_id,
+            worker_id=args.worker_id,
+            invocation_route=route,
+            holder=args.holder,
+            expected_fencing_token=args.expected_fencing_token,
+            receipt_class=args.receipt_class,
+            receipt_sha256=args.receipt_sha256,
+            now=time.time(),
+        )
+    finally:
+        store.close()
+    print(json.dumps({
+        "mode": "M6_WORKER_ROUTE_RECEIPT",
+        "route_id": receipt.route_id,
+        "worker_id": receipt.worker_id,
+        "invocation_route": receipt.invocation_route.value,
+        "delivery_fencing_token": receipt.fencing_token,
+        "receipt_class": receipt.receipt_class,
+        "receipt_sha256": receipt.receipt_sha256,
+        "state": receipt.state,
+    }, sort_keys=True))
+    return 0
+
+
 def _reconcile_queue(args) -> int:
     external = _external_project_registry_selected()
     try:
@@ -804,6 +883,54 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=Path(".project-runner/project-runner.sqlite3"),
     )
 
+    claim_worker_route = subparsers.add_parser("claim-worker-route")
+    claim_worker_route.add_argument("--worker-id", required=True)
+    claim_worker_route.add_argument(
+        "--route",
+        choices=tuple(route.value for route in InvocationRoute),
+        required=True,
+    )
+    claim_worker_route.add_argument("--holder", required=True)
+    claim_worker_route.add_argument("--lease-ttl", type=float, default=300.0)
+    claim_worker_route.add_argument("--payload-out", type=Path, required=True)
+    claim_worker_route.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
+    record_worker_receipt = subparsers.add_parser("record-worker-receipt")
+    record_worker_receipt.add_argument("--route-id", required=True)
+    record_worker_receipt.add_argument("--worker-id", required=True)
+    record_worker_receipt.add_argument(
+        "--route",
+        choices=tuple(route.value for route in InvocationRoute),
+        required=True,
+    )
+    record_worker_receipt.add_argument("--holder", required=True)
+    record_worker_receipt.add_argument(
+        "--expected-fencing-token",
+        type=int,
+        required=True,
+    )
+    record_worker_receipt.add_argument(
+        "--receipt-class",
+        choices=(
+            "SUCCEEDED",
+            "FAILED_RETRYABLE",
+            "FAILED_DETERMINISTIC",
+            "OUTCOME_UNKNOWN",
+            "SUPERSEDED",
+        ),
+        required=True,
+    )
+    record_worker_receipt.add_argument("--receipt-sha256", required=True)
+    record_worker_receipt.add_argument(
+        "--state-db",
+        type=Path,
+        default=Path(".project-runner/project-runner.sqlite3"),
+    )
+
     reconcile_queue = subparsers.add_parser("reconcile-queue")
     reconcile_queue.add_argument("--snapshot-id", type=int, required=True)
     reconcile_queue.add_argument("--frontier-fingerprint", required=True)
@@ -857,6 +984,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _queue_status(args)
     if args.command == "worker-route-status":
         return _worker_route_status(args)
+    if args.command == "claim-worker-route":
+        return _claim_worker_route(args)
+    if args.command == "record-worker-receipt":
+        return _record_worker_receipt(args)
     if args.command == "reconcile-queue":
         return _reconcile_queue(args)
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
