@@ -749,7 +749,9 @@ class SqliteQueueStore:
             if previous_state == "ROUTED":
                 route_row = self.connection.execute(
                     """
-                    SELECT route_id
+                    SELECT
+                        route_id, state, receipt_class,
+                        receipt_sha256, replay_policy
                     FROM worker_route_outbox
                     WHERE snapshot_id = ?
                       AND frontier_fingerprint = ?
@@ -764,6 +766,26 @@ class SqliteQueueStore:
                 if route_row is None:
                     raise ValueError(
                         "routed queue item lacks its durable worker-route envelope"
+                    )
+                if str(route_row[1]) != "RECEIPT_RECORDED":
+                    raise ValueError(
+                        "routed queue item requires a durable worker receipt"
+                    )
+                receipt_class = str(route_row[2])
+                compatible_receipts = {
+                    "CONFIRM_COMPLETE": {"SUCCEEDED"},
+                    "CONFIRM_SUPERSEDED": {"SUPERSEDED"},
+                    "CONFIRM_FAILED_DETERMINISTIC": {
+                        "FAILED_DETERMINISTIC"
+                    },
+                    "RELEASE_RETRY_READ_ONLY": {
+                        "FAILED_RETRYABLE",
+                        "OUTCOME_UNKNOWN",
+                    },
+                }
+                if receipt_class not in compatible_receipts[resolution]:
+                    raise ValueError(
+                        "worker receipt class is incompatible with reconciliation"
                     )
             attempt_generation = int(row[2])
             final_state = resolution_map[resolution]
