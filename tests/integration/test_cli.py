@@ -894,3 +894,173 @@ projects:
     assert "private-provider" not in message
     assert "private-consumer" not in message
     assert "secret-owner" not in message
+
+
+
+def test_worker_route_status_missing_database_is_safe_and_empty(tmp_path, capsys):
+    state_db = tmp_path / "missing-worker-routes.sqlite3"
+
+    assert main(
+        [
+            "worker-route-status",
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+
+    assert json.loads(capsys.readouterr().out) == {
+        "routes": 0,
+        "states": {},
+    }
+
+
+def test_cli_reconcile_queue_releases_safe_read_retry(tmp_path, capsys):
+    from runner.models import DependencyEdge, ProjectDefinition
+    from runner.portfolio import collect_and_schedule_portfolio
+    from runner.queue_consumer import SqliteQueueStore
+
+    class FakeTransport:
+        def __init__(self):
+            self.heads = {
+                ("example/provider", "main"): "a" * 40,
+            }
+
+        def read_ref(self, repository, ref):
+            return self.heads[(repository, ref)]
+
+        def read_file(self, repository, path, ref):
+            raise AssertionError("reconciliation fixture is ref-read only")
+
+        def create_branch(self, repository, branch, sha):
+            raise AssertionError("reconciliation fixture is read-only")
+
+        def put_file(
+            self,
+            repository,
+            path,
+            branch,
+            content,
+            message,
+            expected_blob_sha=None,
+        ):
+            raise AssertionError("reconciliation fixture is read-only")
+
+    provider = ProjectDefinition.from_mapping(
+        {
+            "id": "provider",
+            "name": "Provider",
+            "visibility": "public",
+            "repositories": ["example/provider"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "provider",
+            "scheduling_state": "SCHEDULABLE",
+        }
+    )
+    consumer = ProjectDefinition.from_mapping(
+        {
+            "id": "consumer",
+            "name": "Consumer",
+            "visibility": "public",
+            "repositories": ["example/consumer"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "consumer",
+            "scheduling_state": "SCHEDULABLE",
+            "execution_targets": [
+                {
+                    "work_type": "INSPECT",
+                    "repository": "example/consumer",
+                    "ref": "main",
+                }
+            ],
+        }
+    )
+    dependency = DependencyEdge.from_mapping(
+        {
+            "id": "provider-consumer",
+            "provider": "provider",
+            "consumer": "consumer",
+            "kind": "source",
+            "selector": {
+                "repository": "example/provider",
+                "ref": "main",
+            },
+            "reaction": "INSPECT",
+            "evidence": "exact-subject",
+        }
+    )
+    projects = (provider, consumer)
+    transport = FakeTransport()
+    state_db = tmp_path / "reconcile-cli.sqlite3"
+
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(dependency,),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=state_db,
+        token=None,
+        transport=transport,
+        clock=lambda: 1.0,
+    )
+    transport.heads[("example/provider", "main")] = "b" * 40
+    collect_and_schedule_portfolio(
+        projects=projects,
+        dependencies=(dependency,),
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        state_db=state_db,
+        token=None,
+        transport=transport,
+        clock=lambda: 2.0,
+    )
+
+    store = SqliteQueueStore(state_db)
+    claim = store.claim_next(
+        projects=projects,
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        holder="cli-reconcile",
+        now=3.0,
+        ttl=60.0,
+    )
+    assert claim is not None
+    store.finalize(
+        claim,
+        state="OUTCOME_UNKNOWN",
+        reason="synthetic ambiguity",
+        now=4.0,
+    )
+    store.close()
+
+    assert main(
+        [
+            "reconcile-queue",
+            "--snapshot-id",
+            str(claim.snapshot_id),
+            "--frontier-fingerprint",
+            claim.frontier_fingerprint,
+            "--expected-fencing-token",
+            str(claim.fencing_token),
+            "--resolution",
+            "RELEASE_RETRY_READ_ONLY",
+            "--evidence-sha256",
+            "e" * 64,
+            "--reconciler",
+            "cli-test",
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "M6_QUEUE_RECONCILIATION"
+    assert payload["previous_state"] == "OUTCOME_UNKNOWN"
+    assert payload["final_state"] == "FAILED_RETRYABLE"
+    assert payload["attempt_generation"] == 2
+    assert payload["frontier_fingerprint"] == claim.frontier_fingerprint
