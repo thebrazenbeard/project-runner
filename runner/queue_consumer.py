@@ -699,6 +699,83 @@ class SqliteQueueStore:
             self.connection.rollback()
             raise
 
+    def routed_subjects_current(
+        self,
+        *,
+        snapshot_id: int,
+        frontier_fingerprint_value: str,
+        target_currentness_reader: Callable[[str, str], str],
+    ) -> bool:
+        row = self.connection.execute(
+            """
+            SELECT
+                ps.dependency_digest,
+                pf.frontier_json,
+                qc.target_repository,
+                qc.target_ref,
+                qc.target_head
+            FROM portfolio_queue_claims qc
+            JOIN portfolio_frontiers pf
+              ON pf.snapshot_id = qc.snapshot_id
+             AND pf.frontier_fingerprint = qc.frontier_fingerprint
+            JOIN portfolio_snapshots ps
+              ON ps.snapshot_id = qc.snapshot_id
+            WHERE qc.snapshot_id = ?
+              AND qc.frontier_fingerprint = ?
+            """,
+            (snapshot_id, frontier_fingerprint_value),
+        ).fetchone()
+        if row is None:
+            raise ValueError("routed currentness subject does not exist")
+        dependency_digest = str(row[0])
+        frontier, _ = _frontier_from_json(
+            fingerprint=frontier_fingerprint_value,
+            frontier_json=str(row[1]),
+        )
+        latest = self.connection.execute(
+            """
+            SELECT snapshot_id
+            FROM portfolio_snapshots
+            WHERE dependency_digest = ?
+            ORDER BY snapshot_id DESC
+            LIMIT 1
+            """,
+            (dependency_digest,),
+        ).fetchone()
+        if latest is None:
+            return False
+        current_subjects = {
+            (
+                str(repository),
+                str(ref),
+                str(commit_sha),
+                str(path) or None,
+                None if digest is None else str(digest),
+            )
+            for repository, ref, path, commit_sha, digest
+            in self.connection.execute(
+                """
+                SELECT repository, ref, path, commit_sha, digest
+                FROM portfolio_observations
+                WHERE snapshot_id = ?
+                """,
+                (int(latest[0]),),
+            ).fetchall()
+        }
+        if frontier.subject.identity() not in current_subjects:
+            return False
+
+        target_repository = str(row[2])
+        target_ref = str(row[3])
+        target_head = None if row[4] is None else str(row[4])
+        if target_head is None or _SHA40.fullmatch(target_head) is None:
+            return False
+        observed_target_head = target_currentness_reader(
+            target_repository,
+            target_ref,
+        )
+        return observed_target_head == target_head
+
     def reconcile(
         self,
         *,
@@ -709,6 +786,7 @@ class SqliteQueueStore:
         evidence_sha256: str,
         reconciler: str,
         retry_allowed: bool,
+        target_currentness_reader: Callable[[str, str], str] | None,
         now: float,
     ) -> QueueReconciliationResult:
         if _SHA256.fullmatch(evidence_sha256) is None:
@@ -767,26 +845,43 @@ class SqliteQueueStore:
                     raise ValueError(
                         "routed queue item lacks its durable worker-route envelope"
                     )
-                if str(route_row[1]) != "RECEIPT_RECORDED":
+                route_state = str(route_row[1])
+                if route_state == "RECEIPT_RECORDED":
+                    receipt_class = str(route_row[2])
+                    compatible_receipts = {
+                        "CONFIRM_COMPLETE": {"SUCCEEDED"},
+                        "CONFIRM_SUPERSEDED": {"SUPERSEDED"},
+                        "CONFIRM_FAILED_DETERMINISTIC": {
+                            "FAILED_DETERMINISTIC"
+                        },
+                        "RELEASE_RETRY_READ_ONLY": {
+                            "FAILED_RETRYABLE",
+                            "OUTCOME_UNKNOWN",
+                        },
+                    }
+                    if receipt_class not in compatible_receipts[resolution]:
+                        raise ValueError(
+                            "worker receipt class is incompatible with reconciliation"
+                        )
+                elif route_state != "OUTCOME_UNKNOWN":
                     raise ValueError(
-                        "routed queue item requires a durable worker receipt"
+                        "routed queue item requires a durable worker receipt "
+                        "or ambiguous delivery reconciliation state"
                     )
-                receipt_class = str(route_row[2])
-                compatible_receipts = {
-                    "CONFIRM_COMPLETE": {"SUCCEEDED"},
-                    "CONFIRM_SUPERSEDED": {"SUPERSEDED"},
-                    "CONFIRM_FAILED_DETERMINISTIC": {
-                        "FAILED_DETERMINISTIC"
-                    },
-                    "RELEASE_RETRY_READ_ONLY": {
-                        "FAILED_RETRYABLE",
-                        "OUTCOME_UNKNOWN",
-                    },
-                }
-                if receipt_class not in compatible_receipts[resolution]:
-                    raise ValueError(
-                        "worker receipt class is incompatible with reconciliation"
-                    )
+
+                if resolution == "CONFIRM_COMPLETE":
+                    if target_currentness_reader is None:
+                        raise ValueError(
+                            "routed completion requires independent target currentness"
+                        )
+                    if not self.routed_subjects_current(
+                        snapshot_id=snapshot_id,
+                        frontier_fingerprint_value=frontier_fingerprint_value,
+                        target_currentness_reader=target_currentness_reader,
+                    ):
+                        raise ValueError(
+                            "routed completion currentness is stale"
+                        )
             attempt_generation = int(row[2])
             final_state = resolution_map[resolution]
             next_generation = attempt_generation
@@ -946,7 +1041,10 @@ class SqliteQueueStore:
             ).fetchone()
             if worker_route is None:
                 return True
-            return ReplayPolicy(str(worker_route[0])) is ReplayPolicy.SAFE
+            return ReplayPolicy(str(worker_route[0])) in {
+            ReplayPolicy.SAFE,
+            ReplayPolicy.RECONCILE_REQUIRED,
+        }
 
         worker_route = self.connection.execute(
             """
@@ -964,7 +1062,10 @@ class SqliteQueueStore:
         ).fetchone()
         if worker_route is None:
             return False
-        return ReplayPolicy(str(worker_route[0])) is ReplayPolicy.SAFE
+        return ReplayPolicy(str(worker_route[0])) in {
+            ReplayPolicy.SAFE,
+            ReplayPolicy.RECONCILE_REQUIRED,
+        }
 
     def summary(self) -> dict[str, object]:
         rows = self.connection.execute(
@@ -1335,6 +1436,8 @@ def reconcile_queue_item(
     resolution: str,
     evidence_sha256: str,
     reconciler: str,
+    token: str | None = None,
+    transport: GitHubTransport | None = None,
     clock: Callable[[], float] = time.time,
 ) -> QueueReconciliationResult:
     store = SqliteQueueStore(Path(state_db))
@@ -1352,6 +1455,11 @@ def reconcile_queue_item(
             evidence_sha256=evidence_sha256,
             reconciler=reconciler,
             retry_allowed=retry_allowed,
+            target_currentness_reader=(
+                (transport or GitHubRestTransport(token=token)).read_ref
+                if resolution == "CONFIRM_COMPLETE"
+                else None
+            ),
             now=clock(),
         )
     finally:
