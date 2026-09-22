@@ -221,6 +221,7 @@ def test_worker_delivery_claim_is_fenced_and_reclaim_increments_token(
         first = store.claim_next(
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-one",
             now=11.0,
             ttl=10.0,
@@ -234,6 +235,7 @@ def test_worker_delivery_claim_is_fenced_and_reclaim_increments_token(
         blocked = store.claim_next(
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-two",
             now=12.0,
             ttl=10.0,
@@ -244,6 +246,7 @@ def test_worker_delivery_claim_is_fenced_and_reclaim_increments_token(
         reclaimed = store.claim_next(
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-two",
             now=22.0,
             ttl=10.0,
@@ -262,6 +265,7 @@ def test_worker_delivery_requires_current_worker_registry_digest(tmp_path: Path)
         claim = store.claim_next(
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-one",
             now=11.0,
             ttl=10.0,
@@ -278,6 +282,7 @@ def test_stale_delivery_fence_cannot_record_receipt(tmp_path: Path):
         first = store.claim_next(
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-one",
             now=11.0,
             ttl=5.0,
@@ -287,6 +292,7 @@ def test_stale_delivery_fence_cannot_record_receipt(tmp_path: Path):
         second = store.claim_next(
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-two",
             now=17.0,
             ttl=10.0,
@@ -315,6 +321,7 @@ def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path
         claim = store.claim_next(
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-one",
             now=11.0,
             ttl=10.0,
@@ -326,6 +333,7 @@ def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path
             route_id=envelope.route_id,
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-one",
             expected_fencing_token=claim.fencing_token,
             receipt_class="SUCCEEDED",
@@ -336,6 +344,7 @@ def test_worker_receipt_is_idempotent_only_for_exact_same_receipt(tmp_path: Path
             route_id=envelope.route_id,
             worker_id="reviewer",
             invocation_route=envelope.invocation_route,
+            workers=(_worker(),),
             holder="worker-one",
             expected_fencing_token=claim.fencing_token,
             receipt_class="SUCCEEDED",
