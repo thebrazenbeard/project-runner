@@ -176,6 +176,25 @@ def _project_for_frontier(
     return project
 
 
+def _packet_sensitivity(
+    projects: tuple[ProjectDefinition, ...],
+    frontier: Frontier,
+) -> str:
+    consumer = _project_for_frontier(projects, frontier)
+    provider_owners = tuple(
+        project
+        for project in projects
+        if frontier.subject.repository in project.repositories
+    )
+    if not provider_owners:
+        return "PRIVATE"
+    if consumer.visibility == "private":
+        return "PRIVATE"
+    if any(project.visibility == "private" for project in provider_owners):
+        return "PRIVATE"
+    return "PUBLIC"
+
+
 def _expected_lineage(
     snapshot_id: int,
     fingerprint: str,
@@ -628,6 +647,7 @@ class SqliteQueueStore:
         claim: QueueClaim,
         *,
         worker_registry_digest: str,
+        packet_sensitivity: str,
         route: ReadOnlyWorkerRoute,
         now: float,
     ) -> WorkerRouteEnvelope:
@@ -673,6 +693,7 @@ class SqliteQueueStore:
                 frontier_fingerprint=claim.frontier_fingerprint,
                 queue_fencing_token=claim.fencing_token,
                 worker_registry_digest=worker_registry_digest,
+                packet_sensitivity=packet_sensitivity,
                 route=route,
                 target_repository=claim.target_repository,
                 target_ref=claim.target_ref,
@@ -1272,6 +1293,10 @@ def consume_next_queued_read_only_work(
             envelope = store.route_worker_claim(
                 claim,
                 worker_registry_digest=worker_registry_digest,
+                packet_sensitivity=_packet_sensitivity(
+                    project_tuple,
+                    claim.frontier,
+                ),
                 route=worker_route,
                 now=clock(),
             )
