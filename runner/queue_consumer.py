@@ -17,15 +17,39 @@ from .github_backend import (
     TargetAuthorityGrant,
 )
 from .m6_github import frontier_to_github_inspection_work
-from .models import ExactSubject, Frontier, ProjectDefinition, ProjectExecutionTarget
+from .models import (
+    ExactSubject,
+    Frontier,
+    ProjectDefinition,
+    ProjectExecutionTarget,
+    ReplayPolicy,
+    WorkerDefinition,
+)
 from .operator import InspectionRunResult, run_durable_github_read_inspection
 from .recursive_state import SqliteRecursiveWorkStore
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
+from .worker_routing import (
+    ReadOnlyWorkerRoute,
+    WorkerRouteEnvelope,
+    enqueue_worker_route_record,
+    ensure_worker_route_schema,
+    resolve_read_only_worker_route,
+)
 
 
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SUPPORTED_READ_ONLY_WORK_TYPES = frozenset(
+    {"INSPECT", "RETEST", "REREVIEW", "REQUALIFY"}
+)
 _TERMINAL_QUEUE_STATES = frozenset(
-    {"COMPLETE", "FAILED_DETERMINISTIC", "SUPERSEDED", "OUTCOME_UNKNOWN"}
+    {"COMPLETE", "FAILED_DETERMINISTIC", "SUPERSEDED"}
+)
+_RESERVED_QUEUE_STATES = frozenset(
+    {"CLAIMED", "OUTCOME_UNKNOWN", "ROUTED"}
+)
+_NONCLAIMABLE_QUEUE_STATES = _TERMINAL_QUEUE_STATES | frozenset(
+    {"OUTCOME_UNKNOWN", "ROUTED"}
 )
 
 
@@ -34,6 +58,7 @@ class QueueClaim:
     snapshot_id: int
     frontier_fingerprint: str
     frontier: Frontier
+    frontier_json: str
     holder: str
     fencing_token: int
     expires_at: float
@@ -41,6 +66,7 @@ class QueueClaim:
     target_ref: str
     target_head: str | None
     operator_lineage: str
+    attempt_generation: int
 
 
 @dataclass(frozen=True)
@@ -51,7 +77,19 @@ class QueueConsumptionResult:
     frontier_fingerprint: str | None = None
     fencing_token: int | None = None
     operator_status: str | None = None
+    route_id: str | None = None
     reason: str | None = None
+
+
+@dataclass(frozen=True)
+class QueueReconciliationResult:
+    snapshot_id: int
+    frontier_fingerprint: str
+    previous_state: str
+    final_state: str
+    fencing_token: int
+    attempt_generation: int
+    resolution: str
 
 
 _SCHEMA = """
@@ -66,6 +104,7 @@ CREATE TABLE IF NOT EXISTS portfolio_queue_claims (
     target_ref TEXT NOT NULL,
     target_head TEXT,
     operator_lineage TEXT NOT NULL,
+    attempt_generation INTEGER NOT NULL DEFAULT 1,
     reason TEXT,
     updated_at REAL NOT NULL,
     PRIMARY KEY (snapshot_id, frontier_fingerprint),
@@ -73,7 +112,34 @@ CREATE TABLE IF NOT EXISTS portfolio_queue_claims (
         REFERENCES portfolio_frontiers(snapshot_id, frontier_fingerprint)
         ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS portfolio_queue_reconciliations (
+    reconciliation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snapshot_id INTEGER NOT NULL,
+    frontier_fingerprint TEXT NOT NULL,
+    expected_fencing_token INTEGER NOT NULL,
+    previous_state TEXT NOT NULL,
+    resolution TEXT NOT NULL,
+    final_state TEXT NOT NULL,
+    evidence_sha256 TEXT NOT NULL,
+    reconciler TEXT NOT NULL,
+    reconciled_at REAL NOT NULL
+);
 """
+
+
+def _ensure_queue_columns(connection: sqlite3.Connection) -> None:
+    columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(portfolio_queue_claims)")
+    }
+    if "attempt_generation" not in columns:
+        connection.execute(
+            """
+            ALTER TABLE portfolio_queue_claims
+            ADD COLUMN attempt_generation INTEGER NOT NULL DEFAULT 1
+            """
+        )
 
 
 def _canonical_collision_keys(raw: str) -> frozenset[str]:
@@ -100,6 +166,28 @@ def _execution_target(
     return matches[0]
 
 
+def _project_for_frontier(
+    projects: tuple[ProjectDefinition, ...],
+    frontier: Frontier,
+) -> ProjectDefinition:
+    project = next((item for item in projects if item.id == frontier.project), None)
+    if project is None:
+        raise ValueError("queued frontier project is absent from current registry")
+    return project
+
+
+def _expected_lineage(
+    snapshot_id: int,
+    fingerprint: str,
+    attempt_generation: int,
+) -> str:
+    if attempt_generation <= 0:
+        raise ValueError("queue attempt generation must be positive")
+    if attempt_generation == 1:
+        return f"queue:{snapshot_id}:{fingerprint}"
+    return f"queue:{snapshot_id}:{fingerprint}:retry:{attempt_generation}"
+
+
 class SqliteQueueStore:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
@@ -112,22 +200,30 @@ class SqliteQueueStore:
         self.connection.execute("PRAGMA journal_mode=WAL")
         self.connection.execute("PRAGMA foreign_keys=ON")
         self.connection.executescript(_SCHEMA)
+        _ensure_queue_columns(self.connection)
+        ensure_worker_route_schema(self.connection)
 
     def close(self) -> None:
         self.connection.close()
 
-    def _claim_row(self, row, *, projects: tuple[ProjectDefinition, ...]) -> tuple[Frontier, ProjectExecutionTarget]:
+    def _claim_row(
+        self,
+        row,
+        *,
+        projects: tuple[ProjectDefinition, ...],
+    ) -> tuple[Frontier, ProjectExecutionTarget, str]:
         frontier_json = row[3]
         if frontier_json is None:
             raise ValueError("queued frontier predates reconstructable frontier state")
-        raw = json.loads(str(frontier_json))
+        frontier_json_text = str(frontier_json)
+        raw = json.loads(frontier_json_text)
         if not isinstance(raw, dict):
             raise ValueError("queued frontier payload is structurally invalid")
         frontier = Frontier.from_mapping(raw)
         if frontier_fingerprint(frontier) != str(row[0]):
             raise ValueError("queued frontier fingerprint does not match durable payload")
         target = _execution_target(projects, frontier)
-        return frontier, target
+        return frontier, target, frontier_json_text
 
     def claim_next(
         self,
@@ -138,7 +234,7 @@ class SqliteQueueStore:
         holder: str,
         now: float,
         ttl: float,
-        supported_work_types: frozenset[str] = frozenset({"INSPECT"}),
+        supported_work_types: frozenset[str] = _SUPPORTED_READ_ONLY_WORK_TYPES,
     ) -> QueueClaim | None:
         if not holder.strip():
             raise ValueError("queue lease holder is required")
@@ -173,7 +269,7 @@ class SqliteQueueStore:
                 JOIN portfolio_frontiers pf
                   ON pf.snapshot_id = qc.snapshot_id
                  AND pf.frontier_fingerprint = qc.frontier_fingerprint
-                WHERE qc.state IN ('CLAIMED', 'OUTCOME_UNKNOWN')
+                WHERE qc.state IN ('CLAIMED', 'OUTCOME_UNKNOWN', 'ROUTED')
                 """
             ).fetchall()
 
@@ -191,7 +287,8 @@ class SqliteQueueStore:
                     qc.target_repository,
                     qc.target_ref,
                     qc.target_head,
-                    qc.operator_lineage
+                    qc.operator_lineage,
+                    qc.attempt_generation
                 FROM portfolio_frontiers pf
                 LEFT JOIN portfolio_queue_claims qc
                   ON qc.snapshot_id = pf.snapshot_id
@@ -208,7 +305,7 @@ class SqliteQueueStore:
                 if work_type not in supported_work_types:
                     continue
                 prior_state = None if row[7] is None else str(row[7])
-                if prior_state in _TERMINAL_QUEUE_STATES:
+                if prior_state in _NONCLAIMABLE_QUEUE_STATES:
                     continue
                 if prior_state == "CLAIMED" and now < float(row[6]):
                     continue
@@ -227,7 +324,10 @@ class SqliteQueueStore:
                 if collision_keys & other_reserved_collisions:
                     continue
 
-                frontier, target = self._claim_row(row, projects=project_tuple)
+                frontier, target, frontier_json = self._claim_row(
+                    row,
+                    projects=project_tuple,
+                )
                 if target.repository not in {
                     repo
                     for project in project_tuple
@@ -246,7 +346,14 @@ class SqliteQueueStore:
                 previous_token = 0 if row[5] is None else int(row[5])
                 token = previous_token + 1
                 expires_at = now + ttl
-                expected_lineage = f"queue:{snapshot_id}:{fingerprint}"
+                attempt_generation = (
+                    1 if row[12] is None else int(row[12])
+                )
+                expected_lineage = _expected_lineage(
+                    snapshot_id,
+                    fingerprint,
+                    attempt_generation,
+                )
                 if row[11] is not None and str(row[11]) != expected_lineage:
                     raise ValueError(
                         "persisted queue lineage diverges from durable queue identity"
@@ -263,8 +370,9 @@ class SqliteQueueStore:
                             snapshot_id, frontier_fingerprint, holder,
                             fencing_token, expires_at, state,
                             target_repository, target_ref, target_head,
-                            operator_lineage, reason, updated_at
-                        ) VALUES (?, ?, ?, ?, ?, 'CLAIMED', ?, ?, ?, ?, NULL, ?)
+                            operator_lineage, attempt_generation,
+                            reason, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, 'CLAIMED', ?, ?, ?, ?, ?, NULL, ?)
                         """,
                         (
                             snapshot_id,
@@ -276,6 +384,7 @@ class SqliteQueueStore:
                             target.ref,
                             target_head,
                             lineage,
+                            attempt_generation,
                             now,
                         ),
                     )
@@ -302,6 +411,7 @@ class SqliteQueueStore:
                     snapshot_id=snapshot_id,
                     frontier_fingerprint=fingerprint,
                     frontier=frontier,
+                    frontier_json=frontier_json,
                     holder=holder,
                     fencing_token=token,
                     expires_at=expires_at,
@@ -309,6 +419,7 @@ class SqliteQueueStore:
                     target_ref=target.ref,
                     target_head=target_head,
                     operator_lineage=lineage,
+                    attempt_generation=attempt_generation,
                 )
 
             self.connection.commit()
@@ -381,9 +492,13 @@ class SqliteQueueStore:
         reason: str,
         now: float,
     ) -> None:
-        allowed = _TERMINAL_QUEUE_STATES | {"FAILED_RETRYABLE"}
+        allowed = _TERMINAL_QUEUE_STATES | {
+            "FAILED_RETRYABLE",
+            "OUTCOME_UNKNOWN",
+            "ROUTED",
+        }
         if state not in allowed:
-            raise ValueError("unsupported queue terminal state")
+            raise ValueError("unsupported queue finalization state")
         self.connection.execute("BEGIN IMMEDIATE")
         try:
             row = self.connection.execute(
@@ -421,6 +536,264 @@ class SqliteQueueStore:
         except BaseException:
             self.connection.rollback()
             raise
+
+    def route_worker_claim(
+        self,
+        claim: QueueClaim,
+        *,
+        worker_registry_digest: str,
+        route: ReadOnlyWorkerRoute,
+        now: float,
+    ) -> WorkerRouteEnvelope:
+        if claim.target_head is None:
+            raise ValueError("worker route requires an exact bound target head")
+        if _SHA256.fullmatch(worker_registry_digest) is None:
+            raise ValueError("worker registry digest must be lowercase SHA-256")
+
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.connection.execute(
+                """
+                SELECT holder, fencing_token, state, expires_at
+                FROM portfolio_queue_claims
+                WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                """,
+                (claim.snapshot_id, claim.frontier_fingerprint),
+            ).fetchone()
+            if row is None:
+                raise ValueError("queue claim disappeared")
+            if (
+                str(row[0]) != claim.holder
+                or int(row[1]) != claim.fencing_token
+                or str(row[2]) != "CLAIMED"
+                or now >= float(row[3])
+            ):
+                raise ValueError("queue fence no longer authorizes worker routing")
+
+            envelope = enqueue_worker_route_record(
+                self.connection,
+                snapshot_id=claim.snapshot_id,
+                frontier_fingerprint=claim.frontier_fingerprint,
+                queue_fencing_token=claim.fencing_token,
+                worker_registry_digest=worker_registry_digest,
+                route=route,
+                target_repository=claim.target_repository,
+                target_ref=claim.target_ref,
+                target_head=claim.target_head,
+                frontier_json=claim.frontier_json,
+                now=now,
+            )
+            self.connection.execute(
+                """
+                UPDATE portfolio_queue_claims
+                SET state = 'ROUTED', reason = ?, expires_at = 0, updated_at = ?
+                WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                """,
+                (
+                    f"durably routed as {envelope.route_id}",
+                    now,
+                    claim.snapshot_id,
+                    claim.frontier_fingerprint,
+                ),
+            )
+            self.connection.commit()
+            return envelope
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def reconcile(
+        self,
+        *,
+        snapshot_id: int,
+        frontier_fingerprint_value: str,
+        expected_fencing_token: int,
+        resolution: str,
+        evidence_sha256: str,
+        reconciler: str,
+        retry_allowed: bool,
+        now: float,
+    ) -> QueueReconciliationResult:
+        if _SHA256.fullmatch(evidence_sha256) is None:
+            raise ValueError("reconciliation evidence must be lowercase SHA-256")
+        if not reconciler.strip():
+            raise ValueError("reconciler is required")
+        resolution_map = {
+            "CONFIRM_COMPLETE": "COMPLETE",
+            "CONFIRM_SUPERSEDED": "SUPERSEDED",
+            "CONFIRM_FAILED_DETERMINISTIC": "FAILED_DETERMINISTIC",
+            "RELEASE_RETRY_READ_ONLY": "FAILED_RETRYABLE",
+        }
+        if resolution not in resolution_map:
+            raise ValueError("unsupported queue reconciliation resolution")
+        if resolution == "RELEASE_RETRY_READ_ONLY" and not retry_allowed:
+            raise ValueError("queue route is not qualified for read-only safe replay")
+
+        self.connection.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.connection.execute(
+                """
+                SELECT state, fencing_token, attempt_generation
+                FROM portfolio_queue_claims
+                WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                """,
+                (snapshot_id, frontier_fingerprint_value),
+            ).fetchone()
+            if row is None:
+                raise ValueError("queue reconciliation subject does not exist")
+            previous_state = str(row[0])
+            if previous_state not in {"OUTCOME_UNKNOWN", "ROUTED"}:
+                raise ValueError(
+                    "queue reconciliation requires OUTCOME_UNKNOWN or ROUTED state"
+                )
+            fencing_token = int(row[1])
+            if fencing_token != expected_fencing_token:
+                raise ValueError("queue reconciliation fencing token mismatch")
+            attempt_generation = int(row[2])
+            final_state = resolution_map[resolution]
+            next_generation = attempt_generation
+
+            if resolution == "RELEASE_RETRY_READ_ONLY":
+                next_generation = attempt_generation + 1
+                lineage = _expected_lineage(
+                    snapshot_id,
+                    frontier_fingerprint_value,
+                    next_generation,
+                )
+                self.connection.execute(
+                    """
+                    UPDATE portfolio_queue_claims
+                    SET holder = NULL, expires_at = 0,
+                        state = 'FAILED_RETRYABLE',
+                        operator_lineage = ?,
+                        attempt_generation = ?,
+                        reason = ?, updated_at = ?
+                    WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                    """,
+                    (
+                        lineage,
+                        next_generation,
+                        "explicit reconciliation released read-only retry",
+                        now,
+                        snapshot_id,
+                        frontier_fingerprint_value,
+                    ),
+                )
+            else:
+                self.connection.execute(
+                    """
+                    UPDATE portfolio_queue_claims
+                    SET holder = NULL, expires_at = 0,
+                        state = ?, reason = ?, updated_at = ?
+                    WHERE snapshot_id = ? AND frontier_fingerprint = ?
+                    """,
+                    (
+                        final_state,
+                        f"explicit reconciliation: {resolution}",
+                        now,
+                        snapshot_id,
+                        frontier_fingerprint_value,
+                    ),
+                )
+
+            self.connection.execute(
+                """
+                INSERT INTO portfolio_queue_reconciliations(
+                    snapshot_id, frontier_fingerprint,
+                    expected_fencing_token, previous_state,
+                    resolution, final_state, evidence_sha256,
+                    reconciler, reconciled_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    snapshot_id,
+                    frontier_fingerprint_value,
+                    expected_fencing_token,
+                    previous_state,
+                    resolution,
+                    final_state,
+                    evidence_sha256,
+                    reconciler,
+                    now,
+                ),
+            )
+            self.connection.commit()
+            return QueueReconciliationResult(
+                snapshot_id=snapshot_id,
+                frontier_fingerprint=frontier_fingerprint_value,
+                previous_state=previous_state,
+                final_state=final_state,
+                fencing_token=fencing_token,
+                attempt_generation=next_generation,
+                resolution=resolution,
+            )
+        except BaseException:
+            self.connection.rollback()
+            raise
+
+    def retry_allowed(
+        self,
+        *,
+        snapshot_id: int,
+        frontier_fingerprint_value: str,
+        expected_fencing_token: int,
+    ) -> bool:
+        row = self.connection.execute(
+            """
+            SELECT pf.frontier_json, qc.state
+            FROM portfolio_queue_claims qc
+            JOIN portfolio_frontiers pf
+              ON pf.snapshot_id = qc.snapshot_id
+             AND pf.frontier_fingerprint = qc.frontier_fingerprint
+            WHERE qc.snapshot_id = ? AND qc.frontier_fingerprint = ?
+              AND qc.fencing_token = ?
+            """,
+            (
+                snapshot_id,
+                frontier_fingerprint_value,
+                expected_fencing_token,
+            ),
+        ).fetchone()
+        if row is None:
+            return False
+        raw = json.loads(str(row[0]))
+        frontier = Frontier.from_mapping(raw)
+        if frontier.work_type == "INSPECT":
+            worker_route = self.connection.execute(
+                """
+                SELECT replay_policy
+                FROM worker_route_outbox
+                WHERE snapshot_id = ?
+                  AND frontier_fingerprint = ?
+                  AND queue_fencing_token = ?
+                """,
+                (
+                    snapshot_id,
+                    frontier_fingerprint_value,
+                    expected_fencing_token,
+                ),
+            ).fetchone()
+            if worker_route is None:
+                return True
+            return ReplayPolicy(str(worker_route[0])) is ReplayPolicy.SAFE
+
+        worker_route = self.connection.execute(
+            """
+            SELECT replay_policy
+            FROM worker_route_outbox
+            WHERE snapshot_id = ?
+              AND frontier_fingerprint = ?
+              AND queue_fencing_token = ?
+            """,
+            (
+                snapshot_id,
+                frontier_fingerprint_value,
+                expected_fencing_token,
+            ),
+        ).fetchone()
+        if worker_route is None:
+            return False
+        return ReplayPolicy(str(worker_route[0])) is ReplayPolicy.SAFE
 
     def summary(self) -> dict[str, object]:
         rows = self.connection.execute(
@@ -546,11 +919,13 @@ def _queue_state_for_operator(status: WorkUnitStatus) -> str:
     return "OUTCOME_UNKNOWN"
 
 
-def consume_next_queued_inspection(
+def consume_next_queued_read_only_work(
     *,
     projects: Iterable[ProjectDefinition],
+    workers: Iterable[WorkerDefinition],
     registry_digest: str,
     dependency_digest: str,
+    worker_registry_digest: str,
     state_db: Path,
     holder: str,
     lease_ttl: float,
@@ -559,6 +934,7 @@ def consume_next_queued_inspection(
     clock: Callable[[], float] = time.time,
 ) -> QueueConsumptionResult:
     project_tuple = tuple(projects)
+    worker_tuple = tuple(workers)
     effective_transport = transport or GitHubRestTransport(token=token)
     store = SqliteQueueStore(Path(state_db))
     try:
@@ -574,23 +950,67 @@ def consume_next_queued_inspection(
             return QueueConsumptionResult(
                 claimed=False,
                 queue_state="NO_WORK",
-                reason="no READY queued INSPECT frontier for the current configuration",
+                reason=(
+                    "no READY queued read-only frontier for the current configuration"
+                ),
             )
 
-        try:
-            if claim.target_head is None:
-                head = _resolve_target_head(
-                    repository=claim.target_repository,
-                    ref=claim.target_ref,
-                    token=token,
-                    transport=effective_transport,
-                )
-                claim = store.bind_target_head(
-                    claim,
-                    target_head=head,
-                    now=clock(),
-                )
+        if claim.target_head is None:
+            head = _resolve_target_head(
+                repository=claim.target_repository,
+                ref=claim.target_ref,
+                token=token,
+                transport=effective_transport,
+            )
+            claim = store.bind_target_head(
+                claim,
+                target_head=head,
+                now=clock(),
+            )
 
+        project = _project_for_frontier(project_tuple, claim.frontier)
+        try:
+            worker_route = resolve_read_only_worker_route(
+                project=project,
+                frontier=claim.frontier,
+                workers=worker_tuple,
+            )
+        except ValueError:
+            store.finalize(
+                claim,
+                state="FAILED_RETRYABLE",
+                reason="read-only worker route is not currently authorized",
+                now=clock(),
+            )
+            raise
+
+        if worker_route is not None:
+            envelope = store.route_worker_claim(
+                claim,
+                worker_registry_digest=worker_registry_digest,
+                route=worker_route,
+                now=clock(),
+            )
+            return QueueConsumptionResult(
+                claimed=True,
+                queue_state="ROUTED",
+                snapshot_id=claim.snapshot_id,
+                frontier_fingerprint=claim.frontier_fingerprint,
+                fencing_token=claim.fencing_token,
+                route_id=envelope.route_id,
+                reason="durable read-only worker route created",
+            )
+
+        if claim.frontier.work_type != "INSPECT":
+            store.finalize(
+                claim,
+                state="FAILED_DETERMINISTIC",
+                reason="non-INSPECT work lacks an explicit worker route",
+                now=clock(),
+            )
+            raise ValueError("non-INSPECT work lacks an explicit worker route")
+
+        try:
             existing = _operator_record(
                 state_db=Path(state_db),
                 claim=claim,
@@ -641,8 +1061,8 @@ def consume_next_queued_inspection(
                 ),
                 authorized_provider_repositories=tuple(
                     repository
-                    for project in project_tuple
-                    for repository in project.repositories
+                    for project_item in project_tuple
+                    for repository in project_item.repositories
                 ),
                 token=token,
                 transport=effective_transport,
@@ -703,6 +1123,65 @@ def consume_next_queued_inspection(
                 ):
                     raise
             raise
+    finally:
+        store.close()
+
+
+def consume_next_queued_inspection(
+    *,
+    projects: Iterable[ProjectDefinition],
+    registry_digest: str,
+    dependency_digest: str,
+    state_db: Path,
+    holder: str,
+    lease_ttl: float,
+    token: str | None,
+    transport: GitHubTransport | None = None,
+    clock: Callable[[], float] = time.time,
+) -> QueueConsumptionResult:
+    return consume_next_queued_read_only_work(
+        projects=projects,
+        workers=(),
+        registry_digest=registry_digest,
+        dependency_digest=dependency_digest,
+        worker_registry_digest="0" * 64,
+        state_db=state_db,
+        holder=holder,
+        lease_ttl=lease_ttl,
+        token=token,
+        transport=transport,
+        clock=clock,
+    )
+
+
+def reconcile_queue_item(
+    *,
+    state_db: Path,
+    snapshot_id: int,
+    frontier_fingerprint_value: str,
+    expected_fencing_token: int,
+    resolution: str,
+    evidence_sha256: str,
+    reconciler: str,
+    clock: Callable[[], float] = time.time,
+) -> QueueReconciliationResult:
+    store = SqliteQueueStore(Path(state_db))
+    try:
+        retry_allowed = store.retry_allowed(
+            snapshot_id=snapshot_id,
+            frontier_fingerprint_value=frontier_fingerprint_value,
+            expected_fencing_token=expected_fencing_token,
+        )
+        return store.reconcile(
+            snapshot_id=snapshot_id,
+            frontier_fingerprint_value=frontier_fingerprint_value,
+            expected_fencing_token=expected_fencing_token,
+            resolution=resolution,
+            evidence_sha256=evidence_sha256,
+            reconciler=reconciler,
+            retry_allowed=retry_allowed,
+            now=clock(),
+        )
     finally:
         store.close()
 
