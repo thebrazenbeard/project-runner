@@ -358,6 +358,109 @@ class SqliteWorkerRouteStore:
             self.connection.rollback()
             raise
 
+    def _provider_subject_current(
+        self,
+        *,
+        snapshot_id: int,
+        frontier_json: str,
+    ) -> bool:
+        snapshot = self.connection.execute(
+            """
+            SELECT dependency_digest
+            FROM portfolio_snapshots
+            WHERE snapshot_id = ?
+            """,
+            (snapshot_id,),
+        ).fetchone()
+        if snapshot is None:
+            raise ValueError("worker route snapshot is absent")
+        dependency_digest = str(snapshot[0])
+        latest = self.connection.execute(
+            """
+            SELECT snapshot_id
+            FROM portfolio_snapshots
+            WHERE dependency_digest = ?
+            ORDER BY snapshot_id DESC
+            LIMIT 1
+            """,
+            (dependency_digest,),
+        ).fetchone()
+        if latest is None:
+            return False
+
+        raw = json.loads(frontier_json)
+        if not isinstance(raw, dict):
+            raise ValueError("worker route frontier payload is structurally invalid")
+        frontier = Frontier.from_mapping(raw)
+        current_subjects = {
+            (
+                str(repository),
+                str(ref),
+                str(commit_sha),
+                str(path) or None,
+                None if digest is None else str(digest),
+            )
+            for repository, ref, path, commit_sha, digest
+            in self.connection.execute(
+                """
+                SELECT repository, ref, path, commit_sha, digest
+                FROM portfolio_observations
+                WHERE snapshot_id = ?
+                """,
+                (int(latest[0]),),
+            ).fetchall()
+        }
+        return frontier.subject.identity() in current_subjects
+
+    def _supersede_stale_route(
+        self,
+        *,
+        route_id: str,
+        snapshot_id: int,
+        frontier_fingerprint: str,
+        queue_fencing_token: int,
+        now: float,
+    ) -> None:
+        self.connection.execute(
+            """
+            UPDATE worker_route_outbox
+            SET state = 'SUPERSEDED',
+                delivery_expires_at = 0,
+                updated_at = ?
+            WHERE route_id = ?
+            """,
+            (now, route_id),
+        )
+        has_queue_table = self.connection.execute(
+            """
+            SELECT 1
+            FROM sqlite_master
+            WHERE type = 'table' AND name = 'portfolio_queue_claims'
+            """
+        ).fetchone() is not None
+        if has_queue_table:
+            self.connection.execute(
+                """
+                UPDATE portfolio_queue_claims
+                SET state = 'SUPERSEDED',
+                    holder = NULL,
+                    expires_at = 0,
+                    reason = ?,
+                    updated_at = ?
+                WHERE snapshot_id = ?
+                  AND frontier_fingerprint = ?
+                  AND fencing_token = ?
+                  AND state = 'ROUTED'
+                """,
+                (
+                    "worker route provider subject is no longer current",
+                    now,
+                    snapshot_id,
+                    frontier_fingerprint,
+                    queue_fencing_token,
+                ),
+            )
+
     def claim_next(
         self,
         *,
@@ -407,6 +510,18 @@ class SqliteWorkerRouteStore:
                     raise ValueError(
                         "worker route replay policy diverges from current registry"
                     )
+                if not self._provider_subject_current(
+                    snapshot_id=int(row[10]),
+                    frontier_json=str(row[9]),
+                ):
+                    self._supersede_stale_route(
+                        route_id=str(row[0]),
+                        snapshot_id=int(row[10]),
+                        frontier_fingerprint=str(row[11]),
+                        queue_fencing_token=int(row[12]),
+                        now=now,
+                    )
+                    continue
                 if state == "CLAIMED" and now < float(row[4]):
                     continue
                 if (
