@@ -163,22 +163,19 @@ class SqliteQueueStore:
                 return None
             snapshot_id = int(snapshot[0])
 
-            active_rows = self.connection.execute(
+            reservation_rows = self.connection.execute(
                 """
-                SELECT pf.frontier_fingerprint, pf.collision_keys_json
+                SELECT
+                    qc.snapshot_id,
+                    pf.frontier_fingerprint,
+                    pf.collision_keys_json
                 FROM portfolio_queue_claims qc
                 JOIN portfolio_frontiers pf
                   ON pf.snapshot_id = qc.snapshot_id
                  AND pf.frontier_fingerprint = qc.frontier_fingerprint
-                WHERE qc.state = 'CLAIMED' AND qc.expires_at > ?
-                """,
-                (now,),
+                WHERE qc.state IN ('CLAIMED', 'OUTCOME_UNKNOWN')
+                """
             ).fetchall()
-            active_collisions = {
-                str(item)
-                for _fingerprint, raw_keys in active_rows
-                for item in _canonical_collision_keys(str(raw_keys))
-            }
 
             candidates = self.connection.execute(
                 """
@@ -217,12 +214,17 @@ class SqliteQueueStore:
                     continue
 
                 collision_keys = _canonical_collision_keys(str(row[2]))
-                own_live = (
-                    prior_state == "CLAIMED"
-                    and now < float(row[6])
-                )
-                conflicts = collision_keys & active_collisions
-                if conflicts and not own_live:
+                other_reserved_collisions = {
+                    str(item)
+                    for reserved_snapshot, reserved_fingerprint, raw_keys
+                    in reservation_rows
+                    if not (
+                        int(reserved_snapshot) == snapshot_id
+                        and str(reserved_fingerprint) == fingerprint
+                    )
+                    for item in _canonical_collision_keys(str(raw_keys))
+                }
+                if collision_keys & other_reserved_collisions:
                     continue
 
                 frontier, target = self._claim_row(row, projects=project_tuple)
@@ -233,6 +235,13 @@ class SqliteQueueStore:
                     for repo in project.repositories
                 }:
                     raise ValueError("execution target escaped project repository scope")
+                if row[8] is not None and (
+                    str(row[8]) != target.repository
+                    or str(row[9]) != target.ref
+                ):
+                    raise ValueError(
+                        "persisted queue target diverges from current registry binding"
+                    )
 
                 previous_token = 0 if row[5] is None else int(row[5])
                 token = previous_token + 1
@@ -376,7 +385,7 @@ class SqliteQueueStore:
         try:
             row = self.connection.execute(
                 """
-                SELECT holder, fencing_token, state
+                SELECT holder, fencing_token, state, expires_at
                 FROM portfolio_queue_claims
                 WHERE snapshot_id = ? AND frontier_fingerprint = ?
                 """,
@@ -388,6 +397,7 @@ class SqliteQueueStore:
                 str(row[0]) != claim.holder
                 or int(row[1]) != claim.fencing_token
                 or str(row[2]) != "CLAIMED"
+                or now >= float(row[3])
             ):
                 raise ValueError("queue fence no longer authorizes finalization")
             self.connection.execute(
