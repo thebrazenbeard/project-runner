@@ -238,9 +238,10 @@ class SqlitePortfolioStore:
         ).fetchone()
         return None if row is None else int(row[0])
 
-    def load_unresolved_frontiers(
+    def load_unresolved_frontiers_for_dependency(
         self,
-        snapshot_id: int,
+        *,
+        dependency_digest: str,
     ) -> tuple[Frontier, ...]:
         has_claim_table = self.connection.execute(
             """
@@ -257,27 +258,39 @@ class SqlitePortfolioStore:
                     pf.frontier_json,
                     qc.state
                 FROM portfolio_frontiers pf
+                JOIN portfolio_snapshots ps
+                  ON ps.snapshot_id = pf.snapshot_id
                 LEFT JOIN portfolio_queue_claims qc
                   ON qc.snapshot_id = pf.snapshot_id
                  AND qc.frontier_fingerprint = pf.frontier_fingerprint
-                WHERE pf.snapshot_id = ?
-                ORDER BY pf.frontier_fingerprint
+                WHERE ps.dependency_digest = ?
+                ORDER BY pf.snapshot_id DESC, pf.frontier_fingerprint
                 """,
-                (snapshot_id,),
+                (dependency_digest,),
             ).fetchall()
         else:
             rows = self.connection.execute(
                 """
-                SELECT frontier_fingerprint, frontier_json, NULL
-                FROM portfolio_frontiers
-                WHERE snapshot_id = ?
-                ORDER BY frontier_fingerprint
+                SELECT
+                    pf.frontier_fingerprint,
+                    pf.frontier_json,
+                    NULL
+                FROM portfolio_frontiers pf
+                JOIN portfolio_snapshots ps
+                  ON ps.snapshot_id = pf.snapshot_id
+                WHERE ps.dependency_digest = ?
+                ORDER BY pf.snapshot_id DESC, pf.frontier_fingerprint
                 """,
-                (snapshot_id,),
+                (dependency_digest,),
             ).fetchall()
 
+        seen: set[str] = set()
         result: list[Frontier] = []
         for fingerprint, frontier_json, queue_state in rows:
+            fingerprint_text = str(fingerprint)
+            if fingerprint_text in seen:
+                continue
+            seen.add(fingerprint_text)
             if queue_state is not None and str(queue_state) not in {
                 "FAILED_RETRYABLE",
             }:
@@ -288,7 +301,7 @@ class SqlitePortfolioStore:
             if not isinstance(raw, dict):
                 raise ValueError("stored frontier payload is structurally invalid")
             frontier = Frontier.from_mapping(raw)
-            if frontier_fingerprint(frontier) != str(fingerprint):
+            if frontier_fingerprint(frontier) != fingerprint_text:
                 raise ValueError(
                     "stored frontier fingerprint does not match durable payload"
                 )
@@ -857,8 +870,8 @@ def collect_and_schedule_portfolio(
             }
             carried = tuple(
                 frontier
-                for frontier in store.load_unresolved_frontiers(
-                    previous_dependency_snapshot_id
+                for frontier in store.load_unresolved_frontiers_for_dependency(
+                    dependency_digest=dependency_digest
                 )
                 if _frontier_is_current(frontier, current)
                 and set(frontier.dependencies).issubset(
