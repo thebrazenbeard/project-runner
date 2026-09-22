@@ -18,6 +18,11 @@ projects:
   - work_type: INSPECT
     repository: thebrazenbeard/project-runner
     ref: main
+  - work_type: REREVIEW
+    repository: thebrazenbeard/project-runner
+    ref: main
+    worker_id: project-runner-reference-read-worker
+    worker_route: RUNNER_ACTION_PULL
 - id: chat-communication-bus
   name: Chat Communication Bus
   visibility: private
