@@ -82,7 +82,7 @@ Project Runner can now collect registered dependency refs itself and persist the
       --dependencies topology/dependencies.yaml \
       --state-db .project-runner/project-runner.sqlite3
 
-The first cycle for an exact project-registry/dependency-registry/worker-registry digest tuple establishes a baseline and schedules nothing. Later compatible cycles compare against that durable predecessor, derive invalidations/frontiers with the existing scheduling rules, and atomically persist the new snapshot plus READY/BLOCKED scheduler decisions.
+The first cycle for a dependency-topology digest establishes an observation baseline and schedules nothing. Project- or worker-registry changes on the same topology preserve observation continuity: unresolved exact-subject work is recovered from durable history, re-evaluated under current capabilities/scheduling/target/worker-route authority, and carried forward when still relevant. Later cycles atomically persist the new snapshot plus READY/BLOCKED scheduler decisions.
 
     project-runner portfolio-status \
       --state-db .project-runner/project-runner.sqlite3
@@ -95,7 +95,7 @@ The durable queue now has a bounded read-only consumer. Projects declare exact `
       --dependencies topology/dependencies.yaml \
       --state-db .project-runner/project-runner.sqlite3
 
-Queue claims use monotonic fencing and collision-domain exclusion. The consumer binds the declared target ref to an exact current commit and persists that binding. INSPECT may use the built-in durable GitHub read operator. Other supported read-only work types require an explicitly bound worker whose exact route is VERIFIED and whose route contract is READ_ONLY. Reclaimed INSPECT claims reconcile existing terminal operator state without re-execution; nonterminal durable operator state becomes `OUTCOME_UNKNOWN` rather than being blindly retried.
+Queue claims use monotonic fencing and collision-domain exclusion. Unchanged observation cycles do not erase pending queue work; compatible historical rows remain claimable only while their full exact provider subject is still current. The consumer binds the declared target ref to an exact current commit and persists that binding. INSPECT may use the built-in durable GitHub read operator. Other supported read-only work types require an explicitly bound worker whose exact route is VERIFIED and whose route contract is READ_ONLY. Reclaimed INSPECT claims reconcile existing terminal operator state without re-execution; nonterminal durable operator state becomes `OUTCOME_UNKNOWN` rather than being blindly retried.
 
     project-runner queue-status \
       --state-db .project-runner/project-runner.sqlite3
