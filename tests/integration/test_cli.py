@@ -28,12 +28,13 @@ def test_validate_command_returns_zero(capsys):
     assert "registries valid" in capsys.readouterr().out.lower()
 
 
-def test_inventory_reports_twelve_registered_workers(capsys):
+def test_inventory_reports_reference_worker_and_twelve_registered_workers(capsys):
     assert main(["inventory"]) == 0
     out = capsys.readouterr().out
     assert "projects: 15" in out.lower()
-    assert "workers: 12" in out.lower()
+    assert "workers: 13" in out.lower()
     assert "registered: 12" in out.lower()
+    assert "executable: 1" in out.lower()
 
 
 def test_inventory_uses_explicit_external_project_registry(tmp_path, monkeypatch, capsys):
