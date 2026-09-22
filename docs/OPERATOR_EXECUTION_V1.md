@@ -56,13 +56,13 @@ These are design references, not runtime dependencies.
 3. requires an exact dependency ref;
 4. derives exact READ_REF grants from those validated selectors and performs only read-only GitHub ref reads;
 5. writes a complete currentness snapshot only after every required read succeeds;
-6. treats the first cycle for an exact project-registry + dependency-registry + worker-registry digest tuple as a baseline;
+6. treats only the first cycle for a dependency-topology digest as an observation baseline; project/worker registry changes reuse compatible observations and re-evaluate unresolved exact-subject work;
 7. compares later compatible cycles to their latest durable predecessor;
 8. derives invalidations, frontiers, scheduling eligibility, and priority using the existing M6 logic;
 9. commits the new snapshot and all scheduler decisions in one `BEGIN IMMEDIATE` transaction with a predecessor CAS;
 10. queues READY frontiers and persists blocked frontiers without executing either.
 
-A failure during collection does not advance durable currentness. A concurrent cycle that advances the same configuration first causes the stale cycle to fail rather than overwrite or double-schedule from an obsolete predecessor.
+A failure during collection does not advance durable currentness. A concurrent cycle that advances the same exact scheduling configuration first causes the stale cycle to fail rather than overwrite or double-schedule from an obsolete predecessor. Unresolved unclaimed/retryable frontiers are recovered from durable history for the same dependency topology, filtered against the current exact subject, and re-evaluated under current project/worker authority.
 
 Path-prefix dependencies are conservative in V1: currentness is collected at the exact ref head and the selector path-prefix is bound into the observation locus. A ref-head change can therefore over-invalidate a path-scoped dependency, but it cannot silently treat a changed Git commit as unchanged.
 
@@ -86,7 +86,7 @@ Scheduler readiness now includes target availability. A schedulable/capable fron
 8. if matching durable operator state exists but is nonterminal, records `OUTCOME_UNKNOWN` and refuses blind re-execution;
 9. otherwise invokes the existing durable read-only inspection operator and persists the queue outcome under the exact queue fence.
 
-A new currentness snapshot supersedes older unclaimed queue visibility: queue consumption selects work only from the latest compatible snapshot. This prevents an old queued invalidation from running after a later snapshot has already established newer portfolio truth.
+An unchanged currentness snapshot does not erase pending work. Pending semantic frontiers are carried forward, and queue consumption can recover compatible historical queue rows when their exact provider subject is still current. If a newer provider subject exists, the older subject is no longer claimable. Because this V1 execution ceiling is read-only, stale OUTCOME_UNKNOWN/ROUTED reads remain auditable but do not reserve the collision domain against newer exact-subject read-only work.
 
 `project-runner queue-status` exposes aggregate claim states. External/private queue failures collapse to generic errors rather than echoing private registry or topology details.
 
