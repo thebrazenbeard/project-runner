@@ -1064,3 +1064,200 @@ def test_cli_reconcile_queue_releases_safe_read_retry(tmp_path, capsys):
     assert payload["final_state"] == "FAILED_RETRYABLE"
     assert payload["attempt_generation"] == 2
     assert payload["frontier_fingerprint"] == claim.frontier_fingerprint
+
+
+
+def test_cli_worker_route_pull_and_receipt_round_trip(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from types import SimpleNamespace
+
+    from runner.models import Frontier, ProjectDefinition, WorkerDefinition
+    from runner.worker_routing import (
+        SqliteWorkerRouteStore,
+        resolve_read_only_worker_route,
+    )
+
+    worker = WorkerDefinition.from_mapping(
+        {
+            "id": "reviewer",
+            "name": "Reviewer",
+            "worker_type": "OPENAI_AGENT",
+            "lifecycle": "EXECUTABLE",
+            "locators": {"model": "reviewer-model"},
+            "roles": ["review"],
+            "routes": {"OPENAI_AGENT_API": "VERIFIED"},
+            "route_contracts": {
+                "OPENAI_AGENT_API": {
+                    "effect_class": "READ_ONLY",
+                    "replay_policy": "SAFE",
+                }
+            },
+            "reconstruction": {
+                "repository": "example/workers",
+                "path": "reviewer.md",
+                "commit": "f" * 40,
+            },
+        }
+    )
+    project = ProjectDefinition.from_mapping(
+        {
+            "id": "consumer",
+            "name": "Consumer",
+            "visibility": "public",
+            "repositories": ["example/consumer"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "consumer",
+            "scheduling_state": "SCHEDULABLE",
+            "execution_targets": [
+                {
+                    "work_type": "REREVIEW",
+                    "repository": "example/consumer",
+                    "ref": "review",
+                    "worker_id": "reviewer",
+                    "worker_route": "OPENAI_AGENT_API",
+                }
+            ],
+        }
+    )
+    frontier = Frontier.from_mapping(
+        {
+            "id": "frontier-review",
+            "project": "consumer",
+            "subject": {
+                "repository": "example/provider",
+                "ref": "main",
+                "commit": "b" * 40,
+            },
+            "work_type": "REREVIEW",
+            "reason": "provider changed",
+            "dependencies": ["provider-review"],
+            "required_capabilities": ["analyze"],
+            "collision_keys": ["project:consumer"],
+            "cost_class": "SMALL",
+            "priority_inputs": {
+                "fanout": 1,
+                "blocked_downstream": 0,
+                "staleness_risk": 1,
+                "failure_severity": 0,
+                "declared_priority": 0,
+                "cost": 1,
+                "authority_available": 1,
+                "scheduling_eligible": 1,
+                "executable_now": 1,
+            },
+            "status": "READY",
+        }
+    )
+    route = resolve_read_only_worker_route(
+        project=project,
+        frontier=frontier,
+        workers=(worker,),
+    )
+    assert route is not None
+
+    state_db = tmp_path / "worker-cli.sqlite3"
+    store = SqliteWorkerRouteStore(state_db)
+    envelope = store.enqueue(
+        snapshot_id=2,
+        frontier_fingerprint="a" * 64,
+        queue_fencing_token=3,
+        worker_registry_digest="1" * 64,
+        route=route,
+        target_repository="example/consumer",
+        target_ref="review",
+        target_head="c" * 40,
+        frontier_json=json.dumps(
+            {
+                "id": frontier.id,
+                "project": frontier.project,
+                "subject": {
+                    "repository": frontier.subject.repository,
+                    "ref": frontier.subject.ref,
+                    "commit": frontier.subject.commit,
+                    "path": frontier.subject.path,
+                    "digest": frontier.subject.digest,
+                },
+                "work_type": frontier.work_type,
+                "reason": frontier.reason,
+                "dependencies": list(frontier.dependencies),
+                "required_capabilities": list(
+                    frontier.required_capabilities
+                ),
+                "collision_keys": list(frontier.collision_keys),
+                "cost_class": frontier.cost_class.value,
+                "priority_inputs": dict(frontier.priority_inputs),
+                "status": frontier.status.value,
+            },
+            sort_keys=True,
+        ),
+        now=1.0,
+    )
+    store.close()
+
+    monkeypatch.setattr(
+        cli_module,
+        "_load_worker_registry_snapshot",
+        lambda: SimpleNamespace(
+            workers=(worker,),
+            sha256="1" * 64,
+        ),
+    )
+    payload_out = tmp_path / "worker-packet.json"
+
+    assert main(
+        [
+            "claim-worker-route",
+            "--worker-id",
+            "reviewer",
+            "--route",
+            "OPENAI_AGENT_API",
+            "--holder",
+            "cli-worker",
+            "--lease-ttl",
+            "60",
+            "--payload-out",
+            str(payload_out),
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+    claimed = json.loads(capsys.readouterr().out)
+    assert claimed["claimed"] is True
+    assert claimed["route_id"] == envelope.route_id
+    assert claimed["delivery_fencing_token"] == 1
+    packet = json.loads(payload_out.read_text(encoding="utf-8"))
+    assert packet["target_repository"] == "example/consumer"
+    assert packet["target_ref"] == "review"
+    assert packet["target_head"] == "c" * 40
+    assert packet["frontier"]["work_type"] == "REREVIEW"
+
+    assert main(
+        [
+            "record-worker-receipt",
+            "--route-id",
+            envelope.route_id,
+            "--worker-id",
+            "reviewer",
+            "--route",
+            "OPENAI_AGENT_API",
+            "--holder",
+            "cli-worker",
+            "--expected-fencing-token",
+            "1",
+            "--receipt-class",
+            "SUCCEEDED",
+            "--receipt-sha256",
+            "d" * 64,
+            "--state-db",
+            str(state_db),
+        ]
+    ) == 0
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["state"] == "RECEIPT_RECORDED"
+    assert receipt["receipt_class"] == "SUCCEEDED"
+    assert receipt["receipt_sha256"] == "d" * 64
