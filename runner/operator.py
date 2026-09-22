@@ -116,7 +116,9 @@ def run_durable_github_read_inspection(
     holder: str,
     lease_ttl: float,
     registry_digest: str,
-    backend: GitHubBackend,
+    authorized_target_repositories: Iterable[str],
+    token: str | None,
+    transport: GitHubTransport | None = None,
     clock: Callable[[], float] = time.time,
 ) -> InspectionRunResult:
     """Execute one READY INSPECT frontier through the durable M6 path.
@@ -143,6 +145,16 @@ def run_durable_github_read_inspection(
 
     _require_exact_subject(frontier.subject)
     _require_exact_subject(target_subject)
+    allowed_targets = frozenset(str(item) for item in authorized_target_repositories)
+    if target_subject.repository not in allowed_targets:
+        raise ValueError(
+            "inspection target repository is not authorized for the frontier project"
+        )
+    backend = build_github_read_backend(
+        (frontier.subject, target_subject),
+        token=token,
+        transport=transport,
+    )
 
     state_db = Path(state_db)
     state_db.parent.mkdir(parents=True, exist_ok=True)
