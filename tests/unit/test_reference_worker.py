@@ -70,7 +70,7 @@ def _worker() -> WorkerDefinition:
             "reconstruction": {
                 "repository": "thebrazenbeard/project-runner",
                 "path": "runner/reference_worker.py",
-                "commit": "241ec6fa4fc0ebf24e147afdb022297b140ca5ab",
+                "commit": "50af885c961d78aef0e5f8a735f699a6108a42af",
             },
         }
     )
@@ -306,3 +306,133 @@ def test_reference_worker_no_work_is_noop(tmp_path: Path):
     )
     assert result.claimed is False
     assert result.receipt_class is None
+
+
+
+def test_reference_worker_skips_private_packet_and_takes_public_work(
+    tmp_path: Path,
+):
+    db = tmp_path / "reference-worker-private-skip.sqlite3"
+    worker = _worker()
+    frontier = _frontier()
+
+    portfolio = SqlitePortfolioStore(db)
+    snapshot_id = portfolio.commit_cycle(
+        registry_digest="1" * 64,
+        dependency_digest="2" * 64,
+        worker_registry_digest="3" * 64,
+        snapshot_digest="4" * 64,
+        observed_at=1.0,
+        baseline=True,
+        observations=(
+            Observation.from_mapping(
+                {
+                    "target": "project-runner",
+                    "evidence_class": "AUTHORITATIVE",
+                    "subject": {
+                        "repository": frontier.subject.repository,
+                        "ref": frontier.subject.ref,
+                        "commit": frontier.subject.commit,
+                    },
+                    "observed_value": frontier.subject.commit,
+                    "observed_at": "test",
+                    "observer": "test",
+                }
+            ),
+        ),
+        changed_count=0,
+        ranked_frontiers=(),
+        expected_previous_snapshot_id=None,
+        expected_previous_dependency_snapshot_id=None,
+    )
+    portfolio.close()
+
+    project = ProjectDefinition.from_mapping(
+        {
+            "id": "project-runner",
+            "name": "Project Runner",
+            "visibility": "public",
+            "repositories": ["thebrazenbeard/project-runner"],
+            "capabilities": ["read", "analyze"],
+            "assignment_scope": "NONE",
+            "review_scope": "NONE",
+            "family_id": "project-runner",
+            "scheduling_state": "SCHEDULABLE",
+            "execution_targets": [
+                {
+                    "work_type": "REREVIEW",
+                    "repository": "thebrazenbeard/project-runner",
+                    "ref": "work/reference",
+                    "worker_id": REFERENCE_WORKER_ID,
+                    "worker_route": REFERENCE_WORKER_ROUTE.value,
+                }
+            ],
+        }
+    )
+    route = resolve_read_only_worker_route(
+        project=project,
+        frontier=frontier,
+        workers=(worker,),
+    )
+    assert route is not None
+
+    routes = SqliteWorkerRouteStore(db)
+    private_envelope = routes.enqueue(
+        snapshot_id=snapshot_id,
+        frontier_fingerprint="1" * 64,
+        queue_fencing_token=1,
+        worker_registry_digest="3" * 64,
+        route=route,
+        target_repository="thebrazenbeard/project-runner",
+        target_ref="work/reference",
+        target_head="a" * 40,
+        frontier_json=_frontier_json(frontier),
+        now=2.0,
+        packet_sensitivity="PRIVATE",
+    )
+    public_envelope = routes.enqueue(
+        snapshot_id=snapshot_id,
+        frontier_fingerprint="2" * 64,
+        queue_fencing_token=2,
+        worker_registry_digest="3" * 64,
+        route=route,
+        target_repository="thebrazenbeard/project-runner",
+        target_ref="work/reference",
+        target_head="a" * 40,
+        frontier_json=_frontier_json(frontier),
+        now=2.1,
+        packet_sensitivity="PUBLIC",
+    )
+    routes.close()
+
+    result = run_reference_read_worker_once(
+        state_db=db,
+        workers=(worker,),
+        worker_registry_digest="3" * 64,
+        holder="reference-worker",
+        lease_ttl=60.0,
+        transport=FakeTransport(
+            {
+                ("thebrazenbeard/project-runner", "work/reference"): "a" * 40,
+            }
+        ),
+        clock=iter((3.0, 4.0)).__next__,
+    )
+    assert result.claimed is True
+    assert result.route_id == public_envelope.route_id
+
+    routes = SqliteWorkerRouteStore(db)
+    try:
+        private_state = routes.connection.execute(
+            "SELECT state FROM worker_route_outbox WHERE route_id = ?",
+            (private_envelope.route_id,),
+        ).fetchone()
+        public_state = routes.connection.execute(
+            "SELECT state FROM worker_route_outbox WHERE route_id = ?",
+            (public_envelope.route_id,),
+        ).fetchone()
+    finally:
+        routes.close()
+
+    assert private_state == ("PENDING",)
+    assert public_state == ("RECEIPT_RECORDED",)
