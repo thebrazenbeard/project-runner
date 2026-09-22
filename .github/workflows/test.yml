@@ -24,13 +24,19 @@ jobs:
       - name: Validate registries
         run: project-runner validate
       - name: Live read-only GitHub backend smoke
-        if: github.event_name == 'push'
         env:
           PROJECT_RUNNER_GITHUB_TOKEN: ${{ github.token }}
           PR_REPOSITORY: ${{ github.repository }}
-          PR_REF: ${{ github.ref_name }}
-          PR_EXPECTED_HEAD: ${{ github.sha }}
+          PR_REF: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          PR_EXPECTED_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: project-runner github-read-smoke --repository "$PR_REPOSITORY" --ref "$PR_REF" --expected-head "$PR_EXPECTED_HEAD"
+      - name: M6 live reference worker proof
+        env:
+          PROJECT_RUNNER_GITHUB_TOKEN: ${{ github.token }}
+          PR_REPOSITORY: ${{ github.repository }}
+          PR_REF: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          PR_EXPECTED_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: python scripts/m6_reference_worker_live_proof.py
       - name: M6 two-level recursive restart proof
         run: python scripts/m6_recursive_restart_proof.py
       - name: M6 live HC to Transcendence proof
