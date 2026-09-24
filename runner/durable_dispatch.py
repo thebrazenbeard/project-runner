@@ -18,11 +18,13 @@ from .recursive_state import (
     _ALLOWED_STATUS_TRANSITIONS,
     _TERMINAL_STATUSES,
     _SCHEMA as _RECURSIVE_SCHEMA,
+    _canonical_json as _recursive_canonical_json,
     _immutable_digest,
     _migrate_recursive_capability_schema,
     _normalize_capabilities,
     _validate_active_lease_state,
     _work_from_payload,
+    _work_payload,
 )
 from .verify import EvidenceVerifier, SubjectReader, VerificationOutcome, verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
@@ -216,6 +218,95 @@ class SqliteDispatchAdmissionStore:
 
     def close(self) -> None:
         self.connection.close()
+
+    def initialize_root(
+        self,
+        *,
+        budget: BudgetEnvelope,
+        work: WorkUnit,
+        effective_capabilities,
+    ) -> tuple[int, int]:
+        """Atomically seed root budget and immutable root work state."""
+        if budget.scope_id != "root":
+            raise ValueError("root initialization requires the root budget scope")
+        if work.recursion_depth != 0 or work.parent_work_id is not None:
+            raise ValueError("root initialization requires root work")
+        if work.status is not WorkUnitStatus.PENDING:
+            raise ValueError("root initialization requires PENDING work")
+        if budget.depth != work.recursion_depth:
+            raise ValueError("root budget depth does not match root work")
+        if not budget.lineage_id.strip():
+            raise ValueError("root initialization requires a lineage id")
+
+        fingerprint = work_unit_fingerprint(work)
+        capabilities = _normalize_capabilities(effective_capabilities)
+        if not set(work.required_capabilities).issubset(set(capabilities)):
+            raise ValueError(
+                "root work capability requirement exceeds capability ceiling"
+            )
+
+        work_json = _recursive_canonical_json(_work_payload(work))
+        ancestry_json = _recursive_canonical_json([fingerprint])
+        capabilities_json = _recursive_canonical_json(list(capabilities))
+        immutable_sha256 = _immutable_digest(
+            work_json=work_json,
+            lineage_id=budget.lineage_id,
+            budget_scope_id=budget.scope_id,
+            parent_fingerprint=None,
+            ancestry_json=ancestry_json,
+            effective_capabilities_json=capabilities_json,
+        )
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            self.connection.execute(
+                """
+                INSERT INTO lineage_budgets (
+                    lineage_id, scope_id, max_depth, depth, remaining_children,
+                    remaining_active, remaining_retries,
+                    remaining_backend_jobs, generation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                """,
+                (
+                    budget.lineage_id,
+                    budget.scope_id,
+                    budget.max_depth,
+                    budget.depth,
+                    budget.remaining_children,
+                    budget.remaining_active,
+                    budget.remaining_retries,
+                    budget.remaining_backend_jobs,
+                ),
+            )
+            self.connection.execute(
+                """
+                INSERT INTO recursive_work_state (
+                    lineage_id, work_fingerprint, work_json, budget_scope_id,
+                    parent_fingerprint, ancestry_json, effective_capabilities_json,
+                    immutable_sha256, status, generation
+                ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, 1)
+                """,
+                (
+                    budget.lineage_id,
+                    fingerprint,
+                    work_json,
+                    budget.scope_id,
+                    ancestry_json,
+                    capabilities_json,
+                    immutable_sha256,
+                    WorkUnitStatus.PENDING.value,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
+            raise ValueError("root execution state already exists") from exc
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+
+        return 1, 1
 
     def admit(
         self,
