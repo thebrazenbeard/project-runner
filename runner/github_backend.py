@@ -19,6 +19,17 @@ class GitHubPreconditionFailed(RuntimeError):
 class GitHubOutcomeUnknown(RuntimeError):
     """A ref publication may have occurred but cannot be proven by readback."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        candidate_commit_sha: str | None = None,
+        candidate_blob_sha: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.candidate_commit_sha = candidate_commit_sha
+        self.candidate_blob_sha = candidate_blob_sha
+
 
 class GitHubOperation(str, Enum):
     READ_REF = "READ_REF"
@@ -203,6 +214,73 @@ class GitHubRestTransport:
             raise RuntimeError("unsupported github file encoding")
         content = base64.b64decode(raw_content).decode("utf-8")
         return GitHubFileState(sha=str(payload["sha"]), content=content)
+
+    def read_commit_tree(self, repository: str, commit_sha: str) -> str:
+        owner, repo = repository.split("/", 1)
+        payload = self._request(
+            "GET",
+            f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}/git/commits/{parse.quote(commit_sha, safe='')}",
+        )
+        if payload is None:
+            raise KeyError(commit_sha)
+        tree = payload.get("tree")
+        if not isinstance(tree, Mapping) or not tree.get("sha"):
+            raise RuntimeError("github commit response missing tree")
+        return str(tree["sha"])
+
+    def inspect_update_refs_schema(self) -> Mapping[str, tuple[str, ...]]:
+        query = """
+        query ProjectRunnerUpdateRefsSchema {
+          mutationType: __type(name: "Mutation") {
+            fields { name }
+          }
+          updateRefsInput: __type(name: "UpdateRefsInput") {
+            inputFields { name }
+          }
+          refUpdate: __type(name: "RefUpdate") {
+            inputFields { name }
+          }
+        }
+        """
+        payload = self._request(
+            "POST",
+            self.graphql_url,
+            {"query": query, "variables": {}},
+        )
+        if payload is None:
+            raise RuntimeError("github graphql schema query returned no payload")
+        errors = payload.get("errors")
+        if errors:
+            raise RuntimeError("github graphql schema query returned errors")
+        data = payload.get("data")
+        if not isinstance(data, Mapping):
+            raise RuntimeError("github graphql schema query missing data")
+
+        def names(type_payload: object, field: str) -> tuple[str, ...]:
+            if not isinstance(type_payload, Mapping):
+                return ()
+            values = type_payload.get(field)
+            if not isinstance(values, list):
+                return ()
+            return tuple(
+                sorted(
+                    str(item.get("name"))
+                    for item in values
+                    if isinstance(item, Mapping) and item.get("name")
+                )
+            )
+
+        return {
+            "mutation_fields": names(data.get("mutationType"), "fields"),
+            "update_refs_input_fields": names(
+                data.get("updateRefsInput"),
+                "inputFields",
+            ),
+            "ref_update_fields": names(
+                data.get("refUpdate"),
+                "inputFields",
+            ),
+        }
 
     def create_branch(self, repository: str, branch: str, sha: str) -> None:
         owner, repo = repository.split("/", 1)
@@ -453,19 +531,28 @@ class GitHubRestTransport:
             raise RuntimeError("github commit creation missing sha")
         new_commit_sha = str(new_commit_payload["sha"])
 
-        self._update_ref_exact(
-            repository=repository,
-            branch=branch,
-            expected_head=expected_head,
-            new_head=new_commit_sha,
-        )
+        try:
+            self._update_ref_exact(
+                repository=repository,
+                branch=branch,
+                expected_head=expected_head,
+                new_head=new_commit_sha,
+            )
+        except GitHubOutcomeUnknown as exc:
+            raise GitHubOutcomeUnknown(
+                str(exc),
+                candidate_commit_sha=new_commit_sha,
+                candidate_blob_sha=blob_sha,
+            ) from exc
 
         try:
             readback_head = self.read_ref(repository, branch)
             readback_file = self.read_file(repository, path, branch)
         except (KeyError, RuntimeError, ValueError) as exc:
             raise GitHubOutcomeUnknown(
-                "github exact source-write readback outcome is unknown"
+                "github exact source-write readback outcome is unknown",
+                candidate_commit_sha=new_commit_sha,
+                candidate_blob_sha=blob_sha,
             ) from exc
         if (
             readback_head != new_commit_sha
@@ -474,7 +561,9 @@ class GitHubRestTransport:
             or readback_file.content != content
         ):
             raise GitHubOutcomeUnknown(
-                "github exact source-write readback failed"
+                "github exact source-write readback failed",
+                candidate_commit_sha=new_commit_sha,
+                candidate_blob_sha=blob_sha,
             )
         return new_commit_sha, blob_sha
 

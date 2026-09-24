@@ -1505,8 +1505,13 @@ class SqliteDispatchAdmissionStore:
         evidence: tuple[str, ...],
         reconciler: str,
         observed_at: float,
+        allow_recorded_outcome_unknown: bool = False,
     ) -> int:
         """Reconcile an ADMITTED attempt without executing the backend.
+
+        By default this is valid only before result recording. A caller may
+        explicitly allow reconciliation of a recorded failed OUTCOME_UNKNOWN;
+        no other recorded result is eligible.
 
         Only NO_EFFECT_CONFIRMED may atomically release the exact fence and move
         work to FAILED_RETRYABLE. INDETERMINATE and EFFECT_CONFIRMED remain
@@ -1541,9 +1546,23 @@ class SqliteDispatchAdmissionStore:
                 fencing_token=fencing_token,
             )
             if attempt[5] is not None or attempt[6] is not None:
-                raise ValueError(
-                    "ADMITTED reconciliation is invalid after result recording"
+                if not allow_recorded_outcome_unknown:
+                    raise ValueError(
+                        "ADMITTED reconciliation is invalid after result recording"
+                    )
+                recorded = self.load_result(
+                    lineage_id=lineage_id,
+                    work_fingerprint_value=work_fingerprint_value,
+                    fencing_token=fencing_token,
                 )
+                if (
+                    recorded is None
+                    or recorded.succeeded
+                    or recorded.classification != "OUTCOME_UNKNOWN"
+                ):
+                    raise ValueError(
+                        "recorded reconciliation is limited to OUTCOME_UNKNOWN"
+                    )
 
             latest = self.connection.execute(
                 """

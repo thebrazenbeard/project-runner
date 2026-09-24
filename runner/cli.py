@@ -35,6 +35,10 @@ from .portfolio_wave_scheduler import (
     WaveExecutionBudget,
     plan_wave_admission,
 )
+from .promoted_github_runtime import (
+    qualify_github_source_write_runtime,
+    reconcile_github_source_write_outcome_unknown,
+)
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
@@ -631,6 +635,58 @@ def _portfolio_wave_promote(
     return 0
 
 
+def _github_source_write_runtime_qualify(
+    repository: str,
+    ref: str,
+) -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    if not token:
+        raise ValueError(
+            "PROJECT_RUNNER_GITHUB_TOKEN is required for runtime qualification"
+        )
+    result = qualify_github_source_write_runtime(
+        repository=repository,
+        ref=ref,
+        transport=GitHubRestTransport(token=token),
+    )
+    print(json.dumps(result.to_dict(), sort_keys=True))
+    return 0 if result.status == "PASS" else 1
+
+
+def _github_source_write_reconcile(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+    reconciler: str,
+) -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    if not token:
+        raise ValueError(
+            "PROJECT_RUNNER_GITHUB_TOKEN is required for source-write reconciliation"
+        )
+    result = reconcile_github_source_write_outcome_unknown(
+        state_db=state_db,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+        transport=GitHubRestTransport(token=token),
+        reconciler=reconciler,
+    )
+    print(json.dumps({
+        "mode": "GITHUB_SOURCE_WRITE_OUTCOME_RECONCILIATION_V1",
+        "backend_replayed": False,
+        "outcome": result.outcome,
+        "reason": result.reason,
+        "evidence": list(result.evidence),
+        "observed_head": result.observed_head,
+        "observed_blob_sha": result.observed_blob_sha,
+        "work_generation": result.work_generation,
+    }, sort_keys=True))
+    return 0 if result.outcome != "INDETERMINATE" else 2
+
+
 def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> int:
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     backend = GitHubBackend(
@@ -770,6 +826,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     wave_promote.add_argument("--execution-grant", type=Path, required=True)
     wave_promote.add_argument("--effect-grant", type=Path)
 
+    source_write_qualify = subparsers.add_parser(
+        "github-source-write-runtime-qualify"
+    )
+    source_write_qualify.add_argument("--repository", required=True)
+    source_write_qualify.add_argument("--ref", required=True)
+
+    source_write_reconcile = subparsers.add_parser(
+        "github-source-write-reconcile"
+    )
+    source_write_reconcile.add_argument("--state-db", type=Path, required=True)
+    source_write_reconcile.add_argument("--lineage-id", required=True)
+    source_write_reconcile.add_argument("--work-fingerprint", required=True)
+    source_write_reconcile.add_argument("--fencing-token", type=int, required=True)
+    source_write_reconcile.add_argument("--reconciler", required=True)
+
     github_smoke = subparsers.add_parser("github-read-smoke")
     github_smoke.add_argument("--repository", required=True)
     github_smoke.add_argument("--ref", required=True)
@@ -824,6 +895,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             review_path=args.review,
             execution_grant_path=args.execution_grant,
             effect_grant_path=args.effect_grant,
+        )
+    if args.command == "github-source-write-runtime-qualify":
+        return _github_source_write_runtime_qualify(
+            args.repository,
+            args.ref,
+        )
+    if args.command == "github-source-write-reconcile":
+        return _github_source_write_reconcile(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            reconciler=args.reconciler,
         )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
