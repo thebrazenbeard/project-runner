@@ -101,12 +101,3 @@ See `docs/superpowers/plans/2026-09-17-m5-github-backend.md`.
 ## Worker recovery
 
 Project Runner and its dispatched workers do not require permanent ChatGPT conversations. Fresh runtimes reconstruct from durable repository/Bus/currentness/authority evidence; chat URLs and Custom GPT share links are locators or provenance only. See `docs/PROJECT_RUNNER_WORKER_RECONSTRUCTION_V1.md`.
-
-
-## Portfolio corpus
-
-Project Runner now keeps a descriptive portfolio corpus separate from its execution registry. The corpus records repository/workstream identity, family, activity and priority without granting scheduling or effect authority.
-
-The public projection is `portfolio/corpus.public.json`; the contract and privacy model are documented in `portfolio/README.md` and `docs/PROJECT_RUNNER_PORTFOLIO_CORPUS_V1.md`.
-
-The 2026-09-24 V1 cut binds a 66-repository estate (48 public / 18 private) and 15 known non-repository workstreams (2 public / 13 private). Private identifiers are not published; the public projection carries count/digest commitments instead.
