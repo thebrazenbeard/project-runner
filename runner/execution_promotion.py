@@ -849,6 +849,11 @@ def promote_claimed_to_running(
             promoted_work_generation=promoted_work_generation,
         )
         promotion_sha256 = _sha256(payload)
+        request_json = (
+            _canonical_bytes(execution.execution_request).decode("utf-8")
+            if execution.execution_request is not None
+            else None
+        )
         store.connection.execute(
             """
             INSERT INTO execution_promotions (
@@ -883,6 +888,24 @@ def promote_claimed_to_running(
                 promotion_sha256,
             ),
         )
+        if execution.execution_request is not None:
+            assert request_json is not None
+            assert execution.execution_request_sha256 is not None
+            store.connection.execute(
+                """
+                INSERT INTO execution_promotion_requests (
+                    lineage_id, work_fingerprint, fencing_token,
+                    request_json, request_sha256
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    lineage_id,
+                    work_fingerprint_value,
+                    fencing_token,
+                    request_json,
+                    execution.execution_request_sha256,
+                ),
+            )
         updated = store.connection.execute(
             """
             UPDATE recursive_work_state
@@ -922,6 +945,7 @@ def promote_claimed_to_running(
         review_valid_until=review.valid_until,
         execution_grant_sha256=execution.sha256,
         execution_valid_until=execution.valid_until,
+        execution_request_sha256=execution.execution_request_sha256,
         effect_grant_sha256=effect.sha256 if effect is not None else None,
         effect_valid_until=effect.valid_until if effect is not None else None,
         promoted_at=promoted_at,
