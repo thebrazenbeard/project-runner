@@ -84,7 +84,7 @@ def test_priority_and_identity_budget_bound_selection():
             item("p0-c", priority="P0", lead="VOSS", repository="owner/c"),
             item("p2-d", priority="P2", lead="REZON", repository="owner/d"),
         ),
-        budget=WaveExecutionBudget(max_parallel=3, max_per_identity=1, max_per_family=1),
+        budget=WaveExecutionBudget(max_parallel=3, max_per_identity=1, max_per_family=3),
     )
     assert [selected.subject_id for selected in planned.selected] == [
         "p0-b",
@@ -144,7 +144,7 @@ def test_repository_collision_blocks_overlapping_workstream():
     )
     planned = plan_wave_admission(
         wave(repository, workstream),
-        budget=WaveExecutionBudget(max_parallel=2, max_per_identity=1, max_per_family=1),
+        budget=WaveExecutionBudget(max_parallel=2, max_per_identity=1, max_per_family=2),
     )
     assert [selected.subject_id for selected in planned.selected] == ["repo"]
     blocked = next(
