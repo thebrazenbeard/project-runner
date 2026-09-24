@@ -4,7 +4,7 @@
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/project-runner-corpus-v1-20260924",
-    "commit": "88d6a8bbe47b4287884550d419a80f6c6fdf176b",
+    "commit": "5190f0b868f9b17cd1efd8551583a06e71dcf5d2",
     "path": "portfolio/corpus.public.json",
     "git_blob_sha": "477541bb7bc742f23c7993e0909fa114434af3a6",
     "public_repository_count": 48,
