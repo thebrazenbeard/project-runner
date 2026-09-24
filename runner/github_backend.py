@@ -19,6 +19,17 @@ class GitHubPreconditionFailed(RuntimeError):
 class GitHubOutcomeUnknown(RuntimeError):
     """A ref publication may have occurred but cannot be proven by readback."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        candidate_commit_sha: str | None = None,
+        candidate_blob_sha: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.candidate_commit_sha = candidate_commit_sha
+        self.candidate_blob_sha = candidate_blob_sha
+
 
 class GitHubOperation(str, Enum):
     READ_REF = "READ_REF"
@@ -453,19 +464,28 @@ class GitHubRestTransport:
             raise RuntimeError("github commit creation missing sha")
         new_commit_sha = str(new_commit_payload["sha"])
 
-        self._update_ref_exact(
-            repository=repository,
-            branch=branch,
-            expected_head=expected_head,
-            new_head=new_commit_sha,
-        )
+        try:
+            self._update_ref_exact(
+                repository=repository,
+                branch=branch,
+                expected_head=expected_head,
+                new_head=new_commit_sha,
+            )
+        except GitHubOutcomeUnknown as exc:
+            raise GitHubOutcomeUnknown(
+                str(exc),
+                candidate_commit_sha=new_commit_sha,
+                candidate_blob_sha=blob_sha,
+            ) from exc
 
         try:
             readback_head = self.read_ref(repository, branch)
             readback_file = self.read_file(repository, path, branch)
         except (KeyError, RuntimeError, ValueError) as exc:
             raise GitHubOutcomeUnknown(
-                "github exact source-write readback outcome is unknown"
+                "github exact source-write readback outcome is unknown",
+                candidate_commit_sha=new_commit_sha,
+                candidate_blob_sha=blob_sha,
             ) from exc
         if (
             readback_head != new_commit_sha
@@ -474,7 +494,9 @@ class GitHubRestTransport:
             or readback_file.content != content
         ):
             raise GitHubOutcomeUnknown(
-                "github exact source-write readback failed"
+                "github exact source-write readback failed",
+                candidate_commit_sha=new_commit_sha,
+                candidate_blob_sha=blob_sha,
             )
         return new_commit_sha, blob_sha
 
