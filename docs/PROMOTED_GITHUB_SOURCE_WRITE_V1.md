@@ -65,7 +65,9 @@ reused for a different path or content.
 - request schema is exactly `PROJECT_RUNNER_GITHUB_SOURCE_WRITE_V1`;
 - operation is exactly `PUT_FILE`;
 - request SHA-256 equals the durable promotion binding;
-- repository, ref, and expected head equal the promotion receipt.
+- repository, ref, and expected head equal the promotion receipt;
+- path is already canonical and repo-relative (no leading/trailing slash,
+  empty segment, "." segment, or ".." segment).
 
 The adapter derives its GitHub target grant from that already-promotion-bound
 request. It does not accept a broader caller-supplied target grant.
@@ -79,7 +81,8 @@ The transport independently:
 1. reads the branch head and requires `expected_head`;
 2. reads the exact expected commit/tree;
 3. traverses the exact tree to the target file;
-4. for an existing regular file, requires the exact `expected_blob_sha`;
+4. for an existing file, requires regular-file mode `100644` and the exact
+   `expected_blob_sha`; new files use mode `100644`;
 5. creates the new blob, tree, and commit with `expected_head` as the parent;
 6. publishes the new commit with GitHub GraphQL `updateRefs`, using
    `beforeOid=expected_head`, `afterOid=<new commit>`, and `force=false`;
@@ -90,6 +93,10 @@ The `beforeOid` comparison is the publication-time head CAS. If the branch
 moves after the promotion gate's live read—or after the adapter's preliminary
 read—the ref update is rejected instead of silently applying the write to a
 different head.
+
+Blob/tree/commit objects are created before ref publication. A rejected CAS can
+therefore leave unreachable Git objects, but it does not move the branch ref or
+publish the source change.
 
 ## Result binding
 
