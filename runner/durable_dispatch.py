@@ -18,11 +18,13 @@ from .recursive_state import (
     _ALLOWED_STATUS_TRANSITIONS,
     _TERMINAL_STATUSES,
     _SCHEMA as _RECURSIVE_SCHEMA,
+    _canonical_json as _recursive_canonical_json,
     _immutable_digest,
     _migrate_recursive_capability_schema,
     _normalize_capabilities,
     _validate_active_lease_state,
     _work_from_payload,
+    _work_payload,
 )
 from .verify import EvidenceVerifier, SubjectReader, VerificationOutcome, verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
@@ -216,6 +218,95 @@ class SqliteDispatchAdmissionStore:
 
     def close(self) -> None:
         self.connection.close()
+
+    def initialize_root(
+        self,
+        *,
+        budget: BudgetEnvelope,
+        work: WorkUnit,
+        effective_capabilities,
+    ) -> tuple[int, int]:
+        """Atomically seed root budget and immutable root work state."""
+        if budget.scope_id != "root":
+            raise ValueError("root initialization requires the root budget scope")
+        if work.recursion_depth != 0 or work.parent_work_id is not None:
+            raise ValueError("root initialization requires root work")
+        if work.status is not WorkUnitStatus.PENDING:
+            raise ValueError("root initialization requires PENDING work")
+        if budget.depth != work.recursion_depth:
+            raise ValueError("root budget depth does not match root work")
+        if not budget.lineage_id.strip():
+            raise ValueError("root initialization requires a lineage id")
+
+        fingerprint = work_unit_fingerprint(work)
+        capabilities = _normalize_capabilities(effective_capabilities)
+        if not set(work.required_capabilities).issubset(set(capabilities)):
+            raise ValueError(
+                "root work capability requirement exceeds capability ceiling"
+            )
+
+        work_json = _recursive_canonical_json(_work_payload(work))
+        ancestry_json = _recursive_canonical_json([fingerprint])
+        capabilities_json = _recursive_canonical_json(list(capabilities))
+        immutable_sha256 = _immutable_digest(
+            work_json=work_json,
+            lineage_id=budget.lineage_id,
+            budget_scope_id=budget.scope_id,
+            parent_fingerprint=None,
+            ancestry_json=ancestry_json,
+            effective_capabilities_json=capabilities_json,
+        )
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            self.connection.execute(
+                """
+                INSERT INTO lineage_budgets (
+                    lineage_id, scope_id, max_depth, depth, remaining_children,
+                    remaining_active, remaining_retries,
+                    remaining_backend_jobs, generation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                """,
+                (
+                    budget.lineage_id,
+                    budget.scope_id,
+                    budget.max_depth,
+                    budget.depth,
+                    budget.remaining_children,
+                    budget.remaining_active,
+                    budget.remaining_retries,
+                    budget.remaining_backend_jobs,
+                ),
+            )
+            self.connection.execute(
+                """
+                INSERT INTO recursive_work_state (
+                    lineage_id, work_fingerprint, work_json, budget_scope_id,
+                    parent_fingerprint, ancestry_json, effective_capabilities_json,
+                    immutable_sha256, status, generation
+                ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, 1)
+                """,
+                (
+                    budget.lineage_id,
+                    fingerprint,
+                    work_json,
+                    budget.scope_id,
+                    ancestry_json,
+                    capabilities_json,
+                    immutable_sha256,
+                    WorkUnitStatus.PENDING.value,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            self.connection.rollback()
+            raise ValueError("root execution state already exists") from exc
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+
+        return 1, 1
 
     def admit(
         self,
@@ -507,6 +598,427 @@ class SqliteDispatchAdmissionStore:
             budget_generation=expected_budget_generation + 1,
             work_generation=expected_work_generation + 1,
             retry_consumed=retry_consumed,
+        )
+
+
+    def recover_claim_only_root(
+        self,
+        *,
+        budget: BudgetEnvelope,
+        work: WorkUnit,
+        effective_capabilities,
+        holder: str,
+        now: float,
+        ttl: float,
+    ) -> DurableDispatchAdmission:
+        """Recover an exact claim-only root after a process interruption.
+
+        PENDING roots resume ordinary admission. Exact active CLAIMED roots are
+        idempotently returned to the same holder. Expired CLAIMED roots may be
+        re-fenced only when execution is structurally forbidden and no backend
+        result/verification/reconciliation was recorded.
+        """
+        if work.status is not WorkUnitStatus.PENDING:
+            raise ValueError("claim-only recovery requires PENDING source work")
+        if work.operation != "PORTFOLIO_BOUND_CLAIM":
+            raise ValueError("claim-only recovery requires bound-claim work")
+        if work.payload.get("execution_authority") is not False:
+            raise ValueError("claim-only recovery requires execution_authority=false")
+        if work.payload.get("protected_effects_authorized") is not False:
+            raise ValueError(
+                "claim-only recovery requires protected_effects_authorized=false"
+            )
+        if not holder.strip():
+            raise ValueError("claim-only recovery holder is required")
+        if ttl <= 0:
+            raise ValueError("claim-only recovery ttl must be positive")
+        if budget.scope_id != "root":
+            raise ValueError("claim-only recovery requires root budget")
+
+        fingerprint = work_unit_fingerprint(work)
+        capabilities = _normalize_capabilities(effective_capabilities)
+        expected_work_json = _recursive_canonical_json(_work_payload(work))
+        expected_ancestry_json = _recursive_canonical_json([fingerprint])
+        expected_capabilities_json = _recursive_canonical_json(list(capabilities))
+        expected_immutable = _immutable_digest(
+            work_json=expected_work_json,
+            lineage_id=budget.lineage_id,
+            budget_scope_id=budget.scope_id,
+            parent_fingerprint=None,
+            ancestry_json=expected_ancestry_json,
+            effective_capabilities_json=expected_capabilities_json,
+        )
+
+        pending_generations: tuple[int, int] | None = None
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            work_row = self.connection.execute(
+                """
+                SELECT work_json, budget_scope_id, parent_fingerprint,
+                       ancestry_json, effective_capabilities_json,
+                       immutable_sha256, status, generation
+                FROM recursive_work_state
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (budget.lineage_id, fingerprint),
+            ).fetchone()
+            if work_row is None:
+                raise ValueError(
+                    "claim-only recovery exact work state is not durable"
+                )
+            (
+                work_json,
+                stored_scope_id,
+                parent_fingerprint,
+                ancestry_json,
+                capabilities_json,
+                immutable_sha256,
+                raw_status,
+                raw_work_generation,
+            ) = work_row
+            if str(stored_scope_id) != budget.scope_id or parent_fingerprint is not None:
+                raise ValueError("claim-only recovery work scope mismatch")
+            if str(work_json) != expected_work_json:
+                raise ValueError("claim-only recovery work payload mismatch")
+            if str(ancestry_json) != expected_ancestry_json:
+                raise ValueError("claim-only recovery ancestry mismatch")
+            if str(capabilities_json) != expected_capabilities_json:
+                raise ValueError("claim-only recovery capability ceiling mismatch")
+            if not hmac.compare_digest(str(immutable_sha256), expected_immutable):
+                raise ValueError("claim-only recovery immutable digest mismatch")
+
+            current_status = WorkUnitStatus(str(raw_status))
+            work_generation = int(raw_work_generation)
+
+            budget_row = self.connection.execute(
+                """
+                SELECT max_depth, depth, remaining_children, remaining_active,
+                       remaining_retries, remaining_backend_jobs, generation
+                FROM lineage_budgets
+                WHERE lineage_id = ? AND scope_id = ?
+                """,
+                (budget.lineage_id, budget.scope_id),
+            ).fetchone()
+            if budget_row is None:
+                raise ValueError("claim-only recovery budget is not durable")
+            (
+                max_depth,
+                depth,
+                remaining_children,
+                remaining_active,
+                remaining_retries,
+                remaining_backend_jobs,
+                budget_generation,
+            ) = (int(value) for value in budget_row)
+
+            if (
+                max_depth != budget.max_depth
+                or depth != budget.depth
+                or remaining_children != budget.remaining_children
+                or remaining_retries != budget.remaining_retries
+            ):
+                raise ValueError("claim-only recovery budget identity mismatch")
+
+            if current_status is WorkUnitStatus.PENDING:
+                if work_generation != 1 or budget_generation != 1:
+                    raise ValueError("claim-only pending recovery generation mismatch")
+                if (
+                    remaining_active != budget.remaining_active
+                    or remaining_backend_jobs != budget.remaining_backend_jobs
+                ):
+                    raise ValueError("claim-only pending recovery budget mismatch")
+                if self.connection.execute(
+                    """
+                    SELECT 1 FROM execution_attempts
+                    WHERE lineage_id = ? AND work_fingerprint = ?
+                    LIMIT 1
+                    """,
+                    (budget.lineage_id, fingerprint),
+                ).fetchone() is not None:
+                    raise ValueError(
+                        "claim-only pending recovery unexpectedly has attempt history"
+                    )
+                if self.connection.execute(
+                    "SELECT 1 FROM leases WHERE work_fingerprint = ?",
+                    (fingerprint,),
+                ).fetchone() is not None:
+                    raise ValueError(
+                        "claim-only pending recovery unexpectedly has a lease"
+                    )
+                pending_generations = (budget_generation, work_generation)
+                self.connection.commit()
+            elif current_status is WorkUnitStatus.CLAIMED:
+                expected_active = budget.remaining_active - 1
+                expected_backend_jobs = budget.remaining_backend_jobs - 1
+                if expected_active < 0 or expected_backend_jobs < 0:
+                    raise ValueError(
+                        "claim-only recovery source budget cannot support admission"
+                    )
+                if budget_generation != 2:
+                    raise ValueError("claim-only claimed recovery budget generation mismatch")
+                if (
+                    remaining_active != expected_active
+                    or remaining_backend_jobs != expected_backend_jobs
+                ):
+                    raise ValueError("claim-only claimed recovery budget mismatch")
+
+                lease_row = self.connection.execute(
+                    """
+                    SELECT holder, fencing_token, expires_at, completed
+                    FROM leases WHERE work_fingerprint = ?
+                    """,
+                    (fingerprint,),
+                ).fetchone()
+                if lease_row is None:
+                    raise ValueError("claim-only claimed recovery lease is missing")
+                current_holder, current_token, current_expiry, completed = lease_row
+                if bool(completed):
+                    raise ValueError("claim-only claimed recovery lease is completed")
+                current_token = int(current_token)
+                current_expiry = float(current_expiry)
+
+                latest_token_row = self.connection.execute(
+                    """
+                    SELECT MAX(fencing_token)
+                    FROM execution_attempts
+                    WHERE lineage_id = ? AND work_fingerprint = ?
+                    """,
+                    (budget.lineage_id, fingerprint),
+                ).fetchone()
+                if (
+                    latest_token_row is None
+                    or latest_token_row[0] is None
+                    or int(latest_token_row[0]) != current_token
+                ):
+                    raise ValueError(
+                        "claim-only recovery lease/attempt fencing token mismatch"
+                    )
+
+                attempt = self._attempt_row(
+                    lineage_id=budget.lineage_id,
+                    work_fingerprint_value=fingerprint,
+                    fencing_token=current_token,
+                )
+                if attempt[2] != budget_generation:
+                    raise ValueError(
+                        "claim-only recovery attempt/budget generation mismatch"
+                    )
+                if attempt[3] != work_generation:
+                    raise ValueError(
+                        "claim-only recovery attempt/work generation mismatch"
+                    )
+                if (
+                    current_holder is not None
+                    and str(current_holder) != attempt[0]
+                ):
+                    raise ValueError(
+                        "claim-only recovery lease/attempt holder mismatch"
+                    )
+                if attempt[5] is not None or attempt[6] is not None:
+                    raise ValueError(
+                        "claim-only claimed recovery has a recorded backend result"
+                    )
+                if self.connection.execute(
+                    """
+                    SELECT 1 FROM execution_verifications
+                    WHERE lineage_id = ? AND work_fingerprint = ?
+                      AND fencing_token = ?
+                    LIMIT 1
+                    """,
+                    (budget.lineage_id, fingerprint, current_token),
+                ).fetchone() is not None:
+                    raise ValueError(
+                        "claim-only claimed recovery has verification history"
+                    )
+                if self.connection.execute(
+                    """
+                    SELECT 1 FROM execution_reconciliations
+                    WHERE lineage_id = ? AND work_fingerprint = ?
+                      AND fencing_token = ?
+                    LIMIT 1
+                    """,
+                    (budget.lineage_id, fingerprint, current_token),
+                ).fetchone() is not None:
+                    raise ValueError(
+                        "claim-only claimed recovery has reconciliation history"
+                    )
+
+                budget_after = BudgetEnvelope(
+                    lineage_id=budget.lineage_id,
+                    max_depth=max_depth,
+                    depth=depth,
+                    remaining_children=remaining_children,
+                    remaining_active=remaining_active,
+                    remaining_retries=remaining_retries,
+                    remaining_backend_jobs=remaining_backend_jobs,
+                    scope_id=budget.scope_id,
+                )
+                claimed_work = WorkUnit(
+                    id=work.id,
+                    root_frontier_id=work.root_frontier_id,
+                    parent_work_id=work.parent_work_id,
+                    inputs=work.inputs,
+                    operation=work.operation,
+                    required_capabilities=work.required_capabilities,
+                    collision_keys=work.collision_keys,
+                    recursion_depth=work.recursion_depth,
+                    budget_allocation=work.budget_allocation,
+                    expected_outputs=work.expected_outputs,
+                    completion_criteria=work.completion_criteria,
+                    status=WorkUnitStatus.CLAIMED,
+                    payload=work.payload,
+                )
+
+                if current_holder is not None and now < current_expiry:
+                    if str(current_holder) != holder:
+                        raise ValueError(
+                            "claim-only work already has an active lease"
+                        )
+                    self.connection.commit()
+                    return DurableDispatchAdmission(
+                        work=claimed_work,
+                        lease=Lease(
+                            work_fingerprint=fingerprint,
+                            holder=holder,
+                            fencing_token=current_token,
+                            expires_at=current_expiry,
+                        ),
+                        budget_after=budget_after,
+                        budget_generation=budget_generation,
+                        work_generation=work_generation,
+                        retry_consumed=0,
+                    )
+
+                reconciliation_evidence = (
+                    "claim-only execution_authority=false",
+                    "claim-only work remained CLAIMED",
+                    "no backend result or verification was recorded",
+                )
+                reconciliation_reason = (
+                    "expired claim-only lease is safe to re-fence without "
+                    "backend re-execution"
+                )
+                reconciliation_sha256 = _reconciliation_digest(
+                    outcome="NO_EFFECT_CONFIRMED",
+                    reason=reconciliation_reason,
+                    evidence=reconciliation_evidence,
+                    reconciler="portfolio-claim-recovery",
+                    observed_at=now,
+                )
+                self.connection.execute(
+                    """
+                    INSERT INTO execution_reconciliations (
+                        lineage_id, work_fingerprint, fencing_token, sequence,
+                        outcome, reason, evidence_json, reconciler, observed_at,
+                        reconciliation_sha256
+                    ) VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        budget.lineage_id,
+                        fingerprint,
+                        current_token,
+                        "NO_EFFECT_CONFIRMED",
+                        reconciliation_reason,
+                        _canonical_json(list(reconciliation_evidence)),
+                        "portfolio-claim-recovery",
+                        now,
+                        reconciliation_sha256,
+                    ),
+                )
+
+                new_token = current_token + 1
+                expires_at = now + ttl
+                lease_update = self.connection.execute(
+                    """
+                    UPDATE leases
+                    SET holder = ?, fencing_token = ?, expires_at = ?, completed = 0
+                    WHERE work_fingerprint = ? AND fencing_token = ?
+                    """,
+                    (holder, new_token, expires_at, fingerprint, current_token),
+                )
+                if lease_update.rowcount != 1:
+                    raise ValueError("claim-only recovery fence changed concurrently")
+
+                new_work_generation = work_generation + 1
+                work_update = self.connection.execute(
+                    """
+                    UPDATE recursive_work_state
+                    SET generation = generation + 1
+                    WHERE lineage_id = ? AND work_fingerprint = ?
+                      AND status = ? AND generation = ?
+                    """,
+                    (
+                        budget.lineage_id,
+                        fingerprint,
+                        WorkUnitStatus.CLAIMED.value,
+                        work_generation,
+                    ),
+                )
+                if work_update.rowcount != 1:
+                    raise ValueError("claim-only recovery work changed concurrently")
+
+                attempt_sha256 = _attempt_digest(
+                    lineage_id=budget.lineage_id,
+                    work_fingerprint_value=fingerprint,
+                    fencing_token=new_token,
+                    holder=holder,
+                    admitted_at=now,
+                    budget_generation=budget_generation,
+                    work_generation=new_work_generation,
+                )
+                self.connection.execute(
+                    """
+                    INSERT INTO execution_attempts (
+                        lineage_id, work_fingerprint, fencing_token, holder,
+                        admitted_at, budget_generation, work_generation,
+                        attempt_sha256
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        budget.lineage_id,
+                        fingerprint,
+                        new_token,
+                        holder,
+                        now,
+                        budget_generation,
+                        new_work_generation,
+                        attempt_sha256,
+                    ),
+                )
+                self.connection.commit()
+                return DurableDispatchAdmission(
+                    work=claimed_work,
+                    lease=Lease(
+                        work_fingerprint=fingerprint,
+                        holder=holder,
+                        fencing_token=new_token,
+                        expires_at=expires_at,
+                    ),
+                    budget_after=budget_after,
+                    budget_generation=budget_generation,
+                    work_generation=new_work_generation,
+                    retry_consumed=0,
+                )
+            else:
+                raise ValueError(
+                    "claim-only recovery requires PENDING or CLAIMED work; "
+                    f"found {current_status.value}"
+                )
+        except BaseException:
+            if self.connection.in_transaction:
+                self.connection.rollback()
+            raise
+
+        assert pending_generations is not None
+        return self.admit(
+            lineage_id=budget.lineage_id,
+            work_fingerprint_value=fingerprint,
+            budget_scope_id=budget.scope_id,
+            expected_budget_generation=pending_generations[0],
+            expected_work_generation=pending_generations[1],
+            holder=holder,
+            now=now,
+            ttl=ttl,
         )
 
 
@@ -1401,6 +1913,8 @@ def execute_admitted(
     ADMITTED and must reconcile rather than blindly re-execute. Once the result is
     recorded, restart can re-verify without executing the backend again.
     """
+    if admission.work.payload.get("execution_authority") is False:
+        raise ValueError("durable admission does not authorize backend execution")
     result = backend.execute(admission.work)
     journal.record_result(
         lineage_id=admission.budget_after.lineage_id,

@@ -4,7 +4,7 @@ import pytest
 
 from runner.backends import BackendResult
 from runner.budgets import BudgetEnvelope
-from runner.durable_dispatch import SqliteDispatchAdmissionStore
+from runner.durable_dispatch import SqliteDispatchAdmissionStore, execute_admitted
 from runner.models import ExactSubject
 from runner.persistent_state import SqliteBudgetStore
 from runner.recursive_state import SqliteRecursiveWorkStore
@@ -121,6 +121,87 @@ def _result(fingerprint: str, *, classification: str = "SUCCEEDED") -> BackendRe
         evidence=("journal-test",),
         classification=classification,
     )
+
+
+
+class _SpyBackend:
+    def __init__(self):
+        self.calls = 0
+
+    def execute(self, work):
+        self.calls += 1
+        return _result(work_unit_fingerprint(work))
+
+
+def test_claim_only_admission_cannot_execute_backend(tmp_path: Path):
+    db = tmp_path / "claim-only.db"
+    base = _work()
+    work = WorkUnit(
+        id=base.id,
+        root_frontier_id=base.root_frontier_id,
+        parent_work_id=base.parent_work_id,
+        inputs=base.inputs,
+        operation="PORTFOLIO_BOUND_CLAIM",
+        required_capabilities=base.required_capabilities,
+        collision_keys=base.collision_keys,
+        recursion_depth=base.recursion_depth,
+        budget_allocation=base.budget_allocation,
+        expected_outputs=base.expected_outputs,
+        completion_criteria=base.completion_criteria,
+        status=base.status,
+        payload={
+            "execution_authority": False,
+            "protected_effects_authorized": False,
+        },
+    )
+    fingerprint = work_unit_fingerprint(work)
+    budget = BudgetEnvelope(
+        lineage_id="claim-only-lineage",
+        max_depth=0,
+        depth=0,
+        remaining_children=0,
+        remaining_active=1,
+        remaining_retries=0,
+        remaining_backend_jobs=1,
+    )
+
+    budgets = SqliteBudgetStore(db)
+    assert budgets.put_initial(budget) == 1
+    budgets.close()
+
+    works = SqliteRecursiveWorkStore(db)
+    works.put_initial(
+        work=work,
+        lineage_id=budget.lineage_id,
+        budget_scope_id=budget.scope_id,
+        parent_fingerprint=None,
+        ancestry_fingerprints={fingerprint},
+        effective_capabilities={"read", "analyze"},
+    )
+    works.close()
+
+    store = SqliteDispatchAdmissionStore(db)
+    admitted = store.admit(
+        lineage_id=budget.lineage_id,
+        work_fingerprint_value=fingerprint,
+        budget_scope_id=budget.scope_id,
+        expected_budget_generation=1,
+        expected_work_generation=1,
+        holder="worker-a",
+        now=10.0,
+        ttl=30.0,
+    )
+    backend = _SpyBackend()
+    with pytest.raises(ValueError, match="does not authorize backend execution"):
+        execute_admitted(
+            frontier=None,
+            admission=admitted,
+            backend=backend,
+            journal=store,
+            recorded_at=11.0,
+        )
+    store.close()
+    assert backend.calls == 0
 
 
 def test_admission_creates_restart_visible_unresolved_attempt(tmp_path: Path):

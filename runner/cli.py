@@ -21,6 +21,9 @@ from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport,
 from .leases import InMemoryLeaseStore
 from .models import FrontierStatus, ProjectSchedulingState
 from .portfolio_advancement import load_advancement_wave
+from .portfolio_corpus import load_portfolio_corpus
+from .portfolio_operator_binding import bind_wave_to_operator_registry
+from .portfolio_operator_bridge import claim_bound_plan_subject
 from .portfolio_wave_scheduler import (
     WaveExecutionBudget,
     plan_wave_admission,
@@ -480,6 +483,87 @@ def _portfolio_wave_plan(
     return 0
 
 
+def _portfolio_operator_bindings(
+    wave_path: Path,
+    corpus_path: Path,
+    projects_path: Path,
+) -> int:
+    wave = load_advancement_wave(wave_path)
+    corpus = load_portfolio_corpus(corpus_path, public_safe=True)
+    registry = load_project_snapshot(projects_path)
+    report = bind_wave_to_operator_registry(
+        wave,
+        corpus,
+        registry,
+        public_safe=True,
+    )
+    payload = {
+        "mode": "PORTFOLIO_OPERATOR_BINDING_REPORT_V1",
+        "execution_authority": False,
+        "summary": report.summary(),
+        "decisions": [
+            {
+                "subject_kind": item.subject_kind,
+                "subject_id": item.subject_id,
+                "repository": item.repository,
+                "state": item.state,
+                "reason": item.reason,
+                "operator_project_id": item.operator_project_id,
+            }
+            for item in report.decisions
+        ],
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
+def _portfolio_wave_claim(
+    *,
+    plan_path: Path,
+    wave_path: Path,
+    corpus_path: Path,
+    projects_path: Path,
+    subject_id: str,
+    state_db: Path,
+    holder: str,
+    lease_ttl: float,
+    allowed_repositories: Sequence[str],
+) -> int:
+    claim = claim_bound_plan_subject(
+        plan_path=plan_path,
+        wave_path=wave_path,
+        corpus_path=corpus_path,
+        projects_path=projects_path,
+        subject_id=subject_id,
+        state_db=state_db,
+        holder=holder,
+        lease_ttl=lease_ttl,
+        allowed_repositories=allowed_repositories,
+        token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+    )
+    payload = {
+        "mode": "PORTFOLIO_BOUND_PLAN_CLAIM_V1",
+        "execution_authority": False,
+        "protected_effects_authorized": False,
+        "backend_execution_performed": False,
+        "subject_id": claim.subject_id,
+        "repository": claim.repository,
+        "ref": claim.ref,
+        "exact_head": claim.exact_head,
+        "plan_sha256": claim.plan_sha256,
+        "wave_sha256": claim.wave_sha256,
+        "work_fingerprint": claim.work_fingerprint,
+        "lineage_id": claim.lineage_id,
+        "holder": claim.holder,
+        "fencing_token": claim.fencing_token,
+        "lease_expires_at": claim.lease_expires_at,
+        "budget_generation": claim.budget_generation,
+        "work_generation": claim.work_generation,
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> int:
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     backend = GitHubBackend(
@@ -565,6 +649,50 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
     )
 
+    operator_bindings = subparsers.add_parser("portfolio-operator-bindings")
+    operator_bindings.add_argument(
+        "--wave",
+        type=Path,
+        default=ROOT / "portfolio" / "advancement_wave.public.json",
+    )
+    operator_bindings.add_argument(
+        "--corpus",
+        type=Path,
+        default=ROOT / "portfolio" / "corpus.public.json",
+    )
+    operator_bindings.add_argument(
+        "--projects",
+        type=Path,
+        default=ROOT / "registry" / "projects.yaml",
+    )
+
+    wave_claim = subparsers.add_parser("portfolio-wave-claim")
+    wave_claim.add_argument("--plan", type=Path, required=True)
+    wave_claim.add_argument(
+        "--wave",
+        type=Path,
+        default=ROOT / "portfolio" / "advancement_wave.public.json",
+    )
+    wave_claim.add_argument(
+        "--corpus",
+        type=Path,
+        default=ROOT / "portfolio" / "corpus.public.json",
+    )
+    wave_claim.add_argument(
+        "--projects",
+        type=Path,
+        default=ROOT / "registry" / "projects.yaml",
+    )
+    wave_claim.add_argument("--subject-id", required=True)
+    wave_claim.add_argument("--state-db", type=Path, required=True)
+    wave_claim.add_argument("--holder", required=True)
+    wave_claim.add_argument("--lease-ttl", type=float, required=True)
+    wave_claim.add_argument(
+        "--allowed-repository",
+        action="append",
+        default=[],
+    )
+
     github_smoke = subparsers.add_parser("github-read-smoke")
     github_smoke.add_argument("--repository", required=True)
     github_smoke.add_argument("--ref", required=True)
@@ -590,6 +718,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_per_identity=args.max_per_identity,
             max_per_family=args.max_per_family,
             occupied_collision_keys=args.occupied_collision_key,
+        )
+    if args.command == "portfolio-operator-bindings":
+        return _portfolio_operator_bindings(
+            args.wave,
+            args.corpus,
+            args.projects,
+        )
+    if args.command == "portfolio-wave-claim":
+        return _portfolio_wave_claim(
+            plan_path=args.plan,
+            wave_path=args.wave,
+            corpus_path=args.corpus,
+            projects_path=args.projects,
+            subject_id=args.subject_id,
+            state_db=args.state_db,
+            holder=args.holder,
+            lease_ttl=args.lease_ttl,
+            allowed_repositories=args.allowed_repository,
         )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
