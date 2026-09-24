@@ -25,6 +25,12 @@ _REQUIRED_REF_UPDATE_FIELDS = frozenset(
     {"name", "beforeOid", "afterOid", "force"}
 )
 
+_EFFECT_FINALIZATION_REASON = (
+    "EFFECT_CONFIRMED reconciliation revalidated before and after "
+    "durable VERIFYING against the exact current candidate "
+    "commit/blob/content; no backend replay performed"
+)
+
 
 @dataclass(frozen=True)
 class GitHubSourceWriteRuntimeQualification:
@@ -64,7 +70,9 @@ class GitHubSourceWriteEffectFinalization:
     candidate_blob_sha: str
     reconciliation_sha256: str
     work_generation: int
+    verified_at: float
     backend_replayed: bool = False
+    finalization_replayed: bool = False
 
 
 @dataclass(frozen=True)
@@ -331,6 +339,57 @@ def finalize_github_source_write_effect_confirmed(
         if not path or not isinstance(intended_content, str):
             raise ValueError("effect finalization request is incomplete")
 
+        work_row = store.connection.execute(
+            """
+            SELECT status, generation
+            FROM recursive_work_state
+            WHERE lineage_id = ? AND work_fingerprint = ?
+            """,
+            (lineage_id, work_fingerprint_value),
+        ).fetchone()
+        if work_row is None:
+            raise ValueError("effect finalization recursive work is missing")
+        current_status = WorkUnitStatus(str(work_row[0]))
+        current_generation = int(work_row[1])
+        if current_status is WorkUnitStatus.COMPLETE:
+            lease_row = store.connection.execute(
+                """
+                SELECT holder, fencing_token, completed
+                FROM leases
+                WHERE work_fingerprint = ?
+                """,
+                (work_fingerprint_value,),
+            ).fetchone()
+            verification = store.load_latest_verification(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            if (
+                current_generation != receipt.promoted_work_generation + 2
+                or lease_row is None
+                or str(lease_row[0]) != receipt.holder
+                or int(lease_row[1]) != receipt.fencing_token
+                or not bool(lease_row[2])
+                or verification is None
+                or verification.status is not WorkUnitStatus.COMPLETE
+                or verification.reason != _EFFECT_FINALIZATION_REASON
+            ):
+                raise ValueError(
+                    "completed effect finalization does not match exact receipt"
+                )
+            return GitHubSourceWriteEffectFinalization(
+                status="COMPLETE",
+                reason=verification.reason,
+                candidate_commit_sha=candidate_commit_sha,
+                candidate_blob_sha=candidate_blob_sha,
+                reconciliation_sha256=reconciliation.sha256,
+                work_generation=current_generation,
+                verified_at=verification.verified_at,
+                backend_replayed=False,
+                finalization_replayed=True,
+            )
+
         started_at = float(clock())
         lease = _load_current_lease(store, receipt=receipt)
         if lease.expires_at <= started_at:
@@ -424,11 +483,7 @@ def finalize_github_source_write_effect_confirmed(
                 "effect finalization fence expired during verification"
             )
 
-        reason = (
-            "EFFECT_CONFIRMED reconciliation revalidated before and after "
-            "durable VERIFYING against the exact current candidate "
-            "commit/blob/content; no backend replay performed"
-        )
+        reason = _EFFECT_FINALIZATION_REASON
         generation = store.finalize_terminal_verification(
             lineage_id=lineage_id,
             work_fingerprint_value=work_fingerprint_value,
@@ -446,7 +501,9 @@ def finalize_github_source_write_effect_confirmed(
             candidate_blob_sha=candidate_blob_sha,
             reconciliation_sha256=reconciliation.sha256,
             work_generation=generation,
+            verified_at=verified_at,
             backend_replayed=False,
+            finalization_replayed=False,
         )
     finally:
         store.close()
