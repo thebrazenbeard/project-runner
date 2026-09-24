@@ -13,7 +13,11 @@ from runner.execution_promotion import (
     promote_claimed_to_running,
     sign_evidence,
 )
-from runner.github_backend import GitHubFileState, GitHubPreconditionFailed
+from runner.github_backend import (
+    GitHubFileState,
+    GitHubOutcomeUnknown,
+    GitHubPreconditionFailed,
+)
 from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_bridge import claim_bound_plan_subject
 from runner.promoted_github import (
@@ -48,6 +52,7 @@ class FakeSourceWriteTransport:
         self.read_count = 0
         self.race_on_read = None
         self.race_head = "f" * 40
+        self.unknown_after_write = False
 
     def read_ref(self, repository, ref):
         self.read_count += 1
@@ -107,6 +112,8 @@ class FakeSourceWriteTransport:
             content=content,
         )
         self.refs[(repository, branch)] = commit_sha
+        if self.unknown_after_write:
+            raise GitHubOutcomeUnknown("simulated ambiguous write outcome")
 
         if self.read_ref(repository, branch) != commit_sha:
             raise RuntimeError("readback head mismatch")
@@ -469,6 +476,47 @@ def test_head_move_after_gate_read_is_still_blocked_by_adapter_cas(tmp_path):
     assert result.classification == "PRECONDITION_FAILED"
     assert transport.mutations == []
 
+
+
+def test_ambiguous_source_write_is_journaled_outcome_unknown_without_retry(tmp_path):
+    claim, transport = _claim(tmp_path)
+    request = _request(claim)
+    review, execution, effect = _evidence(claim, request)
+    receipt = _promote(
+        tmp_path,
+        claim,
+        transport,
+        review,
+        execution,
+        effect,
+    )
+    transport.unknown_after_write = True
+    backend = PromotedGitHubSourceWriteBackend(transport=transport)
+
+    result = execute_promoted(
+        state_db=tmp_path / "operator.sqlite3",
+        receipt=receipt,
+        backend=backend,
+        transport=transport,
+        clock=lambda: 1001.0,
+    )
+
+    assert result.succeeded is False
+    assert result.classification == "OUTCOME_UNKNOWN"
+    assert len(transport.mutations) == 1
+
+    with pytest.raises(
+        ValueError,
+        match="already has a backend result",
+    ):
+        execute_promoted(
+            state_db=tmp_path / "operator.sqlite3",
+            receipt=receipt,
+            backend=backend,
+            transport=transport,
+            clock=lambda: 1002.0,
+        )
+    assert len(transport.mutations) == 1
 
 def test_tampered_durable_request_refuses_execution_before_mutation(tmp_path):
     claim, transport = _claim(tmp_path)
