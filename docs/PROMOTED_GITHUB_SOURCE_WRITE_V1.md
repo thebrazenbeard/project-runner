@@ -72,21 +72,24 @@ request. It does not accept a broader caller-supplied target grant.
 
 ## Exact compare-and-swap
 
-The adapter delegates mutation to Project Runner's existing `GitHubBackend`.
+The adapter uses a Git-data write path rather than the GitHub Contents API.
 
-That backend independently:
+The transport independently:
 
 1. reads the branch head and requires `expected_head`;
-2. reads the target file;
-3. for an existing file, requires the exact `expected_blob_sha`;
-4. performs `PUT_FILE`;
-5. reads the branch and file back;
-6. requires the returned commit to equal branch readback;
-7. requires readback content to equal the exact requested content.
+2. reads the exact expected commit/tree;
+3. traverses the exact tree to the target file;
+4. for an existing regular file, requires the exact `expected_blob_sha`;
+5. creates the new blob, tree, and commit with `expected_head` as the parent;
+6. publishes the new commit with GitHub GraphQL `updateRefs`, using
+   `beforeOid=expected_head`, `afterOid=<new commit>`, and `force=false`;
+7. reads the branch and file back;
+8. requires branch readback, blob SHA, and content to equal the created objects.
 
-If the branch moves after the promotion gate's final live read but before the
-adapter mutation, the adapter's own exact-head precondition still fails before
-the write.
+The `beforeOid` comparison is the publication-time head CAS. If the branch
+moves after the promotion gate's live read—or after the adapter's preliminary
+read—the ref update is rejected instead of silently applying the write to a
+different head.
 
 ## Result binding
 
@@ -112,8 +115,14 @@ The adapter performs no mutation when:
 - existing blob CAS fails;
 - target authority derived from the exact request fails.
 
-A failed GitHub backend result is still returned under the original work
-fingerprint and may be journaled as the observed attempt result.
+An explicit head/blob/ref-CAS rejection is returned as
+`PRECONDITION_FAILED` and is a clean no-publication outcome.
+
+If the ref-update request may have reached GitHub but its result cannot be
+proven—for example, transport uncertainty or failed readback after publication—
+the adapter returns `OUTCOME_UNKNOWN`. That result is journaled under the
+original fence, and the governed execution path refuses a blind second backend
+execution for the same attempt.
 
 ## Explicit ceiling
 
