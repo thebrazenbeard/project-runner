@@ -542,6 +542,11 @@ def _validate_bindings(
         raise ValueError("claim effect ceiling is unsupported")
     if execution.effect_class not in allowed_effects:
         raise ValueError("execution effect class exceeds claim effect ceiling")
+    request_sha256 = execution.execution_request_sha256
+    if execution.effect_class == SOURCE_WRITE and request_sha256 is None:
+        raise ValueError("source-write execution requires an exact execution request")
+    if review.execution_request_sha256 != request_sha256:
+        raise ValueError("review evidence does not bind exact execution request")
 
     common = (
         review.subject_id == subject_id
@@ -601,6 +606,7 @@ def _validate_bindings(
         or effect.work_fingerprint != work_fingerprint_value
         or effect.fencing_token != fencing_token
         or effect.effect_class != execution.effect_class
+        or effect.execution_request_sha256 != request_sha256
     ):
         raise ValueError("protected-effect authority does not bind exact claim/fence")
     _assert_fresh(
@@ -644,6 +650,7 @@ def _promotion_payload(
         "review_valid_until": review.valid_until,
         "execution_grant_sha256": execution.sha256,
         "execution_valid_until": execution.valid_until,
+        "execution_request_sha256": execution.execution_request_sha256,
         "effect_grant_sha256": effect.sha256 if effect is not None else None,
         "effect_valid_until": effect.valid_until if effect is not None else None,
         "promoted_at": promoted_at,
