@@ -735,7 +735,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             state_db=args.state_db,
             holder=args.holder,
             lease_ttl=args.lease_ttl,
-            allowed_repositories=args.authorized_repository,
+            allowed_repositories=args.allowed_repository,
         )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
