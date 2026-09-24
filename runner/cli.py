@@ -19,6 +19,11 @@ from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .leases import InMemoryLeaseStore
 from .models import FrontierStatus, ProjectSchedulingState
+from .portfolio_advancement import load_advancement_wave
+from .portfolio_wave_scheduler import (
+    WaveExecutionBudget,
+    plan_wave_admission,
+)
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
@@ -387,6 +392,54 @@ def _dispatch_report(before: Path, after: Path, dependencies: Path) -> int:
 
 
 
+
+def _portfolio_wave_plan(
+    wave_path: Path,
+    *,
+    max_parallel: int,
+    max_per_identity: int,
+    occupied_collision_keys: Sequence[str],
+) -> int:
+    wave = load_advancement_wave(wave_path)
+    plan = plan_wave_admission(
+        wave,
+        budget=WaveExecutionBudget(
+            max_parallel=max_parallel,
+            max_per_identity=max_per_identity,
+        ),
+        occupied_collision_keys=occupied_collision_keys,
+    )
+    payload = {
+        "mode": "PORTFOLIO_WAVE_ADMISSION_PLAN_V1",
+        "execution_authority": False,
+        "protected_effects_authorized": False,
+        "summary": plan.summary(),
+        "selected": [
+            {
+                "subject_kind": item.subject_kind,
+                "subject_id": item.subject_id,
+                "lead_identity": item.lead_identity,
+                "priority": item.priority,
+                "collision_keys": list(item.collision_keys),
+            }
+            for item in plan.selected
+        ],
+        "deferred": [
+            {
+                "subject_kind": item.subject_kind,
+                "subject_id": item.subject_id,
+                "lead_identity": item.lead_identity,
+                "priority": item.priority,
+                "reason": item.reason,
+                "collision_keys": list(item.collision_keys),
+            }
+            for item in plan.deferred
+        ],
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> int:
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     backend = GitHubBackend(
@@ -457,6 +510,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     dispatch_report.add_argument("--after", type=Path, required=True)
     dispatch_report.add_argument("--dependencies", type=Path, required=True)
 
+    wave_plan = subparsers.add_parser("portfolio-wave-plan")
+    wave_plan.add_argument(
+        "--wave",
+        type=Path,
+        default=ROOT / "portfolio" / "advancement_wave.public.json",
+    )
+    wave_plan.add_argument("--max-parallel", type=int, required=True)
+    wave_plan.add_argument("--max-per-identity", type=int, required=True)
+    wave_plan.add_argument(
+        "--occupied-collision-key",
+        action="append",
+        default=[],
+    )
+
     github_smoke = subparsers.add_parser("github-read-smoke")
     github_smoke.add_argument("--repository", required=True)
     github_smoke.add_argument("--ref", required=True)
@@ -475,6 +542,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _frontier_report(args.before, args.after, args.dependencies)
     if args.command == "dispatch-report":
         return _dispatch_report(args.before, args.after, args.dependencies)
+    if args.command == "portfolio-wave-plan":
+        return _portfolio_wave_plan(
+            args.wave,
+            max_parallel=args.max_parallel,
+            max_per_identity=args.max_per_identity,
+            occupied_collision_keys=args.occupied_collision_key,
+        )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
 
