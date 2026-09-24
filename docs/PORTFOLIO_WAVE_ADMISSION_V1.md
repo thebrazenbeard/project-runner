@@ -70,12 +70,16 @@ Output explicitly carries:
 
 - `execution_authority: false`;
 - `protected_effects_authorized: false`;
-- selected subjects and collision keys;
+- SHA-256 of the exact wave file bytes plus wave/corpus binding metadata;
+- a canonical SHA-256 binding over the complete plan payload;
+- selected subjects with reviewer identities, review gate, effect ceiling, frontier, source status, and collision keys;
 - deferred subjects and deterministic reasons.
+
+The plan digest is evidence of exactly what was planned. It is not a lease, authority grant, currentness proof, or effect receipt.
 
 ## Operator handoff boundary
 
-The next integration layer may let Operator consume an admitted subject, but it must re-establish:
+The next integration layer may let Operator consume an admitted subject, but it must first verify the wave digest and canonical plan digest, then re-establish:
 
 - exact current source;
 - target repository/ref authority;
