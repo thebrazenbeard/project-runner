@@ -82,12 +82,12 @@ def main() -> int:
     fixture_current = load_observations(CURRENT)
 
     live_reader = GitHubCurrentSubjectReader(_github_backend(token))
-    live_hc = live_reader.read(
-        ExactSubject(
-            repository="thebrazenbeard/hc-brain",
-            ref="main",
-        )
+    hc_seed = next(
+        observation.subject
+        for observation in fixture_current
+        if observation.target == "hc-brain"
     )
+    live_hc = live_reader.read(hc_seed)
     if live_hc is None or live_hc.commit is None:
         raise RuntimeError("live HC currentness snapshot is unavailable")
     current = tuple(
