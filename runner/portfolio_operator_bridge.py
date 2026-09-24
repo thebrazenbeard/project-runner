@@ -394,22 +394,35 @@ def claim_bound_plan_subject(
     state_db.parent.mkdir(parents=True, exist_ok=True)
     store = SqliteDispatchAdmissionStore(state_db)
     try:
-        budget_generation, work_generation = store.initialize_root(
-            budget=budget,
-            work=work,
-            effective_capabilities=("portfolio.claim",),
-        )
         now = float(clock())
-        admitted = store.admit(
-            lineage_id=lineage_id,
-            work_fingerprint_value=fingerprint,
-            budget_scope_id=budget.scope_id,
-            expected_budget_generation=budget_generation,
-            expected_work_generation=work_generation,
-            holder=holder,
-            now=now,
-            ttl=lease_ttl,
-        )
+        try:
+            budget_generation, work_generation = store.initialize_root(
+                budget=budget,
+                work=work,
+                effective_capabilities=("portfolio.claim",),
+            )
+        except ValueError as exc:
+            if str(exc) != "root execution state already exists":
+                raise
+            admitted = store.recover_claim_only_root(
+                budget=budget,
+                work=work,
+                effective_capabilities=("portfolio.claim",),
+                holder=holder,
+                now=now,
+                ttl=lease_ttl,
+            )
+        else:
+            admitted = store.admit(
+                lineage_id=lineage_id,
+                work_fingerprint_value=fingerprint,
+                budget_scope_id=budget.scope_id,
+                expected_budget_generation=budget_generation,
+                expected_work_generation=work_generation,
+                holder=holder,
+                now=now,
+                ttl=lease_ttl,
+            )
     finally:
         store.close()
 
