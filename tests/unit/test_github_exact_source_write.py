@@ -26,9 +26,15 @@ class ScriptedExactTransport(GitHubRestTransport):
         self.new_content = None
         self.graphql_fail = False
         self.graphql_transport_error = False
+        self.fail_readback = False
         self.requests = []
 
     def read_ref(self, repository, ref):
+        if (
+            self.fail_readback
+            and self.refs[(repository, ref)] == self.new_commit
+        ):
+            raise RuntimeError("simulated readback uncertainty")
         return self.refs[(repository, ref)]
 
     def read_file(self, repository, path, ref):
@@ -173,6 +179,34 @@ def test_exact_source_write_uncertain_ref_update_is_outcome_unknown():
     with pytest.raises(
         GitHubOutcomeUnknown,
         match="outcome is unknown",
+    ):
+        transport.put_file_exact_head(
+            transport.repository,
+            "docs/file.txt",
+            transport.branch,
+            "after\n",
+            "Exact write",
+            expected_head=transport.expected_head,
+            expected_blob_sha=transport.old_blob,
+        )
+
+
+def test_exact_source_write_readback_failure_after_publication_is_unknown():
+    transport = ScriptedExactTransport()
+
+    original = transport._request
+
+    def request_and_arm_readback(method, url, body=None):
+        result = original(method, url, body)
+        if method == "POST" and url == transport.graphql_url:
+            transport.fail_readback = True
+        return result
+
+    transport._request = request_and_arm_readback
+
+    with pytest.raises(
+        GitHubOutcomeUnknown,
+        match="readback outcome is unknown",
     ):
         transport.put_file_exact_head(
             transport.repository,
