@@ -1,14 +1,14 @@
 {
   "wave_id": "PROJECT_RUNNER_PORTFOLIO_ADVANCEMENT_WAVE_V1",
-  "generated_at": "2026-09-24T14:51:00-04:00",
+  "generated_at": "2026-09-24T17:16:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/project-runner-corpus-v1-20260924",
-    "commit": "5190f0b868f9b17cd1efd8551583a06e71dcf5d2",
+    "commit": "381559dd07e52105b4e352a90e207a03c6793ff0",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "477541bb7bc742f23c7993e0909fa114434af3a6",
-    "public_repository_count": 48,
-    "total_repository_count": 66,
+    "git_blob_sha": "886e9be586c37584c17afdc540c38a1d95deaaa6",
+    "public_repository_count": 49,
+    "total_repository_count": 67,
     "private_repository_count": 18,
     "public_workstream_count": 2,
     "total_workstream_count": 15,
@@ -203,7 +203,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
       "frontier": "Refresh census and feed descriptive inventory into Project Runner.",
-      "source_status": "Committed census is stale against the live 66-repository estate."
+      "source_status": "Discovery has 66-cut refresh candidates, but live membership advanced again to 67 repositories with SQL Connectome."
     },
     {
       "subject_kind": "repository",
@@ -619,6 +619,24 @@
     },
     {
       "subject_kind": "repository",
+      "subject_id": "sql-connectome",
+      "repository": "thebrazenbeard/sql-connectome",
+      "priority": "P1",
+      "family_id": "language-and-semantics",
+      "activity_state": "ACTIVE_HEAVY",
+      "lead_identity": "REZON",
+      "reviewer_identities": [
+        "VOSS"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "QUEUED",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Stabilize semantic/execution boundaries and compose with BT2 database/Lantern work without turning translation or connectivity into effect authority.",
+      "source_status": "New active repository; PostgreSQL 17 CI is green while semantic/translation qualification continues advancing on main."
+    },
+    {
+      "subject_kind": "repository",
       "subject_id": "temporal",
       "repository": "thebrazenbeard/temporal",
       "priority": "P2",
@@ -732,26 +750,6 @@
     },
     {
       "subject_kind": "repository",
-      "subject_id": "vera-model-training",
-      "repository": "thebrazenbeard/vera_model_training",
-      "priority": "P0",
-      "family_id": "vera-runtime",
-      "activity_state": "ACTIVE_HEAVY",
-      "lead_identity": "HEPHAESTUS",
-      "reviewer_identities": [
-        "ACHILLES",
-        "REZON",
-        "VOSS"
-      ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
-      "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Execute one reproducible training line with exact corpus lineage.",
-      "source_status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open."
-    },
-    {
-      "subject_kind": "repository",
       "subject_id": "vera-control-plane",
       "repository": "thebrazenbeard/vera-control-plane",
       "priority": "P0",
@@ -809,6 +807,26 @@
       "review_gate": "EXACT_HEAD_REVIEW",
       "frontier": "Collapse stacked activation work into one qualified transport path.",
       "source_status": "Large WorkBridge/VeraPort/Lappy activation stack remains open."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "vera-model-training",
+      "repository": "thebrazenbeard/vera_model_training",
+      "priority": "P0",
+      "family_id": "vera-runtime",
+      "activity_state": "ACTIVE_HEAVY",
+      "lead_identity": "HEPHAESTUS",
+      "reviewer_identities": [
+        "ACHILLES",
+        "REZON",
+        "VOSS"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "QUEUED",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Execute one reproducible training line with exact corpus lineage.",
+      "source_status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open."
     },
     {
       "subject_kind": "repository",
@@ -947,28 +965,6 @@
     },
     {
       "subject_kind": "workstream",
-      "subject_id": "yeshua-real-testament",
-      "repositories": [
-        "thebrazenbeard/on-theo",
-        "thebrazenbeard/testament"
-      ],
-      "priority": "P1",
-      "family_id": "source-critical-research",
-      "activity_state": "ACTIVE_HEAVY",
-      "lead_identity": "VOSS",
-      "reviewer_identities": [
-        "REZON",
-        "ROOTS"
-      ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
-      "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Continue hostile source review upstream and consume survived or explicitly unresolved claims downstream.",
-      "source_status": "Active upstream research and downstream manuscript work remain intentionally separate in authority."
-    },
-    {
-      "subject_kind": "workstream",
       "subject_id": "nature-of-existence",
       "repositories": [
         "thebrazenbeard/on-theo",
@@ -988,6 +984,28 @@
       "review_gate": "EXACT_HEAD_REVIEW",
       "frontier": "Keep hypothesis, symbolism, experiential interpretation and sourced fact distinct.",
       "source_status": "Continuation is preserved in ON_THEO with downstream literary handoff and remains distinct from the Yeshua evidence spine."
+    },
+    {
+      "subject_kind": "workstream",
+      "subject_id": "yeshua-real-testament",
+      "repositories": [
+        "thebrazenbeard/on-theo",
+        "thebrazenbeard/testament"
+      ],
+      "priority": "P1",
+      "family_id": "source-critical-research",
+      "activity_state": "ACTIVE_HEAVY",
+      "lead_identity": "VOSS",
+      "reviewer_identities": [
+        "REZON",
+        "ROOTS"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "QUEUED",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Continue hostile source review upstream and consume survived or explicitly unresolved claims downstream.",
+      "source_status": "Active upstream research and downstream manuscript work remain intentionally separate in authority."
     }
   ]
 }
