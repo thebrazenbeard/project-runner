@@ -466,6 +466,16 @@ def _portfolio_wave_plan(
             for item in plan.deferred
         ],
     }
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    payload["plan_binding"] = {
+        "schema": "PROJECT_RUNNER_PORTFOLIO_WAVE_PLAN_BINDING_V1",
+        "sha256": hashlib.sha256(canonical).hexdigest(),
+    }
     print(json.dumps(payload, sort_keys=True))
     return 0
 
