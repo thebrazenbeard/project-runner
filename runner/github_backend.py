@@ -215,6 +215,73 @@ class GitHubRestTransport:
         content = base64.b64decode(raw_content).decode("utf-8")
         return GitHubFileState(sha=str(payload["sha"]), content=content)
 
+    def read_commit_tree(self, repository: str, commit_sha: str) -> str:
+        owner, repo = repository.split("/", 1)
+        payload = self._request(
+            "GET",
+            f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}/git/commits/{parse.quote(commit_sha, safe='')}",
+        )
+        if payload is None:
+            raise KeyError(commit_sha)
+        tree = payload.get("tree")
+        if not isinstance(tree, Mapping) or not tree.get("sha"):
+            raise RuntimeError("github commit response missing tree")
+        return str(tree["sha"])
+
+    def inspect_update_refs_schema(self) -> Mapping[str, tuple[str, ...]]:
+        query = """
+        query ProjectRunnerUpdateRefsSchema {
+          mutationType: __type(name: "Mutation") {
+            fields { name }
+          }
+          updateRefsInput: __type(name: "UpdateRefsInput") {
+            inputFields { name }
+          }
+          refUpdate: __type(name: "RefUpdate") {
+            inputFields { name }
+          }
+        }
+        """
+        payload = self._request(
+            "POST",
+            self.graphql_url,
+            {"query": query, "variables": {}},
+        )
+        if payload is None:
+            raise RuntimeError("github graphql schema query returned no payload")
+        errors = payload.get("errors")
+        if errors:
+            raise RuntimeError("github graphql schema query returned errors")
+        data = payload.get("data")
+        if not isinstance(data, Mapping):
+            raise RuntimeError("github graphql schema query missing data")
+
+        def names(type_payload: object, field: str) -> tuple[str, ...]:
+            if not isinstance(type_payload, Mapping):
+                return ()
+            values = type_payload.get(field)
+            if not isinstance(values, list):
+                return ()
+            return tuple(
+                sorted(
+                    str(item.get("name"))
+                    for item in values
+                    if isinstance(item, Mapping) and item.get("name")
+                )
+            )
+
+        return {
+            "mutation_fields": names(data.get("mutationType"), "fields"),
+            "update_refs_input_fields": names(
+                data.get("updateRefsInput"),
+                "inputFields",
+            ),
+            "ref_update_fields": names(
+                data.get("refUpdate"),
+                "inputFields",
+            ),
+        }
+
     def create_branch(self, repository: str, branch: str, sha: str) -> None:
         owner, repo = repository.split("/", 1)
         self._request(
