@@ -78,10 +78,13 @@ On a stable snapshot:
 
 - `EFFECT_CONFIRMED`: current head equals the candidate commit and the exact
   target blob/content equals the candidate blob/content;
-- `NO_EFFECT_CONFIRMED`: current head still equals the pre-write exact head and
-  the target blob still equals the pre-write blob, or remains absent for a
-  planned new file;
-- `INDETERMINATE`: live state matches neither exact state.
+- `INDETERMINATE`: every other state, including a branch that currently
+  matches the pre-write snapshot.
+
+Returning to the pre-write head is **not** treated as `NO_EFFECT_CONFIRMED`,
+because the candidate could have been transiently published and later reverted.
+Current state alone cannot prove that no publication or webhook-visible effect
+ever occurred.
 
 The outcome is persisted through Project Runner's existing durable
 `execution_reconciliations` journal.
@@ -93,9 +96,13 @@ For a recorded `OUTCOME_UNKNOWN` only:
 - `EFFECT_CONFIRMED` remains non-retryable and leaves the RUNNING work/fence
   in place for later verification/finalization;
 - `INDETERMINATE` remains non-retryable and may later be refined by another
-  read-only reconciliation;
-- `NO_EFFECT_CONFIRMED` atomically releases the exact fence and moves the work
-  to `FAILED_RETRYABLE`.
+  read-only reconciliation.
+
+This GitHub source-write reconciler does not currently manufacture
+`NO_EFFECT_CONFIRMED` from present repository state. A future independent
+proof source could use the generic durable reconciliation state machine to
+record that outcome, but only with evidence stronger than "the branch looks
+unchanged now."
 
 No other recorded backend classification is eligible for this reconciliation
 path.
