@@ -8,13 +8,11 @@ from typing import Mapping
 from .backends import BackendResult
 from .execution_promotion import PromotedExecution, SOURCE_WRITE
 from .github_backend import (
-    GitHubBackend,
     GitHubOperation,
+    GitHubPreconditionFailed,
     GitHubRequest,
     GitHubTransport,
-    TargetAuthorityGrant,
 )
-from .work_units import WorkUnit, WorkUnitStatus
 
 
 _SOURCE_WRITE_SCHEMA = "PROJECT_RUNNER_GITHUB_SOURCE_WRITE_V1"
@@ -77,7 +75,7 @@ class PromotedGitHubSourceWriteBackend:
 
     The promotion gate already proves the active fence and authority windows.
     This adapter independently binds the durable request to the promotion receipt
-    and delegates the mutation to the existing exact-head/blob GitHub backend.
+    and delegates the mutation to an exact-head Git-data transport primitive.
     """
 
     def __init__(self, *, transport: GitHubTransport) -> None:
@@ -132,61 +130,34 @@ class PromotedGitHubSourceWriteBackend:
                 "source-write request target diverges from promotion",
             )
 
-        github_work = WorkUnit(
-            id=f"promoted-github-source-write:{execution.work.id}",
-            root_frontier_id=execution.work.root_frontier_id,
-            parent_work_id=execution.work.parent_work_id,
-            inputs=execution.work.inputs,
-            operation="GITHUB",
-            required_capabilities=("github.put_file",),
-            collision_keys=execution.work.collision_keys,
-            recursion_depth=execution.work.recursion_depth,
-            budget_allocation=execution.work.budget_allocation,
-            expected_outputs=("commit-sha", "blob-sha"),
-            completion_criteria=(
-                "exact-head/blob preconditions passed",
-                "written content independently read back",
-            ),
-            status=WorkUnitStatus.RUNNING,
-            payload={
-                "github": {
-                    "operation": GitHubOperation.PUT_FILE.value,
-                    "repository": request.repository,
-                    "ref": request.ref,
-                    "expected_head": request.expected_head,
-                    "path": request.path,
-                    "content": request.content,
-                    "message": request.message,
-                    "expected_blob_sha": request.expected_blob_sha,
-                }
-            },
-        )
-        backend = GitHubBackend(
-            transport=self.transport,
-            route_capabilities=("github.put_file",),
-            grants=(
-                TargetAuthorityGrant(
-                    repository=request.repository,
-                    operations=(GitHubOperation.PUT_FILE,),
-                    ref_prefixes=(request.ref,),
-                    path_prefixes=(request.path,),
-                ),
-            ),
-        )
-        observed = backend.execute(github_work)
-        if not observed.succeeded:
-            return BackendResult(
-                work_fingerprint=fingerprint,
-                succeeded=False,
-                outputs=(),
-                evidence=observed.evidence,
-                classification=observed.classification,
+        try:
+            commit_sha, blob_sha = self.transport.put_file_exact_head(
+                request.repository,
+                request.path,
+                request.ref,
+                request.content,
+                request.message,
+                expected_head=request.expected_head,
+                expected_blob_sha=request.expected_blob_sha,
             )
+        except GitHubPreconditionFailed:
+            return self._failure(
+                fingerprint,
+                "PRECONDITION_FAILED",
+                "exact GitHub source-write compare-and-swap failed",
+            )
+        except (KeyError, RuntimeError, ValueError):
+            return self._failure(
+                fingerprint,
+                "TRANSPORT_FAILED",
+                "exact GitHub source-write transport failed",
+            )
+
 
         return BackendResult(
             work_fingerprint=fingerprint,
             succeeded=True,
-            outputs=observed.outputs,
+            outputs=(commit_sha, blob_sha),
             evidence=(
                 "github:promoted-source-write",
                 "github:exact-cas",
