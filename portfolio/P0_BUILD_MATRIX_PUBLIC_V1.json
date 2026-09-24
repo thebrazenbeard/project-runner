@@ -2,7 +2,7 @@
   "schema": "PROJECT_RUNNER_P0_BUILD_MATRIX_V1",
   "observed_date": "2026-09-24",
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
-  "corpus_source": "thebrazenbeard/project-runner@4bc9dfee1204c774d077419ee9c3fdf91ebc141f:portfolio/corpus.public.json",
+  "corpus_source": "thebrazenbeard/project-runner@381559dd07e52105b4e352a90e207a03c6793ff0:portfolio/corpus.public.json",
   "authority_rule": "This matrix records source work only. It grants no merge, deployment, installation, runtime, scheduling, or mutation authority.",
   "lantern_currentness": "UNKNOWN_WOWSQL_CONNECTOR_UNAVAILABLE_DURING_BUILD",
   "records": [
@@ -16,10 +16,10 @@
     {
       "project_id": "discovery",
       "repository": "thebrazenbeard/discovery",
-      "pr": 42,
-      "manifest_subject": "e73243fd520e1ebf1324db4d86fa6d0338dfc177",
+      "pr": 43,
+      "manifest_subject": "dea7cd5bf54988e0e3ff0e187bfca5604dae3988",
       "readback": "PASS",
-      "validation": "CENSUS_V2_VALIDATION_PASS; PUBLIC_CURRENTNESS_WATCH_FAILS_ON_STALE_EXACT_HEADS"
+      "validation": "CENSUS_67_49_VALIDATION_PASS; COMPOSED_LIFECYCLE_PASS; PUBLIC_CURRENTNESS_WATCH_PASS; PRIVACY_SAFE_P0_SUCCESSOR"
     },
     {
       "project_id": "project-lantern",
