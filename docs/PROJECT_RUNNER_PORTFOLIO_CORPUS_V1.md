@@ -14,9 +14,9 @@ This does not make Project Runner the semantic owner of every project.
 
 ## Estate cut
 
-The audited GitHub estate contains 66 repositories:
+The audited GitHub estate contains 67 repositories:
 
-- 48 public;
+- 49 public;
 - 18 private;
 - 64 unarchived;
 - 2 archived, both private.
@@ -134,3 +134,20 @@ It is to:
 3. feed corpus family/priority/activity information into Project Runner as **non-authoritative scheduling context**;
 4. require any scheduling decision to re-check exact currentness and existing authority gates;
 5. keep Discovery's census synchronized with the same live estate so Discovery and Project Runner cannot silently disagree about what exists.
+
+
+## 2026-09-24 live membership refresh
+
+The live estate advanced after the original 66-repository cut.
+
+Current public-safe membership is now:
+
+- 67 total repositories;
+- 49 public;
+- 18 private;
+- 2 archived private repositories.
+
+The only public addition relative to the prior corpus is `thebrazenbeard/sql-connectome`.
+It is admitted descriptively as an active P1 `language-and-semantics` subject. This
+does not grant it P0 status, scheduling authority, database authority, or permission
+to replace BT2/Lantern provider contracts without separate qualification.
