@@ -11,6 +11,8 @@ def test_portfolio_wave_plan_cli_is_bounded_and_non_authorizing(capsys):
             "5",
             "--max-per-identity",
             "1",
+            "--max-per-family",
+            "1",
         ]
     )
     assert code == 0
@@ -20,6 +22,7 @@ def test_portfolio_wave_plan_cli_is_bounded_and_non_authorizing(capsys):
     assert payload["protected_effects_authorized"] is False
     assert payload["summary"]["selected"] <= 5
     assert max(payload["summary"]["selected_by_identity"].values()) <= 1
+    assert max(payload["summary"]["selected_by_family"].values()) <= 1
 
 
 def test_portfolio_wave_plan_cli_respects_occupied_collision(capsys):
@@ -29,6 +32,8 @@ def test_portfolio_wave_plan_cli_respects_occupied_collision(capsys):
             "--max-parallel",
             "10",
             "--max-per-identity",
+            "2",
+            "--max-per-family",
             "2",
             "--occupied-collision-key",
             "repository:thebrazenbeard/project-runner",
