@@ -97,6 +97,12 @@ The returned receipt must exactly equal the durable row. A caller cannot extend
 an expiry or substitute a different head/effect class while retaining the old
 promotion digest.
 
+If promotion committed but the caller lost the response, replay is idempotent only
+for the same exact fence, holder, signed review, signed execution grant, signed
+protected-effect grant (when applicable), operation, effect class, and still-current
+live head. The existing durable receipt is returned; no second RUNNING transition is
+created.
+
 ## Execution-time recheck
 
 Backends for promoted portfolio work use `execute_promoted()`, not
