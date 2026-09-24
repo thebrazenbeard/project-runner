@@ -45,6 +45,16 @@ class GitHubSourceWriteRequest:
             raise ValueError("promoted GitHub source write requires exact head")
         if request.path is None or not request.path.strip():
             raise ValueError("promoted GitHub source write requires a path")
+        path = request.path
+        parts = path.split("/")
+        if (
+            path.startswith("/")
+            or path.endswith("/")
+            or any(part in {"", ".", ".."} for part in parts)
+        ):
+            raise ValueError(
+                "promoted GitHub source-write path must already be canonical"
+            )
         if request.content is None:
             raise ValueError("promoted GitHub source write requires content")
         if request.message is None or not request.message.strip():
@@ -53,7 +63,7 @@ class GitHubSourceWriteRequest:
             repository=request.repository,
             ref=request.ref,
             expected_head=request.expected_head,
-            path=request.path.lstrip("/"),
+            path=path,
             content=request.content,
             message=request.message,
             expected_blob_sha=request.expected_blob_sha,
