@@ -68,9 +68,9 @@ Not authorized by this wave:
 
 ## Public/private boundary
 
-The committed public wave covers every public corpus subject and binds aggregate private membership through the corpus digests.
+The committed public wave covers every public corpus subject and preserves only aggregate private counts. It intentionally does not publish an unkeyed commitment to private identifiers.
 
-The full private wave is an external execution artifact. It must never be copied into this public repository.
+The full private wave is an external execution artifact. Exact private membership must be validated there or by a keyed private commitment mechanism; it must never be copied into this public repository.
 
 ## Advancement semantics
 
