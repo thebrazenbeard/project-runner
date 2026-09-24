@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Runner P0 Currentness Overlay V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "observed_at", "corpus_binding", "coverage",
+    "governance", "subjects"
+  ],
+  "properties": {
+    "schema": {"const": "PROJECT_RUNNER_P0_CURRENTNESS_OVERLAY_V1"},
+    "observed_at": {"type": "string", "minLength": 1},
+    "corpus_binding": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["repository", "ref", "commit", "path", "git_blob_sha"]
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priority", "subject_kind", "repository_count", "complete_for_scope"],
+      "properties": {
+        "priority": {"const": "P0"},
+        "subject_kind": {"const": "repository"},
+        "repository_count": {"type": "integer", "minimum": 1},
+        "complete_for_scope": {"const": true}
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "priority_is_authority", "effect_ceiling", "merge_authorized",
+        "deploy_authorized", "credential_or_permission_changes_authorized"
+      ],
+      "properties": {
+        "priority_is_authority": {"const": false},
+        "effect_ceiling": {"const": "SOURCE_ONLY"},
+        "merge_authorized": {"const": false},
+        "deploy_authorized": {"const": false},
+        "credential_or_permission_changes_authorized": {"const": false}
+      }
+    },
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subject_id", "repository", "default_branch", "default_head",
+          "source_state", "source_status", "frontier", "candidate_pr"
+        ],
+        "properties": {
+          "subject_id": {"type": "string", "minLength": 1},
+          "repository": {"type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$"},
+          "default_branch": {"type": "string", "minLength": 1},
+          "default_head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "source_state": {
+            "enum": [
+              "CURRENT_MAIN_PR",
+              "STACKED_PR",
+              "STALE_PR_REQUIRES_RESTACK",
+              "NO_CURRENT_PR_REQUIRES_MIGRATION"
+            ]
+          },
+          "source_status": {"type": "string", "minLength": 1},
+          "frontier": {"type": "string", "minLength": 1},
+          "candidate_pr": {
+            "anyOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "number", "title", "head_ref", "head_sha",
+                  "base_ref", "base_sha", "draft", "mergeable"
+                ],
+                "properties": {
+                  "number": {"type": "integer", "minimum": 1},
+                  "title": {"type": "string", "minLength": 1},
+                  "head_ref": {"type": "string", "minLength": 1},
+                  "head_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                  "base_ref": {"type": "string", "minLength": 1},
+                  "base_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+                  "draft": {"type": "boolean"},
+                  "mergeable": {"type": "boolean"}
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
