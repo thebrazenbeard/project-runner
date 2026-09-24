@@ -7,6 +7,7 @@ import sqlite3
 import pytest
 
 from runner.cli import main
+from runner.durable_dispatch import SqliteDispatchAdmissionStore
 from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_bridge import (
     claim_bound_plan_subject,
@@ -255,7 +256,7 @@ def test_unauthorized_repository_fails_before_live_read(tmp_path):
     assert transport.reads == []
 
 
-def test_same_bound_plan_subject_cannot_be_claimed_twice_as_new_root(tmp_path):
+def test_active_claim_replay_is_idempotent_for_same_holder(tmp_path):
     plan_path, payload = _write_plan(tmp_path)
     subject_id, record = _selected_record(payload)
     transport = FakeReadOnlyTransport(
@@ -275,6 +276,157 @@ def test_same_bound_plan_subject_cannot_be_claimed_twice_as_new_root(tmp_path):
         clock=lambda: 1000.0,
     )
 
-    claim_bound_plan_subject(**kwargs)
-    with pytest.raises(ValueError, match="root execution state already exists"):
+    first = claim_bound_plan_subject(**kwargs)
+    second = claim_bound_plan_subject(**kwargs)
+    assert second == first
+
+    with sqlite3.connect(tmp_path / "operator.sqlite3") as db:
+        attempts = db.execute(
+            "SELECT fencing_token FROM execution_attempts ORDER BY fencing_token"
+        ).fetchall()
+    assert attempts == [(1,)]
+
+
+def test_active_claim_replay_rejects_different_holder(tmp_path):
+    plan_path, payload = _write_plan(tmp_path)
+    subject_id, record = _selected_record(payload)
+    transport = FakeReadOnlyTransport(
+        {(record.repository, record.default_branch): "e" * 40}
+    )
+    common = dict(
+        plan_path=plan_path,
+        wave_path=WAVE,
+        corpus_path=CORPUS,
+        projects_path=PROJECTS,
+        subject_id=subject_id,
+        state_db=tmp_path / "operator.sqlite3",
+        lease_ttl=60.0,
+        authorized_repositories=(record.repository,),
+        transport=transport,
+    )
+    claim_bound_plan_subject(
+        **common,
+        holder="operator-a",
+        clock=lambda: 1000.0,
+    )
+    with pytest.raises(ValueError, match="active lease"):
+        claim_bound_plan_subject(
+            **common,
+            holder="operator-b",
+            clock=lambda: 1001.0,
+        )
+
+
+def test_expired_claim_only_lease_reclaims_with_new_fence(tmp_path):
+    plan_path, payload = _write_plan(tmp_path)
+    subject_id, record = _selected_record(payload)
+    transport = FakeReadOnlyTransport(
+        {(record.repository, record.default_branch): "f" * 40}
+    )
+    common = dict(
+        plan_path=plan_path,
+        wave_path=WAVE,
+        corpus_path=CORPUS,
+        projects_path=PROJECTS,
+        subject_id=subject_id,
+        state_db=tmp_path / "operator.sqlite3",
+        lease_ttl=10.0,
+        authorized_repositories=(record.repository,),
+        transport=transport,
+    )
+    first = claim_bound_plan_subject(
+        **common,
+        holder="operator-a",
+        clock=lambda: 1000.0,
+    )
+    second = claim_bound_plan_subject(
+        **common,
+        holder="operator-b",
+        clock=lambda: 1011.0,
+    )
+
+    assert first.fencing_token == 1
+    assert second.fencing_token == 2
+    assert second.holder == "operator-b"
+    assert second.budget_generation == 2
+    assert second.work_generation == 3
+    assert second.lease_expires_at == 1021.0
+
+    store = SqliteDispatchAdmissionStore(tmp_path / "operator.sqlite3")
+    unresolved = store.unresolved_attempts()
+    store.close()
+    assert len(unresolved) == 1
+    assert unresolved[0].fencing_token == 2
+    assert unresolved[0].phase == "ADMITTED"
+
+    with sqlite3.connect(tmp_path / "operator.sqlite3") as db:
+        reconciled = db.execute(
+            """
+            SELECT outcome, reconciler
+            FROM execution_reconciliations
+            WHERE fencing_token = 1
+            """
+        ).fetchone()
+    assert reconciled == ("NO_EFFECT_CONFIRMED", "portfolio-claim-recovery")
+
+
+def test_crash_after_root_initialization_recovers_on_replay(tmp_path, monkeypatch):
+    plan_path, payload = _write_plan(tmp_path)
+    subject_id, record = _selected_record(payload)
+    transport = FakeReadOnlyTransport(
+        {(record.repository, record.default_branch): "1" * 40}
+    )
+    kwargs = dict(
+        plan_path=plan_path,
+        wave_path=WAVE,
+        corpus_path=CORPUS,
+        projects_path=PROJECTS,
+        subject_id=subject_id,
+        state_db=tmp_path / "operator.sqlite3",
+        holder="operator-test",
+        lease_ttl=60.0,
+        authorized_repositories=(record.repository,),
+        transport=transport,
+        clock=lambda: 1000.0,
+    )
+
+    original_admit = SqliteDispatchAdmissionStore.admit
+
+    def interrupted_admit(self, **_kwargs):
+        raise RuntimeError("simulated interruption after root initialization")
+
+    monkeypatch.setattr(SqliteDispatchAdmissionStore, "admit", interrupted_admit)
+    with pytest.raises(RuntimeError, match="simulated interruption"):
         claim_bound_plan_subject(**kwargs)
+
+    monkeypatch.setattr(SqliteDispatchAdmissionStore, "admit", original_admit)
+    recovered = claim_bound_plan_subject(**kwargs)
+    assert recovered.fencing_token == 1
+    assert recovered.budget_generation == 2
+    assert recovered.work_generation == 2
+
+
+def test_replay_after_live_head_moves_fails_closed(tmp_path):
+    plan_path, payload = _write_plan(tmp_path)
+    subject_id, record = _selected_record(payload)
+    transport = FakeReadOnlyTransport(
+        {(record.repository, record.default_branch): "2" * 40}
+    )
+    common = dict(
+        plan_path=plan_path,
+        wave_path=WAVE,
+        corpus_path=CORPUS,
+        projects_path=PROJECTS,
+        subject_id=subject_id,
+        state_db=tmp_path / "operator.sqlite3",
+        holder="operator-test",
+        lease_ttl=60.0,
+        authorized_repositories=(record.repository,),
+        transport=transport,
+        clock=lambda: 1000.0,
+    )
+    claim_bound_plan_subject(**common)
+    transport.heads[(record.repository, record.default_branch)] = "3" * 40
+
+    with pytest.raises(ValueError, match="exact work state is not durable"):
+        claim_bound_plan_subject(**common)
