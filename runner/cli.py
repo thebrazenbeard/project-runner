@@ -601,6 +601,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
     )
 
+    operator_bindings = subparsers.add_parser("portfolio-operator-bindings")
+    operator_bindings.add_argument(
+        "--wave",
+        type=Path,
+        default=ROOT / "portfolio" / "advancement_wave.public.json",
+    )
+    operator_bindings.add_argument(
+        "--corpus",
+        type=Path,
+        default=ROOT / "portfolio" / "corpus.public.json",
+    )
+    operator_bindings.add_argument(
+        "--projects",
+        type=Path,
+        default=ROOT / "registry" / "projects.yaml",
+    )
+
     github_smoke = subparsers.add_parser("github-read-smoke")
     github_smoke.add_argument("--repository", required=True)
     github_smoke.add_argument("--ref", required=True)
