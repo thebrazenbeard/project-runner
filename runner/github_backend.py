@@ -451,8 +451,13 @@ class GitHubRestTransport:
             new_head=new_commit_sha,
         )
 
-        readback_head = self.read_ref(repository, branch)
-        readback_file = self.read_file(repository, path, branch)
+        try:
+            readback_head = self.read_ref(repository, branch)
+            readback_file = self.read_file(repository, path, branch)
+        except (KeyError, RuntimeError, ValueError) as exc:
+            raise GitHubOutcomeUnknown(
+                "github exact source-write readback outcome is unknown"
+            ) from exc
         if (
             readback_head != new_commit_sha
             or readback_file is None
