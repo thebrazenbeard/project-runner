@@ -9,7 +9,7 @@
     "generated_at":{"type":"string","minLength":1},
     "corpus_binding":{
       "type":"object","additionalProperties":false,
-      "required":["repository","ref","commit","path","git_blob_sha","public_repository_count","total_repository_count","private_repository_count","public_workstream_count","total_workstream_count","private_workstream_count","private_inventory_sha256","private_workstream_inventory_sha256"],
+      "required":["repository","ref","commit","path","git_blob_sha","public_repository_count","total_repository_count","private_repository_count","public_workstream_count","total_workstream_count","private_workstream_count"],
       "properties":{
         "repository":{"const":"thebrazenbeard/project-runner"},
         "ref":{"type":"string","minLength":1},
@@ -21,9 +21,7 @@
         "private_repository_count":{"type":"integer","minimum":0},
         "public_workstream_count":{"type":"integer","minimum":0},
         "total_workstream_count":{"type":"integer","minimum":0},
-        "private_workstream_count":{"type":"integer","minimum":0},
-        "private_inventory_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
-        "private_workstream_inventory_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}
+        "private_workstream_count":{"type":"integer","minimum":0}
       }
     },
     "identities":{
