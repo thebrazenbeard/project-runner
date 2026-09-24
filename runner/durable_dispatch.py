@@ -1883,10 +1883,6 @@ def execute_admitted(
     """
     if admission.work.payload.get("execution_authority") is False:
         raise ValueError("durable admission does not authorize backend execution")
-    if admission.work.payload.get("protected_effects_authorized") is False:
-        raise ValueError(
-            "durable admission does not authorize protected backend effects"
-        )
     result = backend.execute(admission.work)
     journal.record_result(
         lineage_id=admission.budget_after.lineage_id,
