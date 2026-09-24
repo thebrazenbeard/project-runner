@@ -406,6 +406,42 @@ def test_crash_after_root_initialization_recovers_on_replay(tmp_path, monkeypatc
     assert recovered.work_generation == 2
 
 
+
+def test_claim_recovery_rejects_lease_attempt_divergence(tmp_path):
+    plan_path, payload = _write_plan(tmp_path)
+    subject_id, record = _selected_record(payload)
+    transport = FakeReadOnlyTransport(
+        {(record.repository, record.default_branch): "4" * 40}
+    )
+    kwargs = dict(
+        plan_path=plan_path,
+        wave_path=WAVE,
+        corpus_path=CORPUS,
+        projects_path=PROJECTS,
+        subject_id=subject_id,
+        state_db=tmp_path / "operator.sqlite3",
+        holder="operator-test",
+        lease_ttl=60.0,
+        authorized_repositories=(record.repository,),
+        transport=transport,
+        clock=lambda: 1000.0,
+    )
+    claim = claim_bound_plan_subject(**kwargs)
+
+    with sqlite3.connect(tmp_path / "operator.sqlite3") as db:
+        db.execute(
+            """
+            UPDATE leases
+            SET holder = 'tampered-holder'
+            WHERE work_fingerprint = ?
+            """,
+            (claim.work_fingerprint,),
+        )
+
+    with pytest.raises(ValueError, match="lease/attempt holder mismatch"):
+        claim_bound_plan_subject(**kwargs)
+
+
 def test_replay_after_live_head_moves_fails_closed(tmp_path):
     plan_path, payload = _write_plan(tmp_path)
     subject_id, record = _selected_record(payload)
