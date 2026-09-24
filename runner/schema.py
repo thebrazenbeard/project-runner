@@ -16,6 +16,7 @@ _SCHEMA_FILES = {
     "frontier": _ROOT / "schemas" / "frontier.schema.json",
     "work-unit": _ROOT / "schemas" / "work-unit.schema.json",
     "portfolio-corpus": _ROOT / "schemas" / "portfolio-corpus.schema.json",
+    "p0-project-manifest": _ROOT / "schemas" / "p0-project-manifest.schema.json",
 }
 
 
