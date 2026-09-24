@@ -88,5 +88,14 @@
     "count": 1,
     "identity_disclosure": "OMITTED_FROM_PUBLIC_MATRIX",
     "complete_matrix_location": "private coordination surface"
+  },
+  "corpus_membership": {
+    "total": 67,
+    "public": 49,
+    "private": 18,
+    "public_delta": [
+      "thebrazenbeard/sql-connectome"
+    ],
+    "note": "P0 matrix remains unchanged; SQL Connectome is descriptively P1 at this cut."
   }
 }
