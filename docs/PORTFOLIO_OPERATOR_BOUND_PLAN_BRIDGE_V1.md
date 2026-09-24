@@ -68,13 +68,30 @@ transaction then:
 
 The bridge returns the fence receipt. It does not advance the work to `RUNNING`.
 
-## Duplicate/replay behavior
+## Crash, replay, and lease-expiry behavior
 
 The lineage id is deterministic over the canonical plan digest and subject id.
 
-Attempting to create the same plan/subject as a new root again fails closed instead
-of silently manufacturing a parallel execution lineage. Recovery/retry belongs to
-the durable Operator/recovery path, not this bridge.
+If the process dies after root initialization but before admission, replay verifies
+the exact immutable root and resumes admission instead of orphaning the lineage.
+
+If admission committed but the caller did not receive the receipt:
+- replay by the same holder while the lease is active is idempotent and returns the
+  existing fence;
+- a different holder cannot steal an active lease;
+- after lease expiry, claim-only work may be re-fenced only when it remained
+  `CLAIMED`, carries `execution_authority=false`, and has no backend result,
+  verification, or prior reconciliation;
+- that expired fence is durably recorded as `NO_EFFECT_CONFIRMED` before the new
+  fencing token is issued;
+- reclaim does not consume the root backend/active budget a second time.
+
+If the repository head changes between claims, the exact work fingerprint changes.
+The bridge fails closed rather than silently replacing the exact subject inside an
+existing lineage. Supersession/currentness migration remains a separate frontier.
+
+A generic durable executor also rejects any admitted work whose payload explicitly
+carries `execution_authority=false`; `CLAIMED` alone is not backend authority.
 
 ## Explicit non-authority
 
@@ -115,6 +132,11 @@ canonical source files. External paths can be supplied explicitly.
 
 The result reports `backend_execution_performed=false` together with the exact
 head, work fingerprint, lineage id, fencing token, and generation numbers.
+
+The bridge's `protected_effects_authorized=false` flag remains distinct from
+execution authority: it does not redefine all possible read-only backend execution
+as a protected effect. This bridge sets both flags false, but the durable executor's
+hard stop is the explicit `execution_authority=false` boundary.
 
 ## Claim ceiling
 
