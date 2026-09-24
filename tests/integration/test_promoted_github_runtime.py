@@ -365,13 +365,13 @@ def test_unknown_reconciliation_confirms_published_candidate(tmp_path):
     assert transport.writes == []
 
 
-def test_unknown_reconciliation_confirms_no_effect_and_releases_retry(tmp_path):
+def test_pre_write_current_state_does_not_prove_no_effect(tmp_path):
     claim, _receipt, request, _commit, _blob, transport = (
         _claim_and_promote(tmp_path)
     )
     transport.head = claim.exact_head
     assert transport.files.get(
-        (claim.repository, request["path"], claim.ref)
+        (claim.repository, request["path"], claim.exact_head)
     ) is None
 
     result = reconcile_github_source_write_outcome_unknown(
@@ -384,22 +384,27 @@ def test_unknown_reconciliation_confirms_no_effect_and_releases_retry(tmp_path):
         clock=lambda: 1002.0,
     )
 
-    assert result.outcome == "NO_EFFECT_CONFIRMED"
-    assert result.work_generation == 4
+    assert result.outcome == "INDETERMINATE"
+    assert "cannot prove" in result.reason
+    assert result.work_generation == 3
     assert _work_state(
         tmp_path / "operator.sqlite3",
         claim,
-    ) == ("FAILED_RETRYABLE", 4)
+    ) == ("RUNNING", 3)
     with sqlite3.connect(tmp_path / "operator.sqlite3") as db:
         lease = db.execute(
             """
-            SELECT holder, expires_at, completed
+            SELECT holder, fencing_token, completed
             FROM leases
             WHERE work_fingerprint = ?
             """,
             (claim.work_fingerprint,),
         ).fetchone()
-    assert lease == (None, 0.0, 0)
+    assert lease == (
+        claim.holder,
+        claim.fencing_token,
+        0,
+    )
     assert transport.writes == []
 
 
