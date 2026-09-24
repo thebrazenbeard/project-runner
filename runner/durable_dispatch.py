@@ -777,11 +777,43 @@ class SqliteDispatchAdmissionStore:
                 current_token = int(current_token)
                 current_expiry = float(current_expiry)
 
+                latest_token_row = self.connection.execute(
+                    """
+                    SELECT MAX(fencing_token)
+                    FROM execution_attempts
+                    WHERE lineage_id = ? AND work_fingerprint = ?
+                    """,
+                    (budget.lineage_id, fingerprint),
+                ).fetchone()
+                if (
+                    latest_token_row is None
+                    or latest_token_row[0] is None
+                    or int(latest_token_row[0]) != current_token
+                ):
+                    raise ValueError(
+                        "claim-only recovery lease/attempt fencing token mismatch"
+                    )
+
                 attempt = self._attempt_row(
                     lineage_id=budget.lineage_id,
                     work_fingerprint_value=fingerprint,
                     fencing_token=current_token,
                 )
+                if attempt[2] != budget_generation:
+                    raise ValueError(
+                        "claim-only recovery attempt/budget generation mismatch"
+                    )
+                if attempt[3] != work_generation:
+                    raise ValueError(
+                        "claim-only recovery attempt/work generation mismatch"
+                    )
+                if (
+                    current_holder is not None
+                    and str(current_holder) != attempt[0]
+                ):
+                    raise ValueError(
+                        "claim-only recovery lease/attempt holder mismatch"
+                    )
                 if attempt[5] is not None or attempt[6] is not None:
                     raise ValueError(
                         "claim-only claimed recovery has a recorded backend result"
