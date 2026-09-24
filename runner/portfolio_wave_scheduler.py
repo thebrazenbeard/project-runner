@@ -17,20 +17,26 @@ _INERT_ACTIONS = {"PRESERVE_ONLY", "REFRESH_IF_REACTIVATED"}
 class WaveExecutionBudget:
     max_parallel: int
     max_per_identity: int
+    max_per_family: int
 
     def validate(self) -> None:
         if type(self.max_parallel) is not int or self.max_parallel < 1:
             raise ValueError("max_parallel must be a positive integer")
         if type(self.max_per_identity) is not int or self.max_per_identity < 1:
             raise ValueError("max_per_identity must be a positive integer")
+        if type(self.max_per_family) is not int or self.max_per_family < 1:
+            raise ValueError("max_per_family must be a positive integer")
         if self.max_per_identity > self.max_parallel:
             raise ValueError("max_per_identity cannot exceed max_parallel")
+        if self.max_per_family > self.max_parallel:
+            raise ValueError("max_per_family cannot exceed max_parallel")
 
 
 @dataclass(frozen=True)
 class WaveAdmission:
     subject_kind: str
     subject_id: str
+    family_id: str
     lead_identity: str
     priority: str
     collision_keys: tuple[str, ...]
@@ -40,6 +46,7 @@ class WaveAdmission:
 class WaveDeferral:
     subject_kind: str
     subject_id: str
+    family_id: str
     lead_identity: str
     priority: str
     reason: str
@@ -59,11 +66,15 @@ class WaveAdmissionPlan:
             "deferred": len(self.deferred),
             "max_parallel": self.budget.max_parallel,
             "max_per_identity": self.budget.max_per_identity,
+            "max_per_family": self.budget.max_per_family,
             "selected_by_identity": dict(sorted(Counter(
                 item.lead_identity for item in self.selected
             ).items())),
             "selected_by_priority": dict(sorted(Counter(
                 item.priority for item in self.selected
+            ).items())),
+            "selected_by_family": dict(sorted(Counter(
+                item.family_id for item in self.selected
             ).items())),
             "deferred_by_reason": dict(sorted(Counter(
                 item.reason for item in self.deferred
@@ -117,6 +128,7 @@ def plan_wave_admission(
     deferred: list[WaveDeferral] = []
     reserved = set(occupied)
     identity_load: Counter[str] = Counter()
+    family_load: Counter[str] = Counter()
 
     for item in sorted(wave.items, key=_admission_sort_key):
         keys = collision_keys(item)
@@ -125,6 +137,7 @@ def plan_wave_admission(
             deferred.append(WaveDeferral(
                 subject_kind=item.subject_kind,
                 subject_id=item.subject_id,
+                family_id=item.family_id,
                 lead_identity=item.lead_identity,
                 priority=item.priority,
                 reason="NOT_QUEUED",
@@ -136,6 +149,7 @@ def plan_wave_admission(
             deferred.append(WaveDeferral(
                 subject_kind=item.subject_kind,
                 subject_id=item.subject_id,
+                family_id=item.family_id,
                 lead_identity=item.lead_identity,
                 priority=item.priority,
                 reason="INERT_OR_NO_EFFECT",
@@ -152,6 +166,7 @@ def plan_wave_admission(
             deferred.append(WaveDeferral(
                 subject_kind=item.subject_kind,
                 subject_id=item.subject_id,
+                family_id=item.family_id,
                 lead_identity=item.lead_identity,
                 priority=item.priority,
                 reason="GLOBAL_BUDGET",
@@ -163,9 +178,22 @@ def plan_wave_admission(
             deferred.append(WaveDeferral(
                 subject_kind=item.subject_kind,
                 subject_id=item.subject_id,
+                family_id=item.family_id,
                 lead_identity=item.lead_identity,
                 priority=item.priority,
                 reason="IDENTITY_BUDGET",
+                collision_keys=keys,
+            ))
+            continue
+
+        if family_load[item.family_id] >= budget.max_per_family:
+            deferred.append(WaveDeferral(
+                subject_kind=item.subject_kind,
+                subject_id=item.subject_id,
+                family_id=item.family_id,
+                lead_identity=item.lead_identity,
+                priority=item.priority,
+                reason="FAMILY_BUDGET",
                 collision_keys=keys,
             ))
             continue
@@ -174,6 +202,7 @@ def plan_wave_admission(
             deferred.append(WaveDeferral(
                 subject_kind=item.subject_kind,
                 subject_id=item.subject_id,
+                family_id=item.family_id,
                 lead_identity=item.lead_identity,
                 priority=item.priority,
                 reason="COLLISION",
@@ -184,11 +213,13 @@ def plan_wave_admission(
         selected.append(WaveAdmission(
             subject_kind=item.subject_kind,
             subject_id=item.subject_id,
+            family_id=item.family_id,
             lead_identity=item.lead_identity,
             priority=item.priority,
             collision_keys=keys,
         ))
         identity_load[item.lead_identity] += 1
+        family_load[item.family_id] += 1
         reserved.update(keys)
 
     return WaveAdmissionPlan(
