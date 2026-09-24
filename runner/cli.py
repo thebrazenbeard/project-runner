@@ -619,6 +619,7 @@ def _portfolio_wave_promote(
         "review_valid_until": receipt.review_valid_until,
         "execution_grant_sha256": receipt.execution_grant_sha256,
         "execution_valid_until": receipt.execution_valid_until,
+        "execution_request_sha256": receipt.execution_request_sha256,
         "effect_grant_sha256": receipt.effect_grant_sha256,
         "effect_valid_until": receipt.effect_valid_until,
         "promoted_at": receipt.promoted_at,

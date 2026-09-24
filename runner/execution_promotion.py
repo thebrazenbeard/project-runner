@@ -67,8 +67,28 @@ CREATE TABLE IF NOT EXISTS execution_promotions (
         REFERENCES execution_attempts (
             lineage_id, work_fingerprint, fencing_token
         )
+); 
+"""
+
+_PROMOTION_REQUEST_SCHEMA = """
+CREATE TABLE IF NOT EXISTS execution_promotion_requests (
+    lineage_id TEXT NOT NULL,
+    work_fingerprint TEXT NOT NULL,
+    fencing_token INTEGER NOT NULL,
+    request_json TEXT NOT NULL,
+    request_sha256 TEXT NOT NULL,
+    PRIMARY KEY (lineage_id, work_fingerprint, fencing_token),
+    FOREIGN KEY (lineage_id, work_fingerprint, fencing_token)
+        REFERENCES execution_promotions (
+            lineage_id, work_fingerprint, fencing_token
+        )
 );
 """
+
+
+def _ensure_promotion_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript(_PROMOTION_SCHEMA)
+    connection.executescript(_PROMOTION_REQUEST_SCHEMA)
 
 
 @dataclass(frozen=True)
@@ -84,6 +104,7 @@ class ExecutionReviewEvidence:
     review_state: str
     reviewed_at: float
     valid_until: float
+    execution_request_sha256: str | None
     sha256: str
 
 
@@ -102,6 +123,8 @@ class ExecutionAuthorityGrant:
     effect_class: str
     issued_at: float
     valid_until: float
+    execution_request: Mapping[str, object] | None
+    execution_request_sha256: str | None
     sha256: str
 
 
@@ -119,6 +142,7 @@ class ProtectedEffectAuthorityGrant:
     effect_class: str
     issued_at: float
     valid_until: float
+    execution_request_sha256: str | None
     sha256: str
 
 
@@ -137,6 +161,7 @@ class ExecutionPromotionReceipt:
     review_valid_until: float
     execution_grant_sha256: str
     execution_valid_until: float
+    execution_request_sha256: str | None
     effect_grant_sha256: str | None
     effect_valid_until: float | None
     promoted_at: float
@@ -150,6 +175,7 @@ class PromotedExecution:
     work: WorkUnit
     operation: str
     effect_class: str
+    execution_request: Mapping[str, object] | None
     promotion: ExecutionPromotionReceipt
 
 
@@ -231,6 +257,32 @@ def _integer(payload: Mapping[str, object], key: str, label: str) -> int:
     return value
 
 
+def _optional_digest(
+    payload: Mapping[str, object],
+    key: str,
+    label: str,
+) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    text = str(value)
+    if len(text) != 64 or any(ch not in "0123456789abcdef" for ch in text):
+        raise ValueError(f"{label} must be lowercase sha256")
+    return text
+
+
+def _execution_request(
+    payload: Mapping[str, object],
+) -> tuple[Mapping[str, object] | None, str | None]:
+    value = payload.get("execution_request")
+    if value is None:
+        return None, None
+    if not isinstance(value, Mapping):
+        raise ValueError("execution request must be an object")
+    request_payload = dict(value)
+    return request_payload, _sha256(request_payload)
+
+
 def parse_review_evidence(
     document: Mapping[str, object],
     *,
@@ -265,6 +317,11 @@ def parse_review_evidence(
         review_state=state,
         reviewed_at=_number(payload, "reviewed_at", "reviewed_at"),
         valid_until=_number(payload, "valid_until", "review valid_until"),
+        execution_request_sha256=_optional_digest(
+            payload,
+            "execution_request_sha256",
+            "review execution request sha256",
+        ),
         sha256=digest,
     )
 
@@ -282,6 +339,7 @@ def parse_execution_grant(
     )
     if payload.get("execution_authorized") is not True:
         raise ValueError("execution authority grant does not authorize execution")
+    execution_request, execution_request_sha256 = _execution_request(payload)
     return ExecutionAuthorityGrant(
         grant_id=_text(payload, "grant_id", "execution grant id"),
         issuer=_text(payload, "issuer", "execution grant issuer"),
@@ -308,6 +366,8 @@ def parse_execution_grant(
             "valid_until",
             "execution valid_until",
         ),
+        execution_request=execution_request,
+        execution_request_sha256=execution_request_sha256,
         sha256=digest,
     )
 
@@ -348,6 +408,11 @@ def parse_effect_grant(
         effect_class=_text(payload, "effect_class", "effect class"),
         issued_at=_number(payload, "issued_at", "effect issued_at"),
         valid_until=_number(payload, "valid_until", "effect valid_until"),
+        execution_request_sha256=_optional_digest(
+            payload,
+            "execution_request_sha256",
+            "effect execution request sha256",
+        ),
         sha256=digest,
     )
 
@@ -497,6 +562,11 @@ def _validate_bindings(
         raise ValueError("claim effect ceiling is unsupported")
     if execution.effect_class not in allowed_effects:
         raise ValueError("execution effect class exceeds claim effect ceiling")
+    request_sha256 = execution.execution_request_sha256
+    if execution.effect_class == SOURCE_WRITE and request_sha256 is None:
+        raise ValueError("source-write execution requires an exact execution request")
+    if review.execution_request_sha256 != request_sha256:
+        raise ValueError("review evidence does not bind exact execution request")
 
     common = (
         review.subject_id == subject_id
@@ -556,6 +626,7 @@ def _validate_bindings(
         or effect.work_fingerprint != work_fingerprint_value
         or effect.fencing_token != fencing_token
         or effect.effect_class != execution.effect_class
+        or effect.execution_request_sha256 != request_sha256
     ):
         raise ValueError("protected-effect authority does not bind exact claim/fence")
     _assert_fresh(
@@ -599,6 +670,7 @@ def _promotion_payload(
         "review_valid_until": review.valid_until,
         "execution_grant_sha256": execution.sha256,
         "execution_valid_until": execution.valid_until,
+        "execution_request_sha256": execution.execution_request_sha256,
         "effect_grant_sha256": effect.sha256 if effect is not None else None,
         "effect_valid_until": effect.valid_until if effect is not None else None,
         "promoted_at": promoted_at,
@@ -639,7 +711,7 @@ def promote_claimed_to_running(
         )
 
     store = SqliteDispatchAdmissionStore(Path(state_db))
-    store.connection.executescript(_PROMOTION_SCHEMA)
+    _ensure_promotion_schema(store.connection)
     try:
         precheck_at = float(clock())
         status_row = store.connection.execute(
@@ -660,7 +732,7 @@ def promote_claimed_to_running(
                 work_fingerprint_value=work_fingerprint_value,
                 fencing_token=fencing_token,
             )
-            work, lease_expires_at = _load_promotion(store, existing)
+            work, lease_expires_at, _request = _load_promotion(store, existing)
             claim = work.payload
             _validate_bindings(
                 claim=claim,
@@ -777,6 +849,11 @@ def promote_claimed_to_running(
             promoted_work_generation=promoted_work_generation,
         )
         promotion_sha256 = _sha256(payload)
+        request_json = (
+            _canonical_bytes(execution.execution_request).decode("utf-8")
+            if execution.execution_request is not None
+            else None
+        )
         store.connection.execute(
             """
             INSERT INTO execution_promotions (
@@ -811,6 +888,24 @@ def promote_claimed_to_running(
                 promotion_sha256,
             ),
         )
+        if execution.execution_request is not None:
+            assert request_json is not None
+            assert execution.execution_request_sha256 is not None
+            store.connection.execute(
+                """
+                INSERT INTO execution_promotion_requests (
+                    lineage_id, work_fingerprint, fencing_token,
+                    request_json, request_sha256
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    lineage_id,
+                    work_fingerprint_value,
+                    fencing_token,
+                    request_json,
+                    execution.execution_request_sha256,
+                ),
+            )
         updated = store.connection.execute(
             """
             UPDATE recursive_work_state
@@ -850,6 +945,7 @@ def promote_claimed_to_running(
         review_valid_until=review.valid_until,
         execution_grant_sha256=execution.sha256,
         execution_valid_until=execution.valid_until,
+        execution_request_sha256=execution.execution_request_sha256,
         effect_grant_sha256=effect.sha256 if effect is not None else None,
         effect_valid_until=effect.valid_until if effect is not None else None,
         promoted_at=promoted_at,
@@ -859,6 +955,36 @@ def promote_claimed_to_running(
     )
 
 
+def _read_execution_request(
+    store: SqliteDispatchAdmissionStore,
+    *,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+) -> tuple[Mapping[str, object] | None, str | None]:
+    _ensure_promotion_schema(store.connection)
+    row = store.connection.execute(
+        """
+        SELECT request_json, request_sha256
+        FROM execution_promotion_requests
+        WHERE lineage_id = ? AND work_fingerprint = ? AND fencing_token = ?
+        """,
+        (lineage_id, work_fingerprint_value, fencing_token),
+    ).fetchone()
+    if row is None:
+        return None, None
+    try:
+        payload = json.loads(str(row[0]))
+    except json.JSONDecodeError as exc:
+        raise ValueError("durable execution request is invalid JSON") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("durable execution request must be an object")
+    digest = _sha256(payload)
+    if not hmac.compare_digest(str(row[1]), digest):
+        raise ValueError("durable execution request digest mismatch")
+    return dict(payload), digest
+
+
 def _read_durable_promotion(
     store: SqliteDispatchAdmissionStore,
     *,
@@ -866,7 +992,7 @@ def _read_durable_promotion(
     work_fingerprint_value: str,
     fencing_token: int,
 ) -> ExecutionPromotionReceipt:
-    store.connection.executescript(_PROMOTION_SCHEMA)
+    _ensure_promotion_schema(store.connection)
     row = store.connection.execute(
         """
         SELECT holder, repository, ref, exact_head, operation, effect_class,
@@ -882,6 +1008,12 @@ def _read_durable_promotion(
     ).fetchone()
     if row is None:
         raise ValueError("execution promotion receipt is not durable")
+    _request, request_sha256 = _read_execution_request(
+        store,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+    )
 
     payload = {
         "schema": _PROMOTION_SCHEMA_ID,
@@ -898,6 +1030,7 @@ def _read_durable_promotion(
         "review_valid_until": float(row[7]),
         "execution_grant_sha256": str(row[8]),
         "execution_valid_until": float(row[9]),
+        "execution_request_sha256": request_sha256,
         "effect_grant_sha256": str(row[10]) if row[10] is not None else None,
         "effect_valid_until": float(row[11]) if row[11] is not None else None,
         "promoted_at": float(row[12]),
@@ -905,8 +1038,16 @@ def _read_durable_promotion(
         "promoted_work_generation": int(row[14]),
     }
     digest = _sha256(payload)
-    if not hmac.compare_digest(str(row[15]), digest):
-        raise ValueError("execution promotion digest mismatch")
+    stored_digest = str(row[15])
+    if not hmac.compare_digest(stored_digest, digest):
+        if request_sha256 is not None:
+            raise ValueError("execution promotion digest mismatch")
+        legacy_payload = dict(payload)
+        legacy_payload.pop("execution_request_sha256", None)
+        legacy_digest = _sha256(legacy_payload)
+        if not hmac.compare_digest(stored_digest, legacy_digest):
+            raise ValueError("execution promotion digest mismatch")
+        digest = legacy_digest
     return ExecutionPromotionReceipt(
         lineage_id=lineage_id,
         work_fingerprint=work_fingerprint_value,
@@ -921,6 +1062,7 @@ def _read_durable_promotion(
         review_valid_until=float(row[7]),
         execution_grant_sha256=str(row[8]),
         execution_valid_until=float(row[9]),
+        execution_request_sha256=request_sha256,
         effect_grant_sha256=str(row[10]) if row[10] is not None else None,
         effect_valid_until=float(row[11]) if row[11] is not None else None,
         promoted_at=float(row[12]),
@@ -933,7 +1075,7 @@ def _read_durable_promotion(
 def _load_promotion(
     store: SqliteDispatchAdmissionStore,
     receipt: ExecutionPromotionReceipt,
-) -> tuple[WorkUnit, float]:
+) -> tuple[WorkUnit, float, Mapping[str, object] | None]:
     durable_receipt = _read_durable_promotion(
         store,
         lineage_id=receipt.lineage_id,
@@ -992,7 +1134,15 @@ def _load_promotion(
     if attempt[5] is not None or attempt[6] is not None:
         raise ValueError("promoted execution already has a backend result")
 
-    return work, float(lease[2])
+    execution_request, request_sha256 = _read_execution_request(
+        store,
+        lineage_id=receipt.lineage_id,
+        work_fingerprint_value=receipt.work_fingerprint,
+        fencing_token=receipt.fencing_token,
+    )
+    if receipt.execution_request_sha256 != request_sha256:
+        raise ValueError("promotion/request binding mismatch")
+    return work, float(lease[2]), execution_request
 
 
 def execute_promoted(
@@ -1007,7 +1157,7 @@ def execute_promoted(
     store = SqliteDispatchAdmissionStore(Path(state_db))
     try:
         now = float(clock())
-        work, lease_expires_at = _load_promotion(store, receipt)
+        work, lease_expires_at, execution_request = _load_promotion(store, receipt)
         if now >= lease_expires_at:
             raise ValueError("promoted execution lease is expired")
         if now >= receipt.review_valid_until:
@@ -1033,7 +1183,7 @@ def execute_promoted(
             raise ValueError("promoted execution source head is stale")
 
         execute_at = float(clock())
-        work, lease_expires_at = _load_promotion(store, receipt)
+        work, lease_expires_at, execution_request = _load_promotion(store, receipt)
         if execute_at >= lease_expires_at:
             raise ValueError("promoted execution lease expired before backend call")
         if execute_at >= receipt.review_valid_until:
@@ -1057,6 +1207,7 @@ def execute_promoted(
             work=work,
             operation=receipt.operation,
             effect_class=receipt.effect_class,
+            execution_request=execution_request,
             promotion=receipt,
         )
         result = backend.execute_promoted(execution)

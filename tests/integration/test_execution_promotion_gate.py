@@ -1,5 +1,6 @@
 from contextlib import redirect_stdout
 from io import StringIO
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
@@ -16,6 +17,7 @@ from runner.execution_promotion import (
 )
 from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_bridge import claim_bound_plan_subject
+from runner.promoted_github import source_write_request_sha256
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -127,6 +129,22 @@ def _evidence(
     effect_valid_until=1100.0,
     reviewer="REZON",
 ):
+    execution_request = None
+    request_sha256 = None
+    if effect_class == "SOURCE_WRITE":
+        execution_request = {
+            "schema": "PROJECT_RUNNER_GITHUB_SOURCE_WRITE_V1",
+            "operation": "PUT_FILE",
+            "repository": claim.repository,
+            "ref": claim.ref,
+            "expected_head": claim.exact_head,
+            "path": "docs/test-promotion.txt",
+            "content": "test\n",
+            "message": "Test promoted source write",
+            "expected_blob_sha": None,
+        }
+        request_sha256 = source_write_request_sha256(execution_request)
+
     review = sign_evidence(
         {
             "schema": "PROJECT_RUNNER_EXECUTION_REVIEW_V1",
@@ -141,6 +159,7 @@ def _evidence(
             "review_state": "EXECUTION_PROMOTION_REVIEWED",
             "reviewed_at": now - 10.0,
             "valid_until": review_valid_until,
+            "execution_request_sha256": request_sha256,
         },
         REVIEW_KEY,
     )
@@ -158,6 +177,7 @@ def _evidence(
             "fencing_token": claim.fencing_token,
             "operation": "EXECUTE_FRONTIER",
             "effect_class": effect_class,
+            "execution_request": execution_request,
             "execution_authorized": True,
             "issued_at": now - 5.0,
             "valid_until": execution_valid_until,
@@ -179,6 +199,7 @@ def _evidence(
                 "work_fingerprint": claim.work_fingerprint,
                 "fencing_token": claim.fencing_token,
                 "effect_class": effect_class,
+                "execution_request_sha256": request_sha256,
                 "protected_effects_authorized": True,
                 "issued_at": now - 4.0,
                 "valid_until": effect_valid_until,
@@ -428,6 +449,87 @@ def test_execution_authority_key_cannot_verify_effect_grant(tmp_path):
             clock=lambda: 1000.0,
         )
 
+
+
+
+def test_legacy_no_request_promotion_digest_remains_replayable(tmp_path):
+    claim, transport = _claim(tmp_path)
+    review, execution, _ = _evidence(claim)
+    receipt = _promote(tmp_path, claim, transport, review, execution)
+    assert receipt.execution_request_sha256 is None
+
+    with sqlite3.connect(tmp_path / "operator.sqlite3") as db:
+        row = db.execute(
+            """
+            SELECT holder, repository, ref, exact_head, operation, effect_class,
+                   review_sha256, review_valid_until,
+                   execution_grant_sha256, execution_valid_until,
+                   effect_grant_sha256, effect_valid_until,
+                   promoted_at, attempt_work_generation,
+                   promoted_work_generation
+            FROM execution_promotions
+            WHERE lineage_id = ? AND work_fingerprint = ?
+              AND fencing_token = ?
+            """,
+            (
+                claim.lineage_id,
+                claim.work_fingerprint,
+                claim.fencing_token,
+            ),
+        ).fetchone()
+        legacy_payload = {
+            "schema": "PROJECT_RUNNER_EXECUTION_PROMOTION_V1",
+            "lineage_id": claim.lineage_id,
+            "work_fingerprint": claim.work_fingerprint,
+            "fencing_token": claim.fencing_token,
+            "holder": row[0],
+            "repository": row[1],
+            "ref": row[2],
+            "exact_head": row[3],
+            "operation": row[4],
+            "effect_class": row[5],
+            "review_sha256": row[6],
+            "review_valid_until": row[7],
+            "execution_grant_sha256": row[8],
+            "execution_valid_until": row[9],
+            "effect_grant_sha256": row[10],
+            "effect_valid_until": row[11],
+            "promoted_at": row[12],
+            "attempt_work_generation": row[13],
+            "promoted_work_generation": row[14],
+        }
+        canonical = json.dumps(
+            legacy_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+        legacy_digest = hashlib.sha256(canonical).hexdigest()
+        db.execute(
+            """
+            UPDATE execution_promotions
+            SET promotion_sha256 = ?
+            WHERE lineage_id = ? AND work_fingerprint = ?
+              AND fencing_token = ?
+            """,
+            (
+                legacy_digest,
+                claim.lineage_id,
+                claim.work_fingerprint,
+                claim.fencing_token,
+            ),
+        )
+
+    replayed = _promote(
+        tmp_path,
+        claim,
+        transport,
+        review,
+        execution,
+        clock=lambda: 1001.0,
+    )
+    assert replayed.promotion_sha256 == legacy_digest
+    assert replayed.execution_request_sha256 is None
 
 
 def test_committed_promotion_replay_returns_same_receipt(tmp_path):
