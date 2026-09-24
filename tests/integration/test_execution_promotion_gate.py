@@ -23,7 +23,8 @@ WAVE = ROOT / "portfolio" / "advancement_wave.public.json"
 CORPUS = ROOT / "portfolio" / "corpus.public.json"
 PROJECTS = ROOT / "registry" / "projects.yaml"
 REVIEW_KEY = b"review-test-key"
-AUTHORITY_KEY = b"authority-test-key"
+EXECUTION_KEY = b"execution-authority-test-key"
+EFFECT_KEY = b"protected-effect-authority-test-key"
 
 
 class FakeReadOnlyTransport:
@@ -161,7 +162,7 @@ def _evidence(
             "issued_at": now - 5.0,
             "valid_until": execution_valid_until,
         },
-        AUTHORITY_KEY,
+        EXECUTION_KEY,
     )
     effect = None
     if include_effect:
@@ -182,7 +183,7 @@ def _evidence(
                 "issued_at": now - 4.0,
                 "valid_until": effect_valid_until,
             },
-            AUTHORITY_KEY,
+            EFFECT_KEY,
         )
     return review, execution, effect
 
@@ -207,7 +208,8 @@ def _promote(
         execution_grant_document=execution,
         effect_grant_document=effect,
         review_key=REVIEW_KEY,
-        authority_key=AUTHORITY_KEY,
+        execution_authority_key=EXECUTION_KEY,
+        effect_authority_key=EFFECT_KEY if effect is not None else None,
         transport=transport,
         clock=clock,
     )
@@ -357,7 +359,7 @@ def test_protected_effect_authority_does_not_substitute_for_execution_authority(
         include_effect=True,
     )
     execution["execution_authorized"] = False
-    execution = sign_evidence(execution, AUTHORITY_KEY)
+    execution = sign_evidence(execution, EXECUTION_KEY)
 
     with pytest.raises(ValueError, match="does not authorize execution"):
         _promote(
@@ -367,6 +369,52 @@ def test_protected_effect_authority_does_not_substitute_for_execution_authority(
             review,
             execution,
             effect,
+        )
+
+
+
+def test_source_only_ceiling_rejects_deploy_even_with_effect_grant(tmp_path):
+    claim, transport = _claim(tmp_path)
+    review, execution, effect = _evidence(
+        claim,
+        effect_class="DEPLOY",
+        include_effect=True,
+    )
+
+    with pytest.raises(ValueError, match="exceeds claim effect ceiling"):
+        _promote(
+            tmp_path,
+            claim,
+            transport,
+            review,
+            execution,
+            effect,
+        )
+
+
+def test_execution_authority_key_cannot_verify_effect_grant(tmp_path):
+    claim, transport = _claim(tmp_path)
+    review, execution, effect = _evidence(
+        claim,
+        effect_class="SOURCE_WRITE",
+        include_effect=True,
+    )
+
+    with pytest.raises(ValueError, match="protected-effect authority grant signature mismatch"):
+        promote_claimed_to_running(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            holder=claim.holder,
+            review_document=review,
+            execution_grant_document=execution,
+            effect_grant_document=effect,
+            review_key=REVIEW_KEY,
+            execution_authority_key=EXECUTION_KEY,
+            effect_authority_key=EXECUTION_KEY,
+            transport=transport,
+            clock=lambda: 1000.0,
         )
 
 
@@ -472,6 +520,27 @@ def test_execute_promoted_calls_backend_only_after_all_rechecks(tmp_path):
             ),
         ).fetchone()
     assert result_row is not None and result_row[0]
+
+
+
+def test_supplied_promotion_receipt_fields_cannot_diverge_from_durable_row(tmp_path):
+    from dataclasses import replace
+
+    claim, transport = _claim(tmp_path)
+    review, execution, _ = _evidence(claim)
+    receipt = _promote(tmp_path, claim, transport, review, execution)
+    forged = replace(receipt, review_valid_until=receipt.review_valid_until + 1000.0)
+    backend = SpyPromotedBackend()
+
+    with pytest.raises(ValueError, match="receipt does not match durable state"):
+        execute_promoted(
+            state_db=tmp_path / "operator.sqlite3",
+            receipt=forged,
+            backend=backend,
+            transport=transport,
+            clock=lambda: 1001.0,
+        )
+    assert backend.calls == []
 
 
 def test_tampered_durable_promotion_refuses_backend(tmp_path):
