@@ -12,6 +12,10 @@ from .backends import BackendResult
 from .work_units import WorkUnit, work_unit_fingerprint
 
 
+class GitHubPreconditionFailed(RuntimeError):
+    """Exact Git state precondition failed before ref publication."""
+
+
 class GitHubOperation(str, Enum):
     READ_REF = "READ_REF"
     READ_FILE = "READ_FILE"
@@ -109,14 +113,39 @@ class GitHubTransport(Protocol):
         message: str,
         expected_blob_sha: str | None = None,
     ) -> str: ...
+    def put_file_exact_head(
+        self,
+        repository: str,
+        path: str,
+        branch: str,
+        content: str,
+        message: str,
+        *,
+        expected_head: str,
+        expected_blob_sha: str | None = None,
+    ) -> tuple[str, str]: ...
 
 
 class GitHubRestTransport:
     """Small GitHub REST transport using only the Python standard library."""
 
-    def __init__(self, *, token: str | None = None, api_base: str = "https://api.github.com") -> None:
+    def __init__(
+        self,
+        *,
+        token: str | None = None,
+        api_base: str = "https://api.github.com",
+        graphql_url: str | None = None,
+    ) -> None:
         self.token = token
         self.api_base = api_base.rstrip("/")
+        if graphql_url is not None:
+            self.graphql_url = graphql_url
+        elif self.api_base == "https://api.github.com":
+            self.graphql_url = "https://api.github.com/graphql"
+        elif self.api_base.endswith("/api/v3"):
+            self.graphql_url = self.api_base[:-7] + "/api/graphql"
+        else:
+            self.graphql_url = self.api_base + "/graphql"
 
     def _request(self, method: str, url: str, body: Mapping[str, object] | None = None):
         headers = {
@@ -203,6 +232,213 @@ class GitHubRestTransport:
             payload,
         )
         return str(response["commit"]["sha"])
+
+    def _tree_entry(
+        self,
+        repository: str,
+        tree_sha: str,
+        path: str,
+    ) -> Mapping[str, object] | None:
+        owner, repo = repository.split("/", 1)
+        parts = [part for part in path.lstrip("/").split("/") if part]
+        if not parts:
+            raise ValueError("github exact source write requires a file path")
+        current_tree = tree_sha
+        for index, part in enumerate(parts):
+            payload = self._request(
+                "GET",
+                f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}/git/trees/{parse.quote(current_tree, safe='')}",
+            )
+            if payload is None:
+                raise KeyError(f"missing tree {current_tree}")
+            entries = payload.get("tree")
+            if not isinstance(entries, list):
+                raise RuntimeError("github tree response missing entries")
+            entry = next(
+                (
+                    item
+                    for item in entries
+                    if isinstance(item, Mapping)
+                    and str(item.get("path", "")) == part
+                ),
+                None,
+            )
+            if entry is None:
+                return None
+            if index == len(parts) - 1:
+                return entry
+            if str(entry.get("type", "")) != "tree":
+                return None
+            current_tree = str(entry.get("sha", ""))
+            if not current_tree:
+                raise RuntimeError("github subtree response missing sha")
+        return None
+
+    def _update_ref_exact(
+        self,
+        *,
+        repository: str,
+        branch: str,
+        expected_head: str,
+        new_head: str,
+    ) -> None:
+        owner, repo = repository.split("/", 1)
+        repository_payload = self._request(
+            "GET",
+            f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}",
+        )
+        if repository_payload is None:
+            raise KeyError(repository)
+        repository_id = str(repository_payload.get("node_id", ""))
+        if not repository_id:
+            raise RuntimeError("github repository response missing node id")
+
+        query = """
+        mutation UpdateRefs($input: UpdateRefsInput!) {
+          updateRefs(input: $input) {
+            clientMutationId
+          }
+        }
+        """
+        body = {
+            "query": query,
+            "variables": {
+                "input": {
+                    "repositoryId": repository_id,
+                    "refUpdates": [
+                        {
+                            "name": f"refs/heads/{branch}",
+                            "beforeOid": expected_head,
+                            "afterOid": new_head,
+                            "force": False,
+                        }
+                    ],
+                }
+            },
+        }
+        payload = self._request("POST", self.graphql_url, body)
+        if payload is None:
+            raise RuntimeError("github graphql update returned no payload")
+        errors = payload.get("errors")
+        if errors:
+            raise GitHubPreconditionFailed(
+                "github exact ref compare-and-swap rejected"
+            )
+        if not isinstance(payload.get("data"), Mapping):
+            raise RuntimeError("github graphql update missing data")
+
+    def put_file_exact_head(
+        self,
+        repository: str,
+        path: str,
+        branch: str,
+        content: str,
+        message: str,
+        *,
+        expected_head: str,
+        expected_blob_sha: str | None = None,
+    ) -> tuple[str, str]:
+        owner, repo = repository.split("/", 1)
+        observed_head = self.read_ref(repository, branch)
+        if observed_head != expected_head:
+            raise GitHubPreconditionFailed("github exact head precondition failed")
+
+        commit_payload = self._request(
+            "GET",
+            f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}/git/commits/{parse.quote(expected_head, safe='')}",
+        )
+        if commit_payload is None:
+            raise KeyError(expected_head)
+        tree = commit_payload.get("tree")
+        if not isinstance(tree, Mapping) or not tree.get("sha"):
+            raise RuntimeError("github commit response missing tree")
+        base_tree_sha = str(tree["sha"])
+
+        existing = self._tree_entry(repository, base_tree_sha, path)
+        if existing is None:
+            if expected_blob_sha is not None:
+                raise GitHubPreconditionFailed(
+                    "github expected blob is missing at exact head"
+                )
+            mode = "100644"
+        else:
+            if str(existing.get("type", "")) != "blob":
+                raise GitHubPreconditionFailed(
+                    "github exact source-write target is not a blob"
+                )
+            mode = str(existing.get("mode", ""))
+            if mode != "100644":
+                raise GitHubPreconditionFailed(
+                    "github exact source-write supports regular files only"
+                )
+            observed_blob_sha = str(existing.get("sha", ""))
+            if expected_blob_sha is None:
+                raise GitHubPreconditionFailed(
+                    "github existing file requires expected blob sha"
+                )
+            if observed_blob_sha != expected_blob_sha:
+                raise GitHubPreconditionFailed(
+                    "github exact blob precondition failed"
+                )
+
+        blob_payload = self._request(
+            "POST",
+            f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}/git/blobs",
+            {"content": content, "encoding": "utf-8"},
+        )
+        if blob_payload is None or not blob_payload.get("sha"):
+            raise RuntimeError("github blob creation missing sha")
+        blob_sha = str(blob_payload["sha"])
+
+        tree_payload = self._request(
+            "POST",
+            f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}/git/trees",
+            {
+                "base_tree": base_tree_sha,
+                "tree": [
+                    {
+                        "path": path.lstrip("/"),
+                        "mode": mode,
+                        "type": "blob",
+                        "sha": blob_sha,
+                    }
+                ],
+            },
+        )
+        if tree_payload is None or not tree_payload.get("sha"):
+            raise RuntimeError("github tree creation missing sha")
+        new_tree_sha = str(tree_payload["sha"])
+
+        new_commit_payload = self._request(
+            "POST",
+            f"{self.api_base}/repos/{parse.quote(owner)}/{parse.quote(repo)}/git/commits",
+            {
+                "message": message,
+                "tree": new_tree_sha,
+                "parents": [expected_head],
+            },
+        )
+        if new_commit_payload is None or not new_commit_payload.get("sha"):
+            raise RuntimeError("github commit creation missing sha")
+        new_commit_sha = str(new_commit_payload["sha"])
+
+        self._update_ref_exact(
+            repository=repository,
+            branch=branch,
+            expected_head=expected_head,
+            new_head=new_commit_sha,
+        )
+
+        readback_head = self.read_ref(repository, branch)
+        readback_file = self.read_file(repository, path, branch)
+        if (
+            readback_head != new_commit_sha
+            or readback_file is None
+            or readback_file.sha != blob_sha
+            or readback_file.content != content
+        ):
+            raise RuntimeError("github exact source-write readback failed")
+        return new_commit_sha, blob_sha
 
 
 class GitHubBackend:
