@@ -314,6 +314,17 @@ def test_bad_execution_authority_signature_refuses_promotion(tmp_path):
         _promote(tmp_path, claim, transport, review, execution)
 
 
+
+def test_execution_operation_must_match_claimed_wave_action(tmp_path):
+    claim, transport = _claim(tmp_path)
+    review, execution, _ = _evidence(claim)
+    execution["operation"] = "DIFFERENT_ACTION"
+    execution = sign_evidence(execution, EXECUTION_KEY)
+
+    with pytest.raises(ValueError, match="execution operation does not match claim action"):
+        _promote(tmp_path, claim, transport, review, execution)
+
+
 def test_protected_effect_requires_separate_authority(tmp_path):
     claim, transport = _claim(tmp_path)
     review, execution, _ = _evidence(
