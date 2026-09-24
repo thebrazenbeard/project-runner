@@ -27,13 +27,14 @@ def item(
     state="QUEUED",
     ceiling="SOURCE_ONLY",
     kind="repository",
+    family="test-family",
 ):
     kwargs = {
         "subject_kind": kind,
         "subject_id": subject_id,
         "repositories": (repository,),
         "priority": priority,
-        "family_id": "test-family",
+        "family_id": family,
         "activity_state": "ACTIVE",
         "lead_identity": lead,
         "reviewer_identities": ("REZON",),
@@ -66,12 +67,12 @@ def test_budget_must_be_explicit_and_valid():
     with pytest.raises(ValueError, match="positive integer"):
         plan_wave_admission(
             wave(item("a")),
-            budget=WaveExecutionBudget(max_parallel=0, max_per_identity=1),
+            budget=WaveExecutionBudget(max_parallel=0, max_per_identity=1, max_per_family=1),
         )
     with pytest.raises(ValueError, match="cannot exceed"):
         plan_wave_admission(
             wave(item("a")),
-            budget=WaveExecutionBudget(max_parallel=1, max_per_identity=2),
+            budget=WaveExecutionBudget(max_parallel=1, max_per_identity=2, max_per_family=1),
         )
 
 
@@ -83,7 +84,7 @@ def test_priority_and_identity_budget_bound_selection():
             item("p0-c", priority="P0", lead="VOSS", repository="owner/c"),
             item("p2-d", priority="P2", lead="REZON", repository="owner/d"),
         ),
-        budget=WaveExecutionBudget(max_parallel=3, max_per_identity=1),
+        budget=WaveExecutionBudget(max_parallel=3, max_per_identity=1, max_per_family=1),
     )
     assert [selected.subject_id for selected in planned.selected] == [
         "p0-b",
@@ -95,6 +96,36 @@ def test_priority_and_identity_budget_bound_selection():
         and deferred.reason == "IDENTITY_BUDGET"
         for deferred in planned.deferred
     )
+
+
+def test_family_budget_blocks_cross_identity_same_family():
+    planned = plan_wave_admission(
+        wave(
+            item(
+                "alpha",
+                repository="owner/alpha",
+                priority="P0",
+                lead="ONE",
+            ),
+            item(
+                "beta",
+                repository="owner/beta",
+                priority="P0",
+                lead="VOSS",
+            ),
+        ),
+        budget=WaveExecutionBudget(
+            max_parallel=2,
+            max_per_identity=1,
+            max_per_family=1,
+        ),
+    )
+    assert [selected.subject_id for selected in planned.selected] == ["alpha"]
+    blocked = next(
+        deferred for deferred in planned.deferred
+        if deferred.subject_id == "beta"
+    )
+    assert blocked.reason == "FAMILY_BUDGET"
 
 
 def test_repository_collision_blocks_overlapping_workstream():
@@ -113,7 +144,7 @@ def test_repository_collision_blocks_overlapping_workstream():
     )
     planned = plan_wave_admission(
         wave(repository, workstream),
-        budget=WaveExecutionBudget(max_parallel=2, max_per_identity=1),
+        budget=WaveExecutionBudget(max_parallel=2, max_per_identity=1, max_per_family=1),
     )
     assert [selected.subject_id for selected in planned.selected] == ["repo"]
     blocked = next(
@@ -127,7 +158,7 @@ def test_repository_collision_blocks_overlapping_workstream():
 def test_existing_occupied_collision_key_blocks_admission():
     planned = plan_wave_admission(
         wave(item("repo", repository="owner/shared")),
-        budget=WaveExecutionBudget(max_parallel=1, max_per_identity=1),
+        budget=WaveExecutionBudget(max_parallel=1, max_per_identity=1, max_per_family=1),
         occupied_collision_keys=("repository:owner/shared",),
     )
     assert planned.selected == ()
@@ -143,7 +174,7 @@ def test_held_or_no_effect_item_never_executes():
     )
     planned = plan_wave_admission(
         wave(held),
-        budget=WaveExecutionBudget(max_parallel=1, max_per_identity=1),
+        budget=WaveExecutionBudget(max_parallel=1, max_per_identity=1, max_per_family=1),
     )
     assert planned.selected == ()
     assert planned.deferred[0].reason == "NOT_QUEUED"
@@ -155,7 +186,7 @@ def test_real_public_wave_produces_bounded_collision_free_slice():
     )
     planned = plan_wave_admission(
         public_wave,
-        budget=WaveExecutionBudget(max_parallel=6, max_per_identity=1),
+        budget=WaveExecutionBudget(max_parallel=6, max_per_identity=1, max_per_family=1),
     )
     assert len(planned.selected) <= 6
     assert len({item.lead_identity for item in planned.selected}) == len(
