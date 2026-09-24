@@ -15,6 +15,7 @@ _SCHEMA_FILES = {
     "dependency": _ROOT / "schemas" / "dependency.schema.json",
     "frontier": _ROOT / "schemas" / "frontier.schema.json",
     "work-unit": _ROOT / "schemas" / "work-unit.schema.json",
+    "portfolio-corpus": _ROOT / "schemas" / "portfolio-corpus.schema.json",
 }
 
 
