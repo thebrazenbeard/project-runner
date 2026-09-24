@@ -412,6 +412,32 @@ def test_source_write_effect_authority_must_bind_exact_request(tmp_path):
     assert transport.mutations == []
 
 
+
+def test_noncanonical_signed_path_is_rejected_without_mutation(tmp_path):
+    claim, transport = _claim(tmp_path)
+    request = _request(claim, path="/docs/promoted.txt")
+    review, execution, effect = _evidence(claim, request)
+    receipt = _promote(
+        tmp_path,
+        claim,
+        transport,
+        review,
+        execution,
+        effect,
+    )
+
+    result = execute_promoted(
+        state_db=tmp_path / "operator.sqlite3",
+        receipt=receipt,
+        backend=PromotedGitHubSourceWriteBackend(transport=transport),
+        transport=transport,
+        clock=lambda: 1001.0,
+    )
+
+    assert result.succeeded is False
+    assert result.classification == "INVALID_REQUEST"
+    assert transport.mutations == []
+
 def test_source_write_blob_mismatch_refuses_mutation(tmp_path):
     claim, transport = _claim(tmp_path)
     old = "before\n"
