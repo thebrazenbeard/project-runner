@@ -201,24 +201,27 @@ def _classify_unknown_source_write(
             evidence,
         )
 
-    no_effect_file_match = (
-        observed_file is None
-        if expected_blob_sha is None
-        else (
-            observed_file is not None
-            and observed_file.sha == expected_blob_sha
+    pre_write_state_visible = (
+        observed_head == expected_head
+        and (
+            observed_file is None
+            if expected_blob_sha is None
+            else (
+                observed_file is not None
+                and observed_file.sha == expected_blob_sha
+            )
         )
     )
-    if observed_head == expected_head and no_effect_file_match:
+    if pre_write_state_visible:
         return (
-            "NO_EFFECT_CONFIRMED",
-            "ref and target blob still match the pre-write state",
+            "INDETERMINATE",
+            "current state matches the pre-write snapshot but cannot prove the candidate was never transiently published",
             evidence,
         )
 
     return (
         "INDETERMINATE",
-        "live GitHub state matches neither the candidate publication nor the exact pre-write state",
+        "live GitHub state does not positively prove candidate publication",
         evidence,
     )
 
