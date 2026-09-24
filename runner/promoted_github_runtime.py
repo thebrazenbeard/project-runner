@@ -370,6 +370,54 @@ def finalize_github_source_write_effect_confirmed(
                 "effect finalization candidate content mismatch"
             )
 
+        verification_started_at = float(clock())
+        if lease.expires_at <= verification_started_at:
+            raise ValueError(
+                "effect finalization fence expired before VERIFYING"
+            )
+        verifying_generation = store.begin_verification(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+            expected_work_generation=receipt.promoted_work_generation,
+            lease=lease,
+            started_at=verification_started_at,
+        )
+
+        final_head = transport.read_ref(
+            receipt.repository,
+            receipt.ref,
+        )
+        if final_head != candidate_commit_sha:
+            raise ValueError(
+                "effect finalization candidate moved after VERIFYING"
+            )
+        final_file = transport.read_file(
+            receipt.repository,
+            path,
+            final_head,
+        )
+        final_head_after = transport.read_ref(
+            receipt.repository,
+            receipt.ref,
+        )
+        if final_head_after != final_head:
+            raise ValueError(
+                "effect finalization ref moved during final snapshot"
+            )
+        if final_file is None:
+            raise ValueError(
+                "effect finalization target disappeared after VERIFYING"
+            )
+        if final_file.sha != candidate_blob_sha:
+            raise ValueError(
+                "effect finalization candidate blob changed after VERIFYING"
+            )
+        if final_file.content != intended_content:
+            raise ValueError(
+                "effect finalization candidate content changed after VERIFYING"
+            )
+
         verified_at = float(clock())
         if lease.expires_at <= verified_at:
             raise ValueError(
@@ -377,14 +425,15 @@ def finalize_github_source_write_effect_confirmed(
             )
 
         reason = (
-            "EFFECT_CONFIRMED reconciliation revalidated against the exact "
-            "current candidate commit/blob/content; no backend replay performed"
+            "EFFECT_CONFIRMED reconciliation revalidated before and after "
+            "durable VERIFYING against the exact current candidate "
+            "commit/blob/content; no backend replay performed"
         )
         generation = store.finalize_terminal_verification(
             lineage_id=lineage_id,
             work_fingerprint_value=work_fingerprint_value,
             fencing_token=fencing_token,
-            expected_work_generation=receipt.promoted_work_generation,
+            expected_work_generation=verifying_generation,
             lease=lease,
             status=WorkUnitStatus.COMPLETE,
             reason=reason,
