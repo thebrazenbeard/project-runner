@@ -91,6 +91,8 @@ class ScriptedExactTransport(GitHubRestTransport):
             assert body["parents"] == [self.expected_head]
             return {"sha": self.new_commit}
         if method == "POST" and url == self.graphql_url:
+            if self.graphql_transport_error:
+                raise RuntimeError("simulated transport uncertainty")
             update = body["variables"]["input"]["refUpdates"][0]
             assert update == {
                 "name": "refs/heads/main",
