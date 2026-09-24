@@ -157,11 +157,24 @@ class PromotedGitHubSourceWriteBackend:
                 "PRECONDITION_FAILED",
                 "exact GitHub source-write compare-and-swap failed",
             )
-        except GitHubOutcomeUnknown:
-            return self._failure(
-                fingerprint,
-                "OUTCOME_UNKNOWN",
-                "GitHub source-write outcome could not be proven",
+        except GitHubOutcomeUnknown as exc:
+            outputs = tuple(
+                value
+                for value in (
+                    exc.candidate_commit_sha,
+                    exc.candidate_blob_sha,
+                )
+                if value is not None
+            )
+            return BackendResult(
+                work_fingerprint=fingerprint,
+                succeeded=False,
+                outputs=outputs,
+                evidence=(
+                    "github:outcome_unknown",
+                    "GitHub source-write outcome could not be proven",
+                ),
+                classification="OUTCOME_UNKNOWN",
             )
         except (KeyError, RuntimeError, ValueError):
             return self._failure(
