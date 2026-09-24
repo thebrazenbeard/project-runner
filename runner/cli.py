@@ -18,6 +18,13 @@ from .dedup import deduplicate_frontiers, frontier_fingerprint
 from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
+from .execution_promotion import (
+    effect_authority_key_from_environment,
+    execution_authority_key_from_environment,
+    load_json_document,
+    promote_claimed_to_running,
+    review_key_from_environment,
+)
 from .leases import InMemoryLeaseStore
 from .models import FrontierStatus, ProjectSchedulingState
 from .portfolio_advancement import load_advancement_wave
@@ -564,6 +571,65 @@ def _portfolio_wave_claim(
     return 0
 
 
+def _portfolio_wave_promote(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+    holder: str,
+    review_path: Path,
+    execution_grant_path: Path,
+    effect_grant_path: Path | None,
+) -> int:
+    review_document = load_json_document(review_path)
+    execution_grant_document = load_json_document(execution_grant_path)
+    effect_grant_document = (
+        load_json_document(effect_grant_path)
+        if effect_grant_path is not None
+        else None
+    )
+    receipt = promote_claimed_to_running(
+        state_db=state_db,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+        holder=holder,
+        review_document=review_document,
+        execution_grant_document=execution_grant_document,
+        effect_grant_document=effect_grant_document,
+        review_key=review_key_from_environment(),
+        execution_authority_key=execution_authority_key_from_environment(),
+        effect_authority_key=effect_authority_key_from_environment(),
+        token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+    )
+    payload = {
+        "mode": "PORTFOLIO_EXECUTION_PROMOTION_V1",
+        "backend_execution_performed": False,
+        "lineage_id": receipt.lineage_id,
+        "work_fingerprint": receipt.work_fingerprint,
+        "fencing_token": receipt.fencing_token,
+        "holder": receipt.holder,
+        "repository": receipt.repository,
+        "ref": receipt.ref,
+        "exact_head": receipt.exact_head,
+        "operation": receipt.operation,
+        "effect_class": receipt.effect_class,
+        "review_sha256": receipt.review_sha256,
+        "review_valid_until": receipt.review_valid_until,
+        "execution_grant_sha256": receipt.execution_grant_sha256,
+        "execution_valid_until": receipt.execution_valid_until,
+        "effect_grant_sha256": receipt.effect_grant_sha256,
+        "effect_valid_until": receipt.effect_valid_until,
+        "promoted_at": receipt.promoted_at,
+        "attempt_work_generation": receipt.attempt_work_generation,
+        "promoted_work_generation": receipt.promoted_work_generation,
+        "promotion_sha256": receipt.promotion_sha256,
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> int:
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     backend = GitHubBackend(
@@ -693,6 +759,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
     )
 
+    wave_promote = subparsers.add_parser("portfolio-wave-promote")
+    wave_promote.add_argument("--state-db", type=Path, required=True)
+    wave_promote.add_argument("--lineage-id", required=True)
+    wave_promote.add_argument("--work-fingerprint", required=True)
+    wave_promote.add_argument("--fencing-token", type=int, required=True)
+    wave_promote.add_argument("--holder", required=True)
+    wave_promote.add_argument("--review", type=Path, required=True)
+    wave_promote.add_argument("--execution-grant", type=Path, required=True)
+    wave_promote.add_argument("--effect-grant", type=Path)
+
     github_smoke = subparsers.add_parser("github-read-smoke")
     github_smoke.add_argument("--repository", required=True)
     github_smoke.add_argument("--ref", required=True)
@@ -736,6 +812,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             holder=args.holder,
             lease_ttl=args.lease_ttl,
             allowed_repositories=args.allowed_repository,
+        )
+    if args.command == "portfolio-wave-promote":
+        return _portfolio_wave_promote(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            holder=args.holder,
+            review_path=args.review,
+            execution_grant_path=args.execution_grant,
+            effect_grant_path=args.effect_grant,
         )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
