@@ -20,6 +20,21 @@ from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
 NO_PROTECTED_EFFECT = "NO_PROTECTED_EFFECT"
+SOURCE_WRITE = "SOURCE_WRITE"
+_PROTECTED_EFFECT_CLASSES = frozenset(
+    {
+        SOURCE_WRITE,
+        "MERGE",
+        "DEPLOY",
+        "INSTALL",
+        "CREDENTIAL_OR_PERMISSION_CHANGE",
+        "DESTRUCTIVE_EFFECT",
+    }
+)
+_ALLOWED_EFFECTS_BY_CEILING = {
+    "NO_EFFECT": frozenset({NO_PROTECTED_EFFECT}),
+    "SOURCE_ONLY": frozenset({NO_PROTECTED_EFFECT, SOURCE_WRITE}),
+}
 _REVIEW_SCHEMA = "PROJECT_RUNNER_EXECUTION_REVIEW_V1"
 _EXECUTION_GRANT_SCHEMA = "PROJECT_RUNNER_EXECUTION_AUTHORITY_V1"
 _EFFECT_GRANT_SCHEMA = "PROJECT_RUNNER_PROTECTED_EFFECT_AUTHORITY_V1"
@@ -473,6 +488,12 @@ def _validate_bindings(
     ):
         raise ValueError("claim reviewer identities are invalid")
     review_gate = _text(selected, "review_gate", "claim review gate")
+    effect_ceiling = _text(selected, "effect_ceiling", "claim effect ceiling")
+    allowed_effects = _ALLOWED_EFFECTS_BY_CEILING.get(effect_ceiling)
+    if allowed_effects is None:
+        raise ValueError("claim effect ceiling is unsupported")
+    if execution.effect_class not in allowed_effects:
+        raise ValueError("execution effect class exceeds claim effect ceiling")
 
     common = (
         review.subject_id == subject_id
@@ -594,7 +615,8 @@ def promote_claimed_to_running(
     execution_grant_document: Mapping[str, object],
     effect_grant_document: Mapping[str, object] | None,
     review_key: bytes,
-    authority_key: bytes,
+    execution_authority_key: bytes,
+    effect_authority_key: bytes | None,
     token: str | None = None,
     transport: GitHubTransport | None = None,
     clock: Callable[[], float] = time.time,
@@ -602,13 +624,16 @@ def promote_claimed_to_running(
     review = parse_review_evidence(review_document, key=review_key)
     execution = parse_execution_grant(
         execution_grant_document,
-        key=authority_key,
+        key=execution_authority_key,
     )
-    effect = (
-        parse_effect_grant(effect_grant_document, key=authority_key)
-        if effect_grant_document is not None
-        else None
-    )
+    effect = None
+    if effect_grant_document is not None:
+        if not effect_authority_key:
+            raise ValueError("protected-effect authority verification key is required")
+        effect = parse_effect_grant(
+            effect_grant_document,
+            key=effect_authority_key,
+        )
 
     store = SqliteDispatchAdmissionStore(Path(state_db))
     store.connection.executescript(_PROMOTION_SCHEMA)
@@ -825,7 +850,28 @@ def _load_promotion(
     digest = _sha256(payload)
     if not hmac.compare_digest(str(row[15]), digest):
         raise ValueError("execution promotion digest mismatch")
-    if not hmac.compare_digest(receipt.promotion_sha256, digest):
+    durable_receipt = ExecutionPromotionReceipt(
+        lineage_id=receipt.lineage_id,
+        work_fingerprint=receipt.work_fingerprint,
+        fencing_token=receipt.fencing_token,
+        holder=str(row[0]),
+        repository=str(row[1]),
+        ref=str(row[2]),
+        exact_head=str(row[3]),
+        operation=str(row[4]),
+        effect_class=str(row[5]),
+        review_sha256=str(row[6]),
+        review_valid_until=float(row[7]),
+        execution_grant_sha256=str(row[8]),
+        execution_valid_until=float(row[9]),
+        effect_grant_sha256=str(row[10]) if row[10] is not None else None,
+        effect_valid_until=float(row[11]) if row[11] is not None else None,
+        promoted_at=float(row[12]),
+        attempt_work_generation=int(row[13]),
+        promoted_work_generation=int(row[14]),
+        promotion_sha256=digest,
+    )
+    if receipt != durable_receipt:
         raise ValueError("execution promotion receipt does not match durable state")
 
     work_row = store.connection.execute(
@@ -976,8 +1022,13 @@ def review_key_from_environment() -> bytes:
     return value.encode("utf-8")
 
 
-def authority_key_from_environment() -> bytes:
-    value = os.environ.get("PROJECT_RUNNER_PROMOTION_AUTHORITY_KEY", "")
+def execution_authority_key_from_environment() -> bytes:
+    value = os.environ.get("PROJECT_RUNNER_EXECUTION_AUTHORITY_KEY", "")
     if not value:
-        raise ValueError("PROJECT_RUNNER_PROMOTION_AUTHORITY_KEY is required")
+        raise ValueError("PROJECT_RUNNER_EXECUTION_AUTHORITY_KEY is required")
     return value.encode("utf-8")
+
+
+def effect_authority_key_from_environment() -> bytes | None:
+    value = os.environ.get("PROJECT_RUNNER_PROTECTED_EFFECT_AUTHORITY_KEY", "")
+    return value.encode("utf-8") if value else None
