@@ -77,8 +77,31 @@ def _github_backend(token: str | None) -> GitHubBackend:
 
 
 def main() -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     previous = load_observations(SUBSTANTIVE)
-    current = load_observations(CURRENT)
+    fixture_current = load_observations(CURRENT)
+
+    live_reader = GitHubCurrentSubjectReader(_github_backend(token))
+    live_hc = live_reader.read(
+        ExactSubject(
+            repository="thebrazenbeard/hc-brain",
+            ref="main",
+        )
+    )
+    if live_hc is None or live_hc.commit is None:
+        raise RuntimeError("live HC currentness snapshot is unavailable")
+    current = tuple(
+        replace(
+            observation,
+            subject=live_hc,
+            observed_value=live_hc.commit,
+            observer="github/hc-brain-main-live-proof",
+        )
+        if observation.target == "hc-brain"
+        else observation
+        for observation in fixture_current
+    )
+
     dependencies = load_dependencies(DEPENDENCIES)
     registry_snapshot = load_project_snapshot(ROOT / "registry" / "projects.yaml")
     invalidations = derive_invalidations(previous, current, dependencies)
@@ -89,7 +112,6 @@ def main() -> int:
     if len(frontiers) != 1 or frontiers[0].status is not FrontierStatus.READY:
         raise RuntimeError("expected exactly one ready HC to Transcendence frontier")
 
-    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     with tempfile.TemporaryDirectory() as td:
         db = Path(td) / "m6-live.sqlite3"
         budget_store = SqliteBudgetStore(db)
