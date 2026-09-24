@@ -67,8 +67,28 @@ CREATE TABLE IF NOT EXISTS execution_promotions (
         REFERENCES execution_attempts (
             lineage_id, work_fingerprint, fencing_token
         )
+); 
+"""
+
+_PROMOTION_REQUEST_SCHEMA = """
+CREATE TABLE IF NOT EXISTS execution_promotion_requests (
+    lineage_id TEXT NOT NULL,
+    work_fingerprint TEXT NOT NULL,
+    fencing_token INTEGER NOT NULL,
+    request_json TEXT NOT NULL,
+    request_sha256 TEXT NOT NULL,
+    PRIMARY KEY (lineage_id, work_fingerprint, fencing_token),
+    FOREIGN KEY (lineage_id, work_fingerprint, fencing_token)
+        REFERENCES execution_promotions (
+            lineage_id, work_fingerprint, fencing_token
+        )
 );
 """
+
+
+def _ensure_promotion_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript(_PROMOTION_SCHEMA)
+    connection.executescript(_PROMOTION_REQUEST_SCHEMA)
 
 
 @dataclass(frozen=True)
@@ -691,7 +711,7 @@ def promote_claimed_to_running(
         )
 
     store = SqliteDispatchAdmissionStore(Path(state_db))
-    store.connection.executescript(_PROMOTION_SCHEMA)
+    _ensure_promotion_schema(store.connection)
     try:
         precheck_at = float(clock())
         status_row = store.connection.execute(
@@ -918,7 +938,7 @@ def _read_durable_promotion(
     work_fingerprint_value: str,
     fencing_token: int,
 ) -> ExecutionPromotionReceipt:
-    store.connection.executescript(_PROMOTION_SCHEMA)
+    _ensure_promotion_schema(store.connection)
     row = store.connection.execute(
         """
         SELECT holder, repository, ref, exact_head, operation, effect_class,
