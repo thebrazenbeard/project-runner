@@ -56,16 +56,27 @@ The active fence is checked before GitHub readback.
 
 After readback, the clock is sampled again and the lease must still be active.
 
-The terminal SQLite transaction then calls
-`finalize_terminal_verification()`, which revalidates the same exact lease and
-fencing token before atomically:
+After the first exact candidate readback, the durable store atomically advances
+the work from `RUNNING` to `VERIFYING` under the same exact active fence.
 
-- marking the lease complete;
-- moving recursive work to `COMPLETE`;
-- appending terminal verification evidence.
+That transition is idempotent at the one expected successor generation, so a
+lost response after entering `VERIFYING` can resume without backend replay.
 
-Thus source readback is necessary but cannot finalize under a stale or replaced
-fence.
+The finalizer then performs a second independent exact candidate readback while
+the durable work is already `VERIFYING`. Only after that second stable
+commit/blob/content check does `finalize_terminal_verification()` revalidate
+the same lease/fencing token and atomically:
+
+- mark the lease complete;
+- move recursive work from `VERIFYING` to `COMPLETE`;
+- append terminal verification evidence.
+
+The qualified happy-path generations are therefore:
+
+`RUNNING gN -> VERIFYING gN+1 -> COMPLETE gN+2`.
+
+Thus one source readback cannot jump directly from execution to completion, and
+a stale or replaced fence cannot finalize.
 
 ## Result semantics
 
