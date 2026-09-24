@@ -84,6 +84,17 @@ CREATE TABLE IF NOT EXISTS execution_reconciliations (
 
 
 @dataclass(frozen=True)
+class DurableExecutionReconciliation:
+    sequence: int
+    outcome: str
+    reason: str
+    evidence: tuple[str, ...]
+    reconciler: str
+    observed_at: float
+    sha256: str
+
+
+@dataclass(frozen=True)
 class DurableExecutionJournalEntry:
     lineage_id: str
     work_fingerprint: str
@@ -1190,6 +1201,68 @@ class SqliteDispatchAdmissionStore:
         if result.work_fingerprint != work_fingerprint_value:
             raise ValueError("execution result journal fingerprint mismatch")
         return result
+
+    def load_latest_reconciliation(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+    ) -> DurableExecutionReconciliation | None:
+        self._attempt_row(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        row = self.connection.execute(
+            """
+            SELECT sequence, outcome, reason, evidence_json, reconciler,
+                   observed_at, reconciliation_sha256
+            FROM execution_reconciliations
+            WHERE lineage_id = ?
+              AND work_fingerprint = ?
+              AND fencing_token = ?
+            ORDER BY sequence DESC
+            LIMIT 1
+            """,
+            (
+                lineage_id,
+                work_fingerprint_value,
+                fencing_token,
+            ),
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            evidence_data = json.loads(str(row[3]))
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "execution reconciliation evidence is invalid JSON"
+            ) from exc
+        if not isinstance(evidence_data, list):
+            raise ValueError(
+                "execution reconciliation evidence is structurally invalid"
+            )
+        evidence = tuple(str(item) for item in evidence_data)
+        expected = _reconciliation_digest(
+            outcome=str(row[1]),
+            reason=str(row[2]),
+            evidence=evidence,
+            reconciler=str(row[4]),
+            observed_at=float(row[5]),
+        )
+        if not hmac.compare_digest(str(row[6]), expected):
+            raise ValueError("execution reconciliation journal digest mismatch")
+        return DurableExecutionReconciliation(
+            sequence=int(row[0]),
+            outcome=str(row[1]),
+            reason=str(row[2]),
+            evidence=evidence,
+            reconciler=str(row[4]),
+            observed_at=float(row[5]),
+            sha256=str(row[6]),
+        )
+
 
     def record_verification(
         self,
