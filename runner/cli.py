@@ -19,7 +19,8 @@ from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .execution_promotion import (
-    authority_key_from_environment,
+    effect_authority_key_from_environment,
+    execution_authority_key_from_environment,
     load_json_document,
     promote_claimed_to_running,
     review_key_from_environment,
@@ -598,7 +599,8 @@ def _portfolio_wave_promote(
         execution_grant_document=execution_grant_document,
         effect_grant_document=effect_grant_document,
         review_key=review_key_from_environment(),
-        authority_key=authority_key_from_environment(),
+        execution_authority_key=execution_authority_key_from_environment(),
+        effect_authority_key=effect_authority_key_from_environment(),
         token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
     )
     payload = {
