@@ -1,6 +1,7 @@
 from dataclasses import replace
 from pathlib import Path
 
+from runner.cli import main
 from runner.portfolio_advancement import load_advancement_wave
 from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_binding import bind_wave_to_operator_registry
@@ -89,3 +90,15 @@ def test_repository_binding_ambiguity_fails_closed():
     decision = _decision_map(report)[("repository", "discovery")]
     assert decision.state == "HELD"
     assert decision.reason == "OPERATOR_REPOSITORY_BINDING_AMBIGUOUS"
+
+
+def test_operator_binding_cli_reports_no_execution_authority(capsys):
+    code = main(["portfolio-operator-bindings"])
+    assert code == 0
+    import json
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "PORTFOLIO_OPERATOR_BINDING_REPORT_V1"
+    assert payload["execution_authority"] is False
+    assert payload["summary"]["bound"] > 0
+    assert payload["summary"]["held"] > 0
