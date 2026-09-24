@@ -429,6 +429,60 @@ def test_execution_authority_key_cannot_verify_effect_grant(tmp_path):
         )
 
 
+
+def test_committed_promotion_replay_returns_same_receipt(tmp_path):
+    claim, transport = _claim(tmp_path)
+    review, execution, _ = _evidence(claim)
+    first = _promote(tmp_path, claim, transport, review, execution)
+    second = _promote(
+        tmp_path,
+        claim,
+        transport,
+        review,
+        execution,
+        clock=lambda: 1001.0,
+    )
+    assert second == first
+    assert _status(tmp_path / "operator.sqlite3", claim) == ("RUNNING", 3)
+
+
+def test_committed_promotion_replay_rejects_changed_authority(tmp_path):
+    claim, transport = _claim(tmp_path)
+    review, execution, _ = _evidence(claim)
+    _promote(tmp_path, claim, transport, review, execution)
+
+    changed = dict(execution)
+    changed["grant_id"] = "exec-grant-2"
+    changed = sign_evidence(changed, EXECUTION_KEY)
+
+    with pytest.raises(ValueError, match="replay authority mismatch"):
+        _promote(
+            tmp_path,
+            claim,
+            transport,
+            review,
+            changed,
+            clock=lambda: 1001.0,
+        )
+
+
+def test_committed_promotion_replay_rechecks_live_head(tmp_path):
+    claim, transport = _claim(tmp_path)
+    review, execution, _ = _evidence(claim)
+    _promote(tmp_path, claim, transport, review, execution)
+    transport.heads[(claim.repository, claim.ref)] = "9" * 40
+
+    with pytest.raises(ValueError, match="replay source head is stale"):
+        _promote(
+            tmp_path,
+            claim,
+            transport,
+            review,
+            execution,
+            clock=lambda: 1001.0,
+        )
+
+
 def test_execute_promoted_rechecks_source_and_does_not_call_backend_when_stale(
     tmp_path,
 ):
