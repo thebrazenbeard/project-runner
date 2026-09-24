@@ -14,8 +14,8 @@
   },
   "private_inventory": {
     "count": 18,
-    "normalization": "utf8_sorted_name_newline_v1",
-    "sha256": "6a29a4120a448092d848643f816e44d3557e66f359d46b5cb9462292632bdcd1"
+    "public_commitment_scheme": "COUNT_ONLY_PUBLIC_V1",
+    "exact_membership_publicly_committed": false
   },
   "workstream_counts": {
     "total": 15,
@@ -24,8 +24,8 @@
   },
   "private_workstream_inventory": {
     "count": 13,
-    "normalization": "utf8_sorted_id_newline_v1",
-    "sha256": "b65bc2a49418ed8cec666e4a1bf0f5a06daad59d443150de3b6130a826a69cb7"
+    "public_commitment_scheme": "COUNT_ONLY_PUBLIC_V1",
+    "exact_membership_publicly_committed": false
   },
   "workstreams": [
     {
