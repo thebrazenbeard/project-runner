@@ -16,6 +16,7 @@ from runner.execution_promotion import (
 )
 from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_bridge import claim_bound_plan_subject
+from runner.promoted_github import source_write_request_sha256
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -127,6 +128,22 @@ def _evidence(
     effect_valid_until=1100.0,
     reviewer="REZON",
 ):
+    execution_request = None
+    request_sha256 = None
+    if effect_class == "SOURCE_WRITE":
+        execution_request = {
+            "schema": "PROJECT_RUNNER_GITHUB_SOURCE_WRITE_V1",
+            "operation": "PUT_FILE",
+            "repository": claim.repository,
+            "ref": claim.ref,
+            "expected_head": claim.exact_head,
+            "path": "docs/test-promotion.txt",
+            "content": "test\n",
+            "message": "Test promoted source write",
+            "expected_blob_sha": None,
+        }
+        request_sha256 = source_write_request_sha256(execution_request)
+
     review = sign_evidence(
         {
             "schema": "PROJECT_RUNNER_EXECUTION_REVIEW_V1",
@@ -141,6 +158,7 @@ def _evidence(
             "review_state": "EXECUTION_PROMOTION_REVIEWED",
             "reviewed_at": now - 10.0,
             "valid_until": review_valid_until,
+            "execution_request_sha256": request_sha256,
         },
         REVIEW_KEY,
     )
@@ -158,6 +176,7 @@ def _evidence(
             "fencing_token": claim.fencing_token,
             "operation": "EXECUTE_FRONTIER",
             "effect_class": effect_class,
+            "execution_request": execution_request,
             "execution_authorized": True,
             "issued_at": now - 5.0,
             "valid_until": execution_valid_until,
@@ -179,6 +198,7 @@ def _evidence(
                 "work_fingerprint": claim.work_fingerprint,
                 "fencing_token": claim.fencing_token,
                 "effect_class": effect_class,
+                "execution_request_sha256": request_sha256,
                 "protected_effects_authorized": True,
                 "issued_at": now - 4.0,
                 "valid_until": effect_valid_until,
