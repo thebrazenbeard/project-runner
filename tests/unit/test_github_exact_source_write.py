@@ -26,6 +26,7 @@ class ScriptedExactTransport(GitHubRestTransport):
         self.new_content = None
         self.graphql_fail = False
         self.graphql_transport_error = False
+        self.graphql_generic_error = False
         self.fail_readback = False
         self.requests = []
 
@@ -111,6 +112,11 @@ class ScriptedExactTransport(GitHubRestTransport):
                     "data": {"updateRefs": None},
                     "errors": [{"message": "beforeOid mismatch"}],
                 }
+            if self.graphql_generic_error:
+                return {
+                    "data": {"updateRefs": None},
+                    "errors": [{"message": "internal mutation error"}],
+                }
             self.refs[(self.repository, self.branch)] = self.new_commit
             return {
                 "data": {
@@ -170,6 +176,25 @@ def test_exact_source_write_refuses_graphql_before_oid_mismatch():
         (transport.repository, transport.branch)
     ] == transport.expected_head
 
+
+
+def test_exact_source_write_unclassified_graphql_error_is_outcome_unknown():
+    transport = ScriptedExactTransport()
+    transport.graphql_generic_error = True
+
+    with pytest.raises(
+        GitHubOutcomeUnknown,
+        match="unclassified error",
+    ):
+        transport.put_file_exact_head(
+            transport.repository,
+            "docs/file.txt",
+            transport.branch,
+            "after\n",
+            "Exact write",
+            expected_head=transport.expected_head,
+            expected_blob_sha=transport.old_blob,
+        )
 
 
 def test_exact_source_write_uncertain_ref_update_is_outcome_unknown():
