@@ -7,7 +7,6 @@ import sqlite3
 import pytest
 
 from runner.cli import main
-from runner.github_backend import GitHubFileState
 from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_bridge import (
     claim_bound_plan_subject,
@@ -211,6 +210,22 @@ def test_wrong_corpus_blob_fails_closed(tmp_path):
             plan_path=plan_path,
             wave_path=WAVE,
             corpus_path=altered,
+            projects_path=PROJECTS,
+            subject_id=subject_id,
+        )
+
+
+
+def test_operator_registry_visibility_divergence_blocks_claim(tmp_path):
+    plan_path, payload = _write_plan(tmp_path)
+    subject_id = "vera"
+    assert any(item["subject_id"] == subject_id for item in payload["selected"])
+
+    with pytest.raises(ValueError, match="not operator-bound"):
+        verify_bound_plan_subject(
+            plan_path=plan_path,
+            wave_path=WAVE,
+            corpus_path=CORPUS,
             projects_path=PROJECTS,
             subject_id=subject_id,
         )
