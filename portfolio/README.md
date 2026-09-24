@@ -20,8 +20,8 @@ Private repository and private workstream names are intentionally absent. The pu
 
 - total/public/private counts;
 - archive counts;
-- a SHA-256 commitment to sorted private repository names using `utf8_sorted_name_newline_v1`;
-- a SHA-256 commitment to sorted private workstream IDs using `utf8_sorted_id_newline_v1`.
+- private repository/workstream aggregate counts only in the public projection;
+- no deterministic public digest of private names or private workstream IDs. Exact private membership belongs to an external private corpus or a keyed commitment mechanism.
 
 A complete private corpus may be stored outside this checkout and validated with `load_portfolio_corpus(..., complete=True)`.
 
