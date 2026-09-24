@@ -527,7 +527,7 @@ def _portfolio_wave_claim(
     state_db: Path,
     holder: str,
     lease_ttl: float,
-    authorized_repositories: Sequence[str],
+    allowed_repositories: Sequence[str],
 ) -> int:
     claim = claim_bound_plan_subject(
         plan_path=plan_path,
@@ -538,7 +538,7 @@ def _portfolio_wave_claim(
         state_db=state_db,
         holder=holder,
         lease_ttl=lease_ttl,
-        authorized_repositories=authorized_repositories,
+        allowed_repositories=allowed_repositories,
         token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
     )
     payload = {
@@ -688,7 +688,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     wave_claim.add_argument("--holder", required=True)
     wave_claim.add_argument("--lease-ttl", type=float, required=True)
     wave_claim.add_argument(
-        "--authorized-repository",
+        "--allowed-repository",
         action="append",
         default=[],
     )
@@ -735,7 +735,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             state_db=args.state_db,
             holder=args.holder,
             lease_ttl=args.lease_ttl,
-            authorized_repositories=args.authorized_repository,
+            allowed_repositories=args.authorized_repository,
         )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
