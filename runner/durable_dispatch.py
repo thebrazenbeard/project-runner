@@ -84,6 +84,15 @@ CREATE TABLE IF NOT EXISTS execution_reconciliations (
 
 
 @dataclass(frozen=True)
+class DurableExecutionVerification:
+    sequence: int
+    status: WorkUnitStatus
+    reason: str
+    verified_at: float
+    sha256: str
+
+
+@dataclass(frozen=True)
 class DurableExecutionReconciliation:
     sequence: int
     outcome: str
@@ -1201,6 +1210,53 @@ class SqliteDispatchAdmissionStore:
         if result.work_fingerprint != work_fingerprint_value:
             raise ValueError("execution result journal fingerprint mismatch")
         return result
+
+    def load_latest_verification(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+    ) -> DurableExecutionVerification | None:
+        self._attempt_row(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        row = self.connection.execute(
+            """
+            SELECT sequence, status, reason, verified_at, verification_sha256
+            FROM execution_verifications
+            WHERE lineage_id = ?
+              AND work_fingerprint = ?
+              AND fencing_token = ?
+            ORDER BY sequence DESC
+            LIMIT 1
+            """,
+            (
+                lineage_id,
+                work_fingerprint_value,
+                fencing_token,
+            ),
+        ).fetchone()
+        if row is None:
+            return None
+        status = WorkUnitStatus(str(row[1]))
+        expected = _verification_digest(
+            status=status,
+            reason=str(row[2]),
+            verified_at=float(row[3]),
+        )
+        if not hmac.compare_digest(str(row[4]), expected):
+            raise ValueError("execution verification journal digest mismatch")
+        return DurableExecutionVerification(
+            sequence=int(row[0]),
+            status=status,
+            reason=str(row[2]),
+            verified_at=float(row[3]),
+            sha256=str(row[4]),
+        )
+
 
     def load_latest_reconciliation(
         self,
