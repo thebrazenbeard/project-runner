@@ -402,6 +402,8 @@ def _portfolio_wave_plan(
     max_per_family: int,
     occupied_collision_keys: Sequence[str],
 ) -> int:
+    wave_bytes = wave_path.read_bytes()
+    wave_sha256 = hashlib.sha256(wave_bytes).hexdigest()
     wave = load_advancement_wave(wave_path)
     plan = plan_wave_admission(
         wave,
