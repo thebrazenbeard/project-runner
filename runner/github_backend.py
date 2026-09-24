@@ -16,6 +16,10 @@ class GitHubPreconditionFailed(RuntimeError):
     """Exact Git state precondition failed before ref publication."""
 
 
+class GitHubOutcomeUnknown(RuntimeError):
+    """A ref publication may have occurred but cannot be proven by readback."""
+
+
 class GitHubOperation(str, Enum):
     READ_REF = "READ_REF"
     READ_FILE = "READ_FILE"
@@ -316,16 +320,34 @@ class GitHubRestTransport:
                 }
             },
         }
-        payload = self._request("POST", self.graphql_url, body)
+        try:
+            payload = self._request("POST", self.graphql_url, body)
+        except RuntimeError as exc:
+            message = str(exc)
+            if "github http 409:" in message or "github http 422:" in message:
+                raise GitHubPreconditionFailed(
+                    "github exact ref compare-and-swap rejected"
+                ) from exc
+            raise GitHubOutcomeUnknown(
+                "github exact ref update outcome is unknown"
+            ) from exc
         if payload is None:
-            raise RuntimeError("github graphql update returned no payload")
+            raise GitHubOutcomeUnknown(
+                "github exact ref update returned no payload"
+            )
         errors = payload.get("errors")
         if errors:
             raise GitHubPreconditionFailed(
                 "github exact ref compare-and-swap rejected"
             )
-        if not isinstance(payload.get("data"), Mapping):
-            raise RuntimeError("github graphql update missing data")
+        data = payload.get("data")
+        if (
+            not isinstance(data, Mapping)
+            or not isinstance(data.get("updateRefs"), Mapping)
+        ):
+            raise GitHubOutcomeUnknown(
+                "github exact ref update response is incomplete"
+            )
 
     def put_file_exact_head(
         self,
@@ -437,7 +459,9 @@ class GitHubRestTransport:
             or readback_file.sha != blob_sha
             or readback_file.content != content
         ):
-            raise RuntimeError("github exact source-write readback failed")
+            raise GitHubOutcomeUnknown(
+                "github exact source-write readback failed"
+            )
         return new_commit_sha, blob_sha
 
 
