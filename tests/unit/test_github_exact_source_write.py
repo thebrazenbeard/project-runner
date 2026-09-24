@@ -2,6 +2,7 @@ import pytest
 
 from runner.github_backend import (
     GitHubFileState,
+    GitHubOutcomeUnknown,
     GitHubPreconditionFailed,
     GitHubRestTransport,
 )
@@ -24,6 +25,7 @@ class ScriptedExactTransport(GitHubRestTransport):
         self.new_commit = "d" * 40
         self.new_content = None
         self.graphql_fail = False
+        self.graphql_transport_error = False
         self.requests = []
 
     def read_ref(self, repository, ref):
