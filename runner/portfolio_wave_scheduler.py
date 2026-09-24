@@ -38,7 +38,14 @@ class WaveAdmission:
     subject_id: str
     family_id: str
     lead_identity: str
+    reviewer_identities: tuple[str, ...]
     priority: str
+    action: str
+    activity_state: str
+    effect_ceiling: str
+    review_gate: str
+    frontier: str | None
+    source_status: str
     collision_keys: tuple[str, ...]
 
 
@@ -215,7 +222,14 @@ def plan_wave_admission(
             subject_id=item.subject_id,
             family_id=item.family_id,
             lead_identity=item.lead_identity,
+            reviewer_identities=item.reviewer_identities,
             priority=item.priority,
+            action=item.action,
+            activity_state=item.activity_state,
+            effect_ceiling=item.effect_ceiling,
+            review_gate=item.review_gate,
+            frontier=item.frontier,
+            source_status=item.source_status,
             collision_keys=keys,
         ))
         identity_load[item.lead_identity] += 1
