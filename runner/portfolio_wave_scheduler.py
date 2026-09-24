@@ -162,6 +162,18 @@ def plan_wave_admission(
                 f"wave item exceeds source-only admission ceiling: {item.subject_id}"
             )
 
+        if reserved.intersection(keys):
+            deferred.append(WaveDeferral(
+                subject_kind=item.subject_kind,
+                subject_id=item.subject_id,
+                family_id=item.family_id,
+                lead_identity=item.lead_identity,
+                priority=item.priority,
+                reason="COLLISION",
+                collision_keys=keys,
+            ))
+            continue
+
         if len(selected) >= budget.max_parallel:
             deferred.append(WaveDeferral(
                 subject_kind=item.subject_kind,
@@ -194,18 +206,6 @@ def plan_wave_admission(
                 lead_identity=item.lead_identity,
                 priority=item.priority,
                 reason="FAMILY_BUDGET",
-                collision_keys=keys,
-            ))
-            continue
-
-        if reserved.intersection(keys):
-            deferred.append(WaveDeferral(
-                subject_kind=item.subject_kind,
-                subject_id=item.subject_id,
-                family_id=item.family_id,
-                lead_identity=item.lead_identity,
-                priority=item.priority,
-                reason="COLLISION",
                 collision_keys=keys,
             ))
             continue
