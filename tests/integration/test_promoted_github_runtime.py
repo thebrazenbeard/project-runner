@@ -42,16 +42,21 @@ def _git_blob_sha(content: str) -> str:
 
 
 class ReadOnlyQualificationTransport:
-    def __init__(self, *, schema_ok=True):
+    def __init__(self, *, schema_ok=True, move_on_reread=False):
         self.repository = "thebrazenbeard/project-runner"
         self.ref = "main"
         self.head = "a" * 40
         self.tree = "b" * 40
         self.schema_ok = schema_ok
+        self.move_on_reread = move_on_reread
         self.calls = []
 
     def read_ref(self, repository, ref):
         self.calls.append(("read_ref", repository, ref))
+        if self.move_on_reread and len(
+            [item for item in self.calls if item[0] == "read_ref"]
+        ) > 1:
+            return "f" * 40
         return self.head
 
     def read_commit_tree(self, repository, commit_sha):
@@ -82,9 +87,12 @@ class ReconcileTransport:
         self.files = {}
         self.reads = []
         self.writes = []
+        self.ref_sequence = None
 
     def read_ref(self, repository, ref):
         self.reads.append(("read_ref", repository, ref))
+        if self.ref_sequence:
+            return self.ref_sequence.pop(0)
         return self.head
 
     def read_file(self, repository, path, ref):
@@ -290,7 +298,23 @@ def test_runtime_qualification_is_read_only_and_passes_required_schema():
         "read_ref",
         "read_commit_tree",
         "inspect_update_refs_schema",
+        "read_ref",
     ]
+
+
+def test_runtime_qualification_fails_closed_when_ref_moves_during_probe():
+    transport = ReadOnlyQualificationTransport(
+        schema_ok=True,
+        move_on_reread=True,
+    )
+    result = qualify_github_source_write_runtime(
+        repository=transport.repository,
+        ref=transport.ref,
+        transport=transport,
+    )
+    assert result.status == "FAIL"
+    assert result.stable_snapshot is False
+    assert result.write_exercised is False
 
 
 def test_runtime_qualification_fails_closed_without_before_oid():
@@ -316,7 +340,7 @@ def test_unknown_reconciliation_confirms_published_candidate(tmp_path):
     ) = _claim_and_promote(tmp_path)
     transport.head = candidate_commit
     transport.files[
-        (claim.repository, request["path"], claim.ref)
+        (claim.repository, request["path"], candidate_commit)
     ] = GitHubFileState(
         sha=candidate_blob,
         content=request["content"],
@@ -379,6 +403,42 @@ def test_unknown_reconciliation_confirms_no_effect_and_releases_retry(tmp_path):
     assert transport.writes == []
 
 
+def test_unknown_reconciliation_is_indeterminate_when_ref_moves_mid_snapshot(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    transport.ref_sequence = [candidate_commit, "d" * 40]
+    transport.files[
+        (claim.repository, request["path"], candidate_commit)
+    ] = GitHubFileState(
+        sha=candidate_blob,
+        content=request["content"],
+    )
+
+    result = reconcile_github_source_write_outcome_unknown(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        reconciler="runtime-reconciler",
+        clock=lambda: 1002.0,
+    )
+
+    assert result.outcome == "INDETERMINATE"
+    assert "moved during reconciliation snapshot" in result.reason
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("RUNNING", 3)
+    assert transport.writes == []
+
+
 def test_unknown_reconciliation_remains_indeterminate_on_third_state(tmp_path):
     (
         claim,
@@ -390,7 +450,7 @@ def test_unknown_reconciliation_remains_indeterminate_on_third_state(tmp_path):
     ) = _claim_and_promote(tmp_path)
     transport.head = "d" * 40
     transport.files[
-        (claim.repository, request["path"], claim.ref)
+        (claim.repository, request["path"], transport.head)
     ] = GitHubFileState(
         sha="e" * 40,
         content="someone else\n",
