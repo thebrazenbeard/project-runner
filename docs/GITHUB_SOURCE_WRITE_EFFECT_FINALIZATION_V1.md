@@ -75,8 +75,19 @@ The qualified happy-path generations are therefore:
 
 `RUNNING gN -> VERIFYING gN+1 -> COMPLETE gN+2`.
 
-Thus one source readback cannot jump directly from execution to completion, and
-a stale or replaced fence cannot finalize.
+If the terminal transaction commits but the caller loses the response, a retry
+reconstructs the terminal receipt only when the exact completed generation,
+completed holder/fencing token, validated terminal verification record,
+promotion, execution request, and EFFECT_CONFIRMED reconciliation all still
+cross-bind. The returned receipt is marked `finalization_replayed=true`.
+
+That receipt replay is historical/idempotent. It does **not** perform another
+GitHub read and therefore does not assert that the candidate remains current at
+replay time.
+
+Thus one source readback cannot jump directly from execution to completion, a
+stale or replaced fence cannot finalize, and response loss after terminal commit
+cannot cause backend or source-effect replay.
 
 ## Result semantics
 
