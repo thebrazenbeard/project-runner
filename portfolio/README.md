@@ -51,6 +51,6 @@ These are portfolio triage categories, not permissions.
 
 ## Validation
 
-The schema is `schemas/portfolio-corpus.schema.json` and the loader is `runner/portfolio.py`.
+The schema is `schemas/portfolio-corpus.schema.json` and the loader is `runner/portfolio_corpus.py`.
 
 The loader rejects duplicate repository identities, inconsistent aggregate counts, private identifiers in the public projection, incomplete public projections, and incomplete/mismatched full private corpora.
