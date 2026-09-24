@@ -21,6 +21,8 @@ from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport,
 from .leases import InMemoryLeaseStore
 from .models import FrontierStatus, ProjectSchedulingState
 from .portfolio_advancement import load_advancement_wave
+from .portfolio_corpus import load_portfolio_corpus
+from .portfolio_operator_binding import bind_wave_to_operator_registry
 from .portfolio_wave_scheduler import (
     WaveExecutionBudget,
     plan_wave_admission,
