@@ -644,6 +644,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_per_family=args.max_per_family,
             occupied_collision_keys=args.occupied_collision_key,
         )
+    if args.command == "portfolio-operator-bindings":
+        return _portfolio_operator_bindings(
+            args.wave,
+            args.corpus,
+            args.projects,
+        )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
 
