@@ -162,9 +162,11 @@ class PortfolioCorpusSnapshot:
     counts: PortfolioCounts
     workstream_counts: WorkstreamCounts
     private_inventory_count: int
-    private_inventory_sha256: str
+    private_inventory_scheme: str
+    private_inventory_exact_membership_publicly_committed: bool
     private_workstream_inventory_count: int
-    private_workstream_inventory_sha256: str
+    private_workstream_inventory_scheme: str
+    private_workstream_exact_membership_publicly_committed: bool
     records: tuple[PortfolioRecord, ...]
     workstreams: tuple[WorkstreamRecord, ...]
     sha256: str
@@ -235,9 +237,11 @@ def load_portfolio_corpus(
     assert isinstance(private_inventory, dict)
     assert isinstance(private_workstream_inventory, dict)
     private_count = int(private_inventory["count"])
-    private_digest = str(private_inventory["sha256"])
+    private_scheme = str(private_inventory["public_commitment_scheme"])
+    private_committed = bool(private_inventory["exact_membership_publicly_committed"])
     private_workstream_count = int(private_workstream_inventory["count"])
-    private_workstream_digest = str(private_workstream_inventory["sha256"])
+    private_workstream_scheme = str(private_workstream_inventory["public_commitment_scheme"])
+    private_workstream_committed = bool(private_workstream_inventory["exact_membership_publicly_committed"])
     if private_count != counts.private:
         raise ValueError(
             "private inventory count does not match portfolio private count"
@@ -327,9 +331,11 @@ def load_portfolio_corpus(
         counts=counts,
         workstream_counts=workstream_counts,
         private_inventory_count=private_count,
-        private_inventory_sha256=private_digest,
+        private_inventory_scheme=private_scheme,
+        private_inventory_exact_membership_publicly_committed=private_committed,
         private_workstream_inventory_count=private_workstream_count,
-        private_workstream_inventory_sha256=private_workstream_digest,
+        private_workstream_inventory_scheme=private_workstream_scheme,
+        private_workstream_exact_membership_publicly_committed=private_workstream_committed,
         records=records,
         workstreams=workstreams,
         sha256=hashlib.sha256(raw).hexdigest(),
