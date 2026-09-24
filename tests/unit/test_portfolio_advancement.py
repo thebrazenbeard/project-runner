@@ -29,7 +29,7 @@ def test_public_wave_covers_public_corpus_exactly():
     workstream_items = [
         item for item in wave.items if item.subject_kind == "workstream"
     ]
-    assert len(repo_items) == 48
+    assert len(repo_items) == 49
     assert len(workstream_items) == 2
 
 
@@ -105,8 +105,23 @@ def test_summary_and_identity_projection_are_deterministic():
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
     summary = wave.summary()
-    assert summary["subjects"] == 50
+    assert summary["subjects"] == 51
     assert summary["held"] >= 1
     one_items = wave.for_identity("ONE")
     assert all(item.lead_identity == "ONE" for item in one_items)
     assert all(item.execution_state == "QUEUED" for item in one_items)
+
+
+def test_sql_connectome_is_admitted_without_effect_authority():
+    wave = load_advancement_wave(
+        ROOT / "portfolio" / "advancement_wave.public.json"
+    )
+    item = next(
+        item for item in wave.items
+        if item.subject_kind == "repository"
+        and item.subject_id == "sql-connectome"
+    )
+    assert item.repositories == ("thebrazenbeard/sql-connectome",)
+    assert item.effect_ceiling == "SOURCE_ONLY"
+    assert item.execution_state == "QUEUED"
+    assert item.priority == "P1"
