@@ -21,7 +21,9 @@ from .github_backend import (
 from .models import ExactSubject
 from .portfolio_advancement import AdvancementItem, load_advancement_wave
 from .portfolio_corpus import PortfolioRecord, load_portfolio_corpus
+from .portfolio_operator_binding import bind_wave_to_operator_registry
 from .portfolio_wave_scheduler import collision_keys
+from .registry import load_project_snapshot
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
@@ -54,6 +56,8 @@ class VerifiedPlanSubject:
     plan_sha256: str
     wave_sha256: str
     selected_payload: Mapping[str, object]
+    operator_project_id: str
+    operator_registry_sha256: str
 
 
 def _canonical_json_bytes(payload: object) -> bytes:
@@ -117,6 +121,7 @@ def verify_bound_plan_subject(
     plan_path: Path,
     wave_path: Path,
     corpus_path: Path,
+    projects_path: Path,
     subject_id: str,
 ) -> VerifiedPlanSubject:
     plan_raw = plan_path.read_bytes()
@@ -200,12 +205,34 @@ def verify_bound_plan_subject(
     if not record.default_branch.strip():
         raise ValueError("corpus repository default branch is missing")
 
+    registry = load_project_snapshot(projects_path)
+    binding_report = bind_wave_to_operator_registry(
+        wave,
+        corpus,
+        registry,
+        public_safe=True,
+    )
+    binding_matches = [
+        decision
+        for decision in binding_report.decisions
+        if decision.subject_id == subject_id
+    ]
+    if len(binding_matches) != 1:
+        raise ValueError("subject must have exactly one operator binding decision")
+    binding = binding_matches[0]
+    if binding.state != "BOUND" or binding.operator_project_id is None:
+        raise ValueError(
+            f"subject is not operator-bound: {binding.reason}"
+        )
+
     return VerifiedPlanSubject(
         item=item,
         record=record,
         plan_sha256=plan_sha256,
         wave_sha256=wave_sha256,
         selected_payload=dict(selected),
+        operator_project_id=binding.operator_project_id,
+        operator_registry_sha256=binding_report.operator_registry_sha256,
     )
 
 
@@ -264,6 +291,7 @@ def claim_bound_plan_subject(
     plan_path: Path,
     wave_path: Path,
     corpus_path: Path,
+    projects_path: Path,
     subject_id: str,
     state_db: Path,
     holder: str,
@@ -291,6 +319,7 @@ def claim_bound_plan_subject(
         plan_path=Path(plan_path),
         wave_path=Path(wave_path),
         corpus_path=Path(corpus_path),
+        projects_path=Path(projects_path),
         subject_id=subject_id,
     )
     repository = verified.record.repository
@@ -338,6 +367,8 @@ def claim_bound_plan_subject(
         payload={
             "schema": "PROJECT_RUNNER_BOUND_PLAN_CLAIM_V1",
             "subject_id": subject_id,
+            "operator_project_id": verified.operator_project_id,
+            "operator_registry_sha256": verified.operator_registry_sha256,
             "plan_sha256": verified.plan_sha256,
             "wave_sha256": verified.wave_sha256,
             "selected": dict(verified.selected_payload),
