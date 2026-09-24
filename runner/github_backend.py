@@ -337,8 +337,17 @@ class GitHubRestTransport:
             )
         errors = payload.get("errors")
         if errors:
-            raise GitHubPreconditionFailed(
-                "github exact ref compare-and-swap rejected"
+            messages = " ".join(
+                str(item.get("message", ""))
+                for item in errors
+                if isinstance(item, Mapping)
+            ).lower()
+            if "beforeoid" in messages or "before oid" in messages:
+                raise GitHubPreconditionFailed(
+                    "github exact ref compare-and-swap rejected"
+                )
+            raise GitHubOutcomeUnknown(
+                "github exact ref update returned an unclassified error"
             )
         data = payload.get("data")
         if (
