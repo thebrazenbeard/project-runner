@@ -9,6 +9,7 @@ from .backends import BackendResult
 from .execution_promotion import PromotedExecution, SOURCE_WRITE
 from .github_backend import (
     GitHubOperation,
+    GitHubOutcomeUnknown,
     GitHubPreconditionFailed,
     GitHubRequest,
     GitHubTransport,
@@ -145,6 +146,12 @@ class PromotedGitHubSourceWriteBackend:
                 fingerprint,
                 "PRECONDITION_FAILED",
                 "exact GitHub source-write compare-and-swap failed",
+            )
+        except GitHubOutcomeUnknown:
+            return self._failure(
+                fingerprint,
+                "OUTCOME_UNKNOWN",
+                "GitHub source-write outcome could not be proven",
             )
         except (KeyError, RuntimeError, ValueError):
             return self._failure(
