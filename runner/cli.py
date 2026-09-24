@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from dataclasses import replace
+import hashlib
 import hmac
 import json
 import os
