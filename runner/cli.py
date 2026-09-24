@@ -482,6 +482,40 @@ def _portfolio_wave_plan(
     return 0
 
 
+def _portfolio_operator_bindings(
+    wave_path: Path,
+    corpus_path: Path,
+    projects_path: Path,
+) -> int:
+    wave = load_advancement_wave(wave_path)
+    corpus = load_portfolio_corpus(corpus_path, public_safe=True)
+    registry = load_project_snapshot(projects_path)
+    report = bind_wave_to_operator_registry(
+        wave,
+        corpus,
+        registry,
+        public_safe=True,
+    )
+    payload = {
+        "mode": "PORTFOLIO_OPERATOR_BINDING_REPORT_V1",
+        "execution_authority": False,
+        "summary": report.summary(),
+        "decisions": [
+            {
+                "subject_kind": item.subject_kind,
+                "subject_id": item.subject_id,
+                "repository": item.repository,
+                "state": item.state,
+                "reason": item.reason,
+                "operator_project_id": item.operator_project_id,
+            }
+            for item in report.decisions
+        ],
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
 def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> int:
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     backend = GitHubBackend(
