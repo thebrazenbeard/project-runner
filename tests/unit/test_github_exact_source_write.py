@@ -165,6 +165,25 @@ def test_exact_source_write_refuses_graphql_before_oid_mismatch():
     ] == transport.expected_head
 
 
+
+def test_exact_source_write_uncertain_ref_update_is_outcome_unknown():
+    transport = ScriptedExactTransport()
+    transport.graphql_transport_error = True
+
+    with pytest.raises(
+        GitHubOutcomeUnknown,
+        match="outcome is unknown",
+    ):
+        transport.put_file_exact_head(
+            transport.repository,
+            "docs/file.txt",
+            transport.branch,
+            "after\n",
+            "Exact write",
+            expected_head=transport.expected_head,
+            expected_blob_sha=transport.old_blob,
+        )
+
 def test_exact_source_write_rejects_blob_mismatch_before_object_creation():
     transport = ScriptedExactTransport()
 
