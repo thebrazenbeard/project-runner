@@ -84,6 +84,7 @@ class ExecutionReviewEvidence:
     review_state: str
     reviewed_at: float
     valid_until: float
+    execution_request_sha256: str | None
     sha256: str
 
 
@@ -102,6 +103,8 @@ class ExecutionAuthorityGrant:
     effect_class: str
     issued_at: float
     valid_until: float
+    execution_request: Mapping[str, object] | None
+    execution_request_sha256: str | None
     sha256: str
 
 
@@ -119,6 +122,7 @@ class ProtectedEffectAuthorityGrant:
     effect_class: str
     issued_at: float
     valid_until: float
+    execution_request_sha256: str | None
     sha256: str
 
 
@@ -137,6 +141,7 @@ class ExecutionPromotionReceipt:
     review_valid_until: float
     execution_grant_sha256: str
     execution_valid_until: float
+    execution_request_sha256: str | None
     effect_grant_sha256: str | None
     effect_valid_until: float | None
     promoted_at: float
@@ -150,6 +155,7 @@ class PromotedExecution:
     work: WorkUnit
     operation: str
     effect_class: str
+    execution_request: Mapping[str, object] | None
     promotion: ExecutionPromotionReceipt
 
 
