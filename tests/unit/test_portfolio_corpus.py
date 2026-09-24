@@ -27,14 +27,14 @@ def _base_payload() -> dict:
         },
         "private_inventory": {
             "count": 1,
-            "normalization": "utf8_sorted_name_newline_v1",
-            "sha256": "0" * 64,
+            "public_commitment_scheme": "COUNT_ONLY_PUBLIC_V1",
+            "exact_membership_publicly_committed": False,
         },
         "workstream_counts": {"total": 2, "public": 1, "private": 1},
         "private_workstream_inventory": {
             "count": 1,
-            "normalization": "utf8_sorted_id_newline_v1",
-            "sha256": "1" * 64,
+            "public_commitment_scheme": "COUNT_ONLY_PUBLIC_V1",
+            "exact_membership_publicly_committed": False,
         },
         "workstreams": [
             {
@@ -75,6 +75,8 @@ def test_public_corpus_preserves_private_aggregates_without_identifiers(tmp_path
     assert corpus.workstream_counts.total == 2
     assert corpus.workstream_counts.private == 1
     assert corpus.private_inventory_count == 1
+    assert corpus.private_inventory_scheme == "COUNT_ONLY_PUBLIC_V1"
+    assert corpus.private_inventory_exact_membership_publicly_committed is False
     assert tuple(record.repository for record in corpus.records) == ("owner/public-one",)
     assert tuple(item.id for item in corpus.workstreams) == ("public-work",)
 
@@ -200,3 +202,9 @@ def test_summary_is_aggregate_only(tmp_path: Path):
     assert summary["workstream_priorities"] == {"P1": 1}
     assert summary["published_records"] == 1
     assert "records" not in summary
+
+
+def test_public_corpus_does_not_require_private_name_digest(tmp_path: Path):
+    corpus = load_portfolio_corpus(_write(tmp_path, _base_payload()), public_safe=True)
+    assert not hasattr(corpus, "private_inventory_sha256")
+    assert not hasattr(corpus, "private_workstream_inventory_sha256")
