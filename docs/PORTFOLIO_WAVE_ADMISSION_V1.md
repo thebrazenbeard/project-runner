@@ -16,6 +16,7 @@ The caller must provide:
 
 - `max_parallel`: total subjects admitted in this planning pass;
 - `max_per_identity`: maximum admitted subjects for one lead identity;
+- `max_per_family`: maximum admitted subjects from one portfolio family;
 - zero or more already occupied collision keys.
 
 The planner rejects invalid budgets instead of inventing one.
@@ -23,6 +24,8 @@ The planner rejects invalid budgets instead of inventing one.
 ## Collision semantics
 
 Repository subjects reserve `repository:<owner/repo>`.
+
+Portfolio families are governed separately by `max_per_family`. Family membership is not treated as a repository collision; it is an explicit concurrency budget so related repositories can be serialized without pretending they are the same durable surface.
 
 Workstreams reserve every repository-like durable surface they name. Non-repository surfaces are reserved as `surface:<normalized surface>`.
 
@@ -59,6 +62,7 @@ Example:
 project-runner portfolio-wave-plan \
   --max-parallel 6 \
   --max-per-identity 1 \
+  --max-per-family 1 \
   --occupied-collision-key repository:thebrazenbeard/vera-mono
 ```
 
