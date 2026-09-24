@@ -681,7 +681,9 @@ def _github_source_write_finalize_effect(
         "candidate_blob_sha": result.candidate_blob_sha,
         "reconciliation_sha256": result.reconciliation_sha256,
         "work_generation": result.work_generation,
+        "verified_at": result.verified_at,
         "backend_replayed": result.backend_replayed,
+        "finalization_replayed": result.finalization_replayed,
         "deployment_effect_claimed": False,
         "installation_effect_claimed": False,
     }, sort_keys=True))
