@@ -398,6 +398,7 @@ def _portfolio_wave_plan(
     *,
     max_parallel: int,
     max_per_identity: int,
+    max_per_family: int,
     occupied_collision_keys: Sequence[str],
 ) -> int:
     wave = load_advancement_wave(wave_path)
@@ -406,6 +407,7 @@ def _portfolio_wave_plan(
         budget=WaveExecutionBudget(
             max_parallel=max_parallel,
             max_per_identity=max_per_identity,
+            max_per_family=max_per_family,
         ),
         occupied_collision_keys=occupied_collision_keys,
     )
@@ -418,6 +420,7 @@ def _portfolio_wave_plan(
             {
                 "subject_kind": item.subject_kind,
                 "subject_id": item.subject_id,
+                "family_id": item.family_id,
                 "lead_identity": item.lead_identity,
                 "priority": item.priority,
                 "collision_keys": list(item.collision_keys),
@@ -428,6 +431,7 @@ def _portfolio_wave_plan(
             {
                 "subject_kind": item.subject_kind,
                 "subject_id": item.subject_id,
+                "family_id": item.family_id,
                 "lead_identity": item.lead_identity,
                 "priority": item.priority,
                 "reason": item.reason,
@@ -518,6 +522,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     wave_plan.add_argument("--max-parallel", type=int, required=True)
     wave_plan.add_argument("--max-per-identity", type=int, required=True)
+    wave_plan.add_argument("--max-per-family", type=int, required=True)
     wave_plan.add_argument(
         "--occupied-collision-key",
         action="append",
@@ -547,6 +552,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.wave,
             max_parallel=args.max_parallel,
             max_per_identity=args.max_per_identity,
+            max_per_family=args.max_per_family,
             occupied_collision_keys=args.occupied_collision_key,
         )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
