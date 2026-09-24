@@ -1,12 +1,12 @@
 {
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
-  "observed_at": "2026-09-24T13:08:00-04:00",
+  "observed_at": "2026-09-24T17:16:00-04:00",
   "owner": "thebrazenbeard",
   "status_basis": "Live GitHub repository/PR/commit audit reconciled with user-authorized ChatGPT and durable project-history evidence.",
   "freshness_rule": "Descriptive status is an observed cut, not authority; refresh live source/runtime evidence before scheduling, merging, deploying, or claiming current completion.",
   "counts": {
-    "total": 66,
-    "public": 48,
+    "total": 67,
+    "public": 49,
     "private": 18,
     "archived": 2,
     "public_archived": 0,
@@ -493,6 +493,20 @@
       "purpose": "Semantics and Pragmatics Model research/construction hub.",
       "status": "Construction provenance and causal semantic/pragmatic experiments remain open.",
       "current_frontier": "Establish a reproducible causal experiment before stronger claims."
+    },
+    {
+      "id": "sql-connectome",
+      "repository": "thebrazenbeard/sql-connectome",
+      "name": "SQL Connectome",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P1",
+      "family_id": "language-and-semantics",
+      "activity_state": "ACTIVE_HEAVY",
+      "purpose": "Provider-neutral multi-dialect SQL semantic connectome with governed PostgreSQL execution/currentness substrate.",
+      "status": "New active repository; PostgreSQL 17 CI is green while semantic/translation qualification continues advancing on main.",
+      "current_frontier": "Stabilize semantic/execution boundaries and compose with BT2 database/Lantern work without turning translation or connectivity into effect authority."
     },
     {
       "id": "temporal",
