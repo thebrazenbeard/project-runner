@@ -103,7 +103,7 @@ def test_bound_plan_claim_rechecks_live_head_and_acquires_fresh_fence(tmp_path):
         state_db=tmp_path / "operator.sqlite3",
         holder="operator-test",
         lease_ttl=60.0,
-        authorized_repositories=(record.repository,),
+        allowed_repositories=(record.repository,),
         transport=transport,
         clock=lambda: 1000.0,
     )
@@ -176,7 +176,7 @@ def test_tampered_plan_fails_before_currentness_or_claim(tmp_path):
             state_db=tmp_path / "operator.sqlite3",
             holder="operator-test",
             lease_ttl=60.0,
-            authorized_repositories=(record.repository,),
+            allowed_repositories=(record.repository,),
             transport=transport,
         )
 
@@ -249,7 +249,7 @@ def test_unauthorized_repository_fails_before_live_read(tmp_path):
             state_db=tmp_path / "operator.sqlite3",
             holder="operator-test",
             lease_ttl=60.0,
-            authorized_repositories=(),
+            allowed_repositories=(),
             transport=transport,
         )
 
@@ -271,7 +271,7 @@ def test_active_claim_replay_is_idempotent_for_same_holder(tmp_path):
         state_db=tmp_path / "operator.sqlite3",
         holder="operator-test",
         lease_ttl=60.0,
-        authorized_repositories=(record.repository,),
+        allowed_repositories=(record.repository,),
         transport=transport,
         clock=lambda: 1000.0,
     )
@@ -301,7 +301,7 @@ def test_active_claim_replay_rejects_different_holder(tmp_path):
         subject_id=subject_id,
         state_db=tmp_path / "operator.sqlite3",
         lease_ttl=60.0,
-        authorized_repositories=(record.repository,),
+        allowed_repositories=(record.repository,),
         transport=transport,
     )
     claim_bound_plan_subject(
@@ -331,7 +331,7 @@ def test_expired_claim_only_lease_reclaims_with_new_fence(tmp_path):
         subject_id=subject_id,
         state_db=tmp_path / "operator.sqlite3",
         lease_ttl=10.0,
-        authorized_repositories=(record.repository,),
+        allowed_repositories=(record.repository,),
         transport=transport,
     )
     first = claim_bound_plan_subject(
@@ -385,7 +385,7 @@ def test_crash_after_root_initialization_recovers_on_replay(tmp_path, monkeypatc
         state_db=tmp_path / "operator.sqlite3",
         holder="operator-test",
         lease_ttl=60.0,
-        authorized_repositories=(record.repository,),
+        allowed_repositories=(record.repository,),
         transport=transport,
         clock=lambda: 1000.0,
     )
@@ -422,7 +422,7 @@ def test_claim_recovery_rejects_lease_attempt_divergence(tmp_path):
         state_db=tmp_path / "operator.sqlite3",
         holder="operator-test",
         lease_ttl=60.0,
-        authorized_repositories=(record.repository,),
+        allowed_repositories=(record.repository,),
         transport=transport,
         clock=lambda: 1000.0,
     )
@@ -457,7 +457,7 @@ def test_replay_after_live_head_moves_fails_closed(tmp_path):
         state_db=tmp_path / "operator.sqlite3",
         holder="operator-test",
         lease_ttl=60.0,
-        authorized_repositories=(record.repository,),
+        allowed_repositories=(record.repository,),
         transport=transport,
         clock=lambda: 1000.0,
     )
