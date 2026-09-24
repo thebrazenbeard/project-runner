@@ -237,6 +237,32 @@ def _integer(payload: Mapping[str, object], key: str, label: str) -> int:
     return value
 
 
+def _optional_digest(
+    payload: Mapping[str, object],
+    key: str,
+    label: str,
+) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    text = str(value)
+    if len(text) != 64 or any(ch not in "0123456789abcdef" for ch in text):
+        raise ValueError(f"{label} must be lowercase sha256")
+    return text
+
+
+def _execution_request(
+    payload: Mapping[str, object],
+) -> tuple[Mapping[str, object] | None, str | None]:
+    value = payload.get("execution_request")
+    if value is None:
+        return None, None
+    if not isinstance(value, Mapping):
+        raise ValueError("execution request must be an object")
+    request_payload = dict(value)
+    return request_payload, _sha256(request_payload)
+
+
 def parse_review_evidence(
     document: Mapping[str, object],
     *,
@@ -271,6 +297,11 @@ def parse_review_evidence(
         review_state=state,
         reviewed_at=_number(payload, "reviewed_at", "reviewed_at"),
         valid_until=_number(payload, "valid_until", "review valid_until"),
+        execution_request_sha256=_optional_digest(
+            payload,
+            "execution_request_sha256",
+            "review execution request sha256",
+        ),
         sha256=digest,
     )
 
@@ -288,6 +319,7 @@ def parse_execution_grant(
     )
     if payload.get("execution_authorized") is not True:
         raise ValueError("execution authority grant does not authorize execution")
+    execution_request, execution_request_sha256 = _execution_request(payload)
     return ExecutionAuthorityGrant(
         grant_id=_text(payload, "grant_id", "execution grant id"),
         issuer=_text(payload, "issuer", "execution grant issuer"),
@@ -314,6 +346,8 @@ def parse_execution_grant(
             "valid_until",
             "execution valid_until",
         ),
+        execution_request=execution_request,
+        execution_request_sha256=execution_request_sha256,
         sha256=digest,
     )
 
@@ -354,6 +388,11 @@ def parse_effect_grant(
         effect_class=_text(payload, "effect_class", "effect class"),
         issued_at=_number(payload, "issued_at", "effect issued_at"),
         valid_until=_number(payload, "valid_until", "effect valid_until"),
+        execution_request_sha256=_optional_digest(
+            payload,
+            "execution_request_sha256",
+            "effect execution request sha256",
+        ),
         sha256=digest,
     )
 
