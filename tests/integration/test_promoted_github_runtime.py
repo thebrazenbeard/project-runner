@@ -582,6 +582,8 @@ def test_effect_confirmed_finalization_completes_without_backend_replay(tmp_path
 
     assert result.status == "COMPLETE"
     assert result.backend_replayed is False
+    assert result.finalization_replayed is False
+    assert result.verified_at == 1005.0
     assert result.candidate_commit_sha == candidate_commit
     assert result.candidate_blob_sha == candidate_blob
     assert result.work_generation == 5
@@ -616,6 +618,56 @@ def test_effect_confirmed_finalization_completes_without_backend_replay(tmp_path
     assert lease == (claim.holder, claim.fencing_token, 1)
     assert verification[0] == "COMPLETE"
     assert "no backend replay" in verification[1]
+    assert transport.writes == []
+
+
+def test_completed_effect_finalization_receipt_replays_without_backend_or_git_read(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    times = iter((1003.0, 1004.0, 1005.0))
+    first = finalize_github_source_write_effect_confirmed(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        clock=lambda: next(times),
+    )
+    reads_after_first = tuple(transport.reads)
+
+    transport.head = "d" * 40
+    replayed = finalize_github_source_write_effect_confirmed(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        clock=lambda: (_ for _ in ()).throw(
+            AssertionError("terminal receipt replay must not sample runtime time")
+        ),
+    )
+
+    assert replayed.status == "COMPLETE"
+    assert replayed.work_generation == first.work_generation == 5
+    assert replayed.verified_at == first.verified_at == 1005.0
+    assert replayed.reconciliation_sha256 == first.reconciliation_sha256
+    assert replayed.backend_replayed is False
+    assert replayed.finalization_replayed is True
+    assert tuple(transport.reads) == reads_after_first
     assert transport.writes == []
 
 
