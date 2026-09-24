@@ -488,6 +488,9 @@ def _validate_bindings(
     ):
         raise ValueError("claim reviewer identities are invalid")
     review_gate = _text(selected, "review_gate", "claim review gate")
+    action = _text(selected, "action", "claim action")
+    if execution.operation != action:
+        raise ValueError("execution operation does not match claim action")
     effect_ceiling = _text(selected, "effect_ceiling", "claim effect ceiling")
     allowed_effects = _ALLOWED_EFFECTS_BY_CEILING.get(effect_ceiling)
     if allowed_effects is None:
