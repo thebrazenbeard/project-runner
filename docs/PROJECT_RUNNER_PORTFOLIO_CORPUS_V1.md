@@ -26,7 +26,7 @@ The audit also identified 15 durable non-repository workstreams that should not 
 - 2 public;
 - 13 private.
 
-The complete private corpus is intentionally external to this public checkout. The public corpus binds the private membership by count and digest without publishing identifiers.
+The complete private corpus is intentionally external to this public checkout. The public corpus exposes only aggregate private counts. It intentionally does not publish an unkeyed digest of private identifiers.
 
 ## Portfolio structure
 
