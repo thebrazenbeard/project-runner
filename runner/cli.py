@@ -193,6 +193,16 @@ def _evaluate_change(before: Path, after: Path, dependencies: Path) -> int:
             )
         ],
     }
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    payload["plan_binding"] = {
+        "schema": "PROJECT_RUNNER_PORTFOLIO_WAVE_PLAN_BINDING_V1",
+        "sha256": hashlib.sha256(canonical).hexdigest(),
+    }
     print(json.dumps(payload, sort_keys=True))
     return 0
 
@@ -418,6 +428,12 @@ def _portfolio_wave_plan(
         "mode": "PORTFOLIO_WAVE_ADMISSION_PLAN_V1",
         "execution_authority": False,
         "protected_effects_authorized": False,
+        "wave_binding": {
+            "sha256": wave_sha256,
+            "wave_id": wave.wave_id,
+            "generated_at": wave.generated_at,
+            "corpus_binding": dict(wave.corpus_binding),
+        },
         "summary": plan.summary(),
         "selected": [
             {
@@ -425,7 +441,14 @@ def _portfolio_wave_plan(
                 "subject_id": item.subject_id,
                 "family_id": item.family_id,
                 "lead_identity": item.lead_identity,
+                "reviewer_identities": list(item.reviewer_identities),
                 "priority": item.priority,
+                "action": item.action,
+                "activity_state": item.activity_state,
+                "effect_ceiling": item.effect_ceiling,
+                "review_gate": item.review_gate,
+                "frontier": item.frontier,
+                "source_status": item.source_status,
                 "collision_keys": list(item.collision_keys),
             }
             for item in plan.selected
