@@ -20,7 +20,6 @@ from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport,
 from .leases import InMemoryLeaseStore
 from .models import FrontierStatus, ProjectSchedulingState
 from .prioritize import rank_frontiers
-from .portfolio import load_portfolio_corpus
 from .propagate import derive_invalidations
 from .registry import load_dependencies, load_observations, load_project_snapshot, load_workers
 from .verify import verify_attempt
@@ -118,17 +117,7 @@ def _load_all():
 
 def _validate() -> int:
     projects, workers = _load_all()
-    corpus = load_portfolio_corpus(
-        ROOT / "portfolio" / "corpus.public.json",
-        public_safe=True,
-    )
     print(f"Registries valid: {len(projects)} projects, {len(workers)} workers")
-    print(
-        "Portfolio corpus valid: "
-        f"{len(corpus.records)} public repositories, "
-        f"{len(corpus.workstreams)} public workstreams; "
-        f"{corpus.counts.total} total repositories bound"
-    )
     return 0
 
 
