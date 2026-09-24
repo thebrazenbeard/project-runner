@@ -13,7 +13,7 @@ from runner.execution_promotion import (
     promote_claimed_to_running,
     sign_evidence,
 )
-from runner.github_backend import GitHubFileState
+from runner.github_backend import GitHubFileState, GitHubPreconditionFailed
 from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_bridge import claim_bound_plan_subject
 from runner.promoted_github import (
@@ -60,6 +60,64 @@ class FakeSourceWriteTransport:
 
     def create_branch(self, repository, branch, sha):
         raise AssertionError("SOURCE_WRITE adapter cannot create branches")
+
+    def put_file_exact_head(
+        self,
+        repository,
+        path,
+        branch,
+        content,
+        message,
+        *,
+        expected_head,
+        expected_blob_sha=None,
+    ):
+        if self.read_ref(repository, branch) != expected_head:
+            raise GitHubPreconditionFailed("exact head mismatch")
+        current = self.files.get((repository, path, branch))
+        if current is None:
+            if expected_blob_sha is not None:
+                raise GitHubPreconditionFailed("expected blob missing")
+        else:
+            if expected_blob_sha is None:
+                raise GitHubPreconditionFailed("existing file requires blob sha")
+            if current.sha != expected_blob_sha:
+                raise GitHubPreconditionFailed("blob mismatch")
+
+        self.mutations.append(
+            (
+                "put_file",
+                repository,
+                path,
+                branch,
+                expected_blob_sha,
+            )
+        )
+        blob_sha = _git_blob_sha(content)
+        commit_sha = hashlib.sha1(
+            (
+                expected_head
+                + path
+                + content
+                + message
+            ).encode("utf-8")
+        ).hexdigest()
+        self.files[(repository, path, branch)] = GitHubFileState(
+            sha=blob_sha,
+            content=content,
+        )
+        self.refs[(repository, branch)] = commit_sha
+
+        if self.read_ref(repository, branch) != commit_sha:
+            raise RuntimeError("readback head mismatch")
+        readback = self.read_file(repository, path, branch)
+        if (
+            readback is None
+            or readback.sha != blob_sha
+            or readback.content != content
+        ):
+            raise RuntimeError("readback file mismatch")
+        return commit_sha, blob_sha
 
     def put_file(
         self,
