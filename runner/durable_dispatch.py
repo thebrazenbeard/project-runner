@@ -1367,6 +1367,108 @@ class SqliteDispatchAdmissionStore:
             self.connection.commit()
         return sequence
 
+    def begin_verification(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+        expected_work_generation: int,
+        lease: Lease,
+        started_at: float,
+    ) -> int:
+        """Atomically move observed RUNNING work into VERIFYING under the same fence.
+
+        Replay is idempotent if the exact work is already VERIFYING at the one
+        expected successor generation.
+        """
+        if lease.fencing_token != fencing_token:
+            raise ValueError("execution verification fencing token mismatch")
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            attempt = self._attempt_row(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            if attempt[5] is None or attempt[6] is None:
+                raise ValueError(
+                    "execution result must be recorded before verification"
+                )
+
+            work_row = self.connection.execute(
+                """
+                SELECT status, generation
+                FROM recursive_work_state
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (lineage_id, work_fingerprint_value),
+            ).fetchone()
+            if work_row is None:
+                raise ValueError("recursive work state not found")
+            current_status = WorkUnitStatus(str(work_row[0]))
+            current_generation = int(work_row[1])
+
+            _validate_active_lease_state(
+                self.connection,
+                work_fingerprint_value=work_fingerprint_value,
+                lease=lease,
+                now=started_at,
+            )
+
+            if (
+                current_status is WorkUnitStatus.VERIFYING
+                and current_generation == expected_work_generation + 1
+            ):
+                self.connection.rollback()
+                return current_generation
+
+            if current_generation != expected_work_generation:
+                raise ValueError("recursive work generation mismatch")
+            if current_status is not WorkUnitStatus.RUNNING:
+                raise ValueError(
+                    "verification start requires RUNNING work"
+                )
+            allowed = _ALLOWED_STATUS_TRANSITIONS.get(
+                current_status,
+                frozenset(),
+            )
+            if WorkUnitStatus.VERIFYING not in allowed:
+                raise ValueError(
+                    "recursive work lifecycle transition is invalid: "
+                    f"{current_status.value} -> VERIFYING"
+                )
+
+            updated = self.connection.execute(
+                """
+                UPDATE recursive_work_state
+                SET status = ?, generation = generation + 1
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND status = ?
+                  AND generation = ?
+                """,
+                (
+                    WorkUnitStatus.VERIFYING.value,
+                    lineage_id,
+                    work_fingerprint_value,
+                    WorkUnitStatus.RUNNING.value,
+                    expected_work_generation,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise ValueError(
+                    "recursive work changed during verification start"
+                )
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+        return expected_work_generation + 1
+
+
     def finalize_terminal_verification(
         self,
         *,
