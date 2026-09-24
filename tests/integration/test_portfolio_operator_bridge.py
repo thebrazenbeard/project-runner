@@ -18,6 +18,7 @@ from runner.portfolio_operator_bridge import (
 ROOT = Path(__file__).resolve().parents[2]
 WAVE = ROOT / "portfolio" / "advancement_wave.public.json"
 CORPUS = ROOT / "portfolio" / "corpus.public.json"
+PROJECTS = ROOT / "registry" / "projects.yaml"
 
 
 class FakeReadOnlyTransport:
@@ -60,11 +61,11 @@ def _write_plan(tmp_path):
             [
                 "portfolio-wave-plan",
                 "--max-parallel",
-                "6",
+                "50",
                 "--max-per-identity",
-                "1",
+                "50",
                 "--max-per-family",
-                "1",
+                "50",
             ]
         )
     assert code == 0
@@ -75,8 +76,11 @@ def _write_plan(tmp_path):
 
 
 def _selected_record(payload):
-    assert payload["selected"]
-    subject_id = payload["selected"][0]["subject_id"]
+    subject_id = "project-runner"
+    assert any(
+        item["subject_id"] == subject_id
+        for item in payload["selected"]
+    )
     corpus = load_portfolio_corpus(CORPUS, public_safe=True)
     record = next(item for item in corpus.records if item.id == subject_id)
     return subject_id, record
@@ -94,6 +98,7 @@ def test_bound_plan_claim_rechecks_live_head_and_acquires_fresh_fence(tmp_path):
         plan_path=plan_path,
         wave_path=WAVE,
         corpus_path=CORPUS,
+        projects_path=PROJECTS,
         subject_id=subject_id,
         state_db=tmp_path / "operator.sqlite3",
         holder="operator-test",
@@ -166,6 +171,7 @@ def test_tampered_plan_fails_before_currentness_or_claim(tmp_path):
             plan_path=plan_path,
             wave_path=WAVE,
             corpus_path=CORPUS,
+            projects_path=PROJECTS,
             subject_id=subject_id,
             state_db=tmp_path / "operator.sqlite3",
             holder="operator-test",
@@ -189,6 +195,7 @@ def test_wrong_wave_fails_closed(tmp_path):
             plan_path=plan_path,
             wave_path=altered,
             corpus_path=CORPUS,
+            projects_path=PROJECTS,
             subject_id=subject_id,
         )
 
@@ -204,6 +211,7 @@ def test_wrong_corpus_blob_fails_closed(tmp_path):
             plan_path=plan_path,
             wave_path=WAVE,
             corpus_path=altered,
+            projects_path=PROJECTS,
             subject_id=subject_id,
         )
 
@@ -220,6 +228,7 @@ def test_unauthorized_repository_fails_before_live_read(tmp_path):
             plan_path=plan_path,
             wave_path=WAVE,
             corpus_path=CORPUS,
+            projects_path=PROJECTS,
             subject_id=subject_id,
             state_db=tmp_path / "operator.sqlite3",
             holder="operator-test",
@@ -241,6 +250,7 @@ def test_same_bound_plan_subject_cannot_be_claimed_twice_as_new_root(tmp_path):
         plan_path=plan_path,
         wave_path=WAVE,
         corpus_path=CORPUS,
+        projects_path=PROJECTS,
         subject_id=subject_id,
         state_db=tmp_path / "operator.sqlite3",
         holder="operator-test",
