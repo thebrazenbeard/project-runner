@@ -642,6 +642,61 @@ def promote_claimed_to_running(
     store.connection.executescript(_PROMOTION_SCHEMA)
     try:
         precheck_at = float(clock())
+        status_row = store.connection.execute(
+            """
+            SELECT status
+            FROM recursive_work_state
+            WHERE lineage_id = ? AND work_fingerprint = ?
+            """,
+            (lineage_id, work_fingerprint_value),
+        ).fetchone()
+        if (
+            status_row is not None
+            and WorkUnitStatus(str(status_row[0])) is WorkUnitStatus.RUNNING
+        ):
+            existing = _read_durable_promotion(
+                store,
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            work, lease_expires_at = _load_promotion(store, existing)
+            claim = work.payload
+            _validate_bindings(
+                claim=claim,
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+                review=review,
+                execution=execution,
+                effect=effect,
+                now=precheck_at,
+            )
+            if existing.holder != holder:
+                raise ValueError("execution promotion replay holder mismatch")
+            if existing.review_sha256 != review.sha256:
+                raise ValueError("execution promotion replay review mismatch")
+            if existing.execution_grant_sha256 != execution.sha256:
+                raise ValueError("execution promotion replay authority mismatch")
+            expected_effect_sha = effect.sha256 if effect is not None else None
+            if existing.effect_grant_sha256 != expected_effect_sha:
+                raise ValueError("execution promotion replay effect authority mismatch")
+            if existing.operation != execution.operation:
+                raise ValueError("execution promotion replay operation mismatch")
+            if existing.effect_class != execution.effect_class:
+                raise ValueError("execution promotion replay effect class mismatch")
+            if precheck_at >= lease_expires_at:
+                raise ValueError("execution promotion replay lease is expired")
+            observed_head = _read_live_head(
+                repository=existing.repository,
+                ref=existing.ref,
+                token=token,
+                transport=transport,
+            )
+            if observed_head != existing.exact_head:
+                raise ValueError("execution promotion replay source head is stale")
+            return existing
+
         work, work_generation, _lease_expiry, claim = _load_claim_snapshot(
             store,
             lineage_id=lineage_id,
@@ -804,10 +859,13 @@ def promote_claimed_to_running(
     )
 
 
-def _load_promotion(
+def _read_durable_promotion(
     store: SqliteDispatchAdmissionStore,
-    receipt: ExecutionPromotionReceipt,
-) -> tuple[WorkUnit, float]:
+    *,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+) -> ExecutionPromotionReceipt:
     store.connection.executescript(_PROMOTION_SCHEMA)
     row = store.connection.execute(
         """
@@ -820,20 +878,16 @@ def _load_promotion(
         FROM execution_promotions
         WHERE lineage_id = ? AND work_fingerprint = ? AND fencing_token = ?
         """,
-        (
-            receipt.lineage_id,
-            receipt.work_fingerprint,
-            receipt.fencing_token,
-        ),
+        (lineage_id, work_fingerprint_value, fencing_token),
     ).fetchone()
     if row is None:
         raise ValueError("execution promotion receipt is not durable")
 
     payload = {
         "schema": _PROMOTION_SCHEMA_ID,
-        "lineage_id": receipt.lineage_id,
-        "work_fingerprint": receipt.work_fingerprint,
-        "fencing_token": receipt.fencing_token,
+        "lineage_id": lineage_id,
+        "work_fingerprint": work_fingerprint_value,
+        "fencing_token": fencing_token,
         "holder": str(row[0]),
         "repository": str(row[1]),
         "ref": str(row[2]),
@@ -853,10 +907,10 @@ def _load_promotion(
     digest = _sha256(payload)
     if not hmac.compare_digest(str(row[15]), digest):
         raise ValueError("execution promotion digest mismatch")
-    durable_receipt = ExecutionPromotionReceipt(
-        lineage_id=receipt.lineage_id,
-        work_fingerprint=receipt.work_fingerprint,
-        fencing_token=receipt.fencing_token,
+    return ExecutionPromotionReceipt(
+        lineage_id=lineage_id,
+        work_fingerprint=work_fingerprint_value,
+        fencing_token=fencing_token,
         holder=str(row[0]),
         repository=str(row[1]),
         ref=str(row[2]),
@@ -874,6 +928,18 @@ def _load_promotion(
         promoted_work_generation=int(row[14]),
         promotion_sha256=digest,
     )
+
+
+def _load_promotion(
+    store: SqliteDispatchAdmissionStore,
+    receipt: ExecutionPromotionReceipt,
+) -> tuple[WorkUnit, float]:
+    durable_receipt = _read_durable_promotion(
+        store,
+        lineage_id=receipt.lineage_id,
+        work_fingerprint_value=receipt.work_fingerprint,
+        fencing_token=receipt.fencing_token,
+    )
     if receipt != durable_receipt:
         raise ValueError("execution promotion receipt does not match durable state")
 
@@ -889,7 +955,7 @@ def _load_promotion(
         raise ValueError("promoted work state not found")
     if WorkUnitStatus(str(work_row[1])) is not WorkUnitStatus.RUNNING:
         raise ValueError("backend execution requires RUNNING work")
-    if int(work_row[2]) != int(row[14]):
+    if int(work_row[2]) != receipt.promoted_work_generation:
         raise ValueError("promotion/work generation mismatch")
     work = _work_from_payload(
         json.loads(str(work_row[0])),
