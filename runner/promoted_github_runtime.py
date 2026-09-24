@@ -35,6 +35,7 @@ class GitHubSourceWriteRuntimeQualification:
     before_oid_available: bool
     after_oid_available: bool
     force_available: bool
+    stable_snapshot: bool
     write_exercised: bool
     status: str
 
@@ -48,6 +49,7 @@ class GitHubSourceWriteRuntimeQualification:
             "before_oid_available": self.before_oid_available,
             "after_oid_available": self.after_oid_available,
             "force_available": self.force_available,
+            "stable_snapshot": self.stable_snapshot,
             "write_exercised": self.write_exercised,
             "status": self.status,
         }
@@ -84,6 +86,11 @@ def qualify_github_source_write_runtime(
         raise ValueError("runtime GitHub commit did not return an exact tree")
 
     schema = transport.inspect_update_refs_schema()
+    head_after = transport.read_ref(repository, ref)
+    if _SHA40.fullmatch(head_after) is None:
+        raise ValueError("runtime GitHub ref reread did not return an exact commit")
+    stable_snapshot = head_after == head
+
     mutation_fields = frozenset(schema.get("mutation_fields", ()))
     update_refs_fields = frozenset(
         schema.get("update_refs_input_fields", ())
@@ -104,6 +111,7 @@ def qualify_github_source_write_runtime(
             and before_oid_available
             and after_oid_available
             and force_available
+            and stable_snapshot
         )
         else "FAIL"
     )
@@ -116,6 +124,7 @@ def qualify_github_source_write_runtime(
         before_oid_available=before_oid_available,
         after_oid_available=after_oid_available,
         force_available=force_available,
+        stable_snapshot=stable_snapshot,
         write_exercised=False,
         status=status,
     )
@@ -301,16 +310,32 @@ def reconcile_github_source_write_outcome_unknown(
         observed_file = transport.read_file(
             receipt.repository,
             path,
+            observed_head,
+        )
+        observed_head_after = transport.read_ref(
+            receipt.repository,
             receipt.ref,
         )
-        outcome, reason, evidence = _classify_unknown_source_write(
-            receipt=receipt,
-            request_payload=request_payload,
-            candidate_commit_sha=candidate_commit_sha,
-            candidate_blob_sha=candidate_blob_sha,
-            observed_head=observed_head,
-            observed_file=observed_file,
-        )
+        if observed_head_after != observed_head:
+            outcome = "INDETERMINATE"
+            reason = "repository ref moved during reconciliation snapshot"
+            evidence = (
+                f"repository={receipt.repository}",
+                f"ref={receipt.ref}",
+                f"snapshot_head_b0={observed_head}",
+                f"snapshot_head_b1={observed_head_after}",
+                f"candidate_commit={candidate_commit_sha}",
+                f"candidate_blob={candidate_blob_sha}",
+            )
+        else:
+            outcome, reason, evidence = _classify_unknown_source_write(
+                receipt=receipt,
+                request_payload=request_payload,
+                candidate_commit_sha=candidate_commit_sha,
+                candidate_blob_sha=candidate_blob_sha,
+                observed_head=observed_head,
+                observed_file=observed_file,
+            )
 
         lease = _load_current_lease(store, receipt=receipt)
         work_generation = store.reconcile_admitted(
