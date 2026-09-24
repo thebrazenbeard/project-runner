@@ -4,17 +4,15 @@
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/project-runner-corpus-v1-20260924",
-    "commit": "4bc9dfee1204c774d077419ee9c3fdf91ebc141f",
+    "commit": "5478e8900438a346da4ff65663a13bef05b11c14",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "d85a485e4582132310c798652e28d3f203cd7b42",
+    "git_blob_sha": "477541bb7bc742f23c7993e0909fa114434af3a6",
     "public_repository_count": 48,
     "total_repository_count": 66,
     "private_repository_count": 18,
     "public_workstream_count": 2,
     "total_workstream_count": 15,
-    "private_workstream_count": 13,
-    "private_inventory_sha256": "6a29a4120a448092d848643f816e44d3557e66f359d46b5cb9462292632bdcd1",
-    "private_workstream_inventory_sha256": "b65bc2a49418ed8cec666e4a1bf0f5a06daad59d443150de3b6130a826a69cb7"
+    "private_workstream_count": 13
   },
   "identities": {
     "ONE": "lead orchestrator/integrator; sequencing and cross-project composition",
