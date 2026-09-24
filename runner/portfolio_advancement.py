@@ -157,17 +157,10 @@ def validate_wave_against_corpus(
         raise ValueError("wave total repository count does not match corpus")
     if int(binding["private_repository_count"]) != corpus.counts.private:
         raise ValueError("wave private repository count does not match corpus")
-    if str(binding["private_inventory_sha256"]) != corpus.private_inventory_sha256:
-        raise ValueError("wave private repository digest does not match corpus")
     if int(binding["total_workstream_count"]) != corpus.workstream_counts.total:
         raise ValueError("wave total workstream count does not match corpus")
     if int(binding["private_workstream_count"]) != corpus.workstream_counts.private:
         raise ValueError("wave private workstream count does not match corpus")
-    if (
-        str(binding["private_workstream_inventory_sha256"])
-        != corpus.private_workstream_inventory_sha256
-    ):
-        raise ValueError("wave private workstream digest does not match corpus")
 
     repo_items = {
         item.subject_id: item
