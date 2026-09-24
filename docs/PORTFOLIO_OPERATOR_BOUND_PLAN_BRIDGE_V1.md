@@ -29,9 +29,14 @@ A subject can be claimed only when all of the following survive exact validation
 10. the corpus gives exactly one non-archived repository and explicit default branch;
 11. the Operator registry gives exactly one schedulable project binding with matching
     id, repository, and visibility;
-12. the repository is present in the caller's explicit authorized-repository set.
+12. the repository is present in the caller's explicit allowed-repository set.
 
 Any mismatch fails before durable claim.
+
+The claim-scope allowlist is **not** proof of repository write authority, a credential,
+or a principal grant. It only constrains which already-bound repository subject this
+claim-only command may place into local durable Operator state. Protected repository
+effects remain separately unauthorized.
 
 ## Fresh currentness
 
@@ -100,7 +105,7 @@ A successful claim proves only that:
 - reviewed scheduling evidence was bound;
 - current repository state was re-read;
 - Operator registry ownership was exact;
-- caller repository authority included the subject;
+- caller claim scope allowlist included the subject;
 - a durable lease/fencing token was acquired.
 
 It does **not** prove or authorize:
@@ -124,7 +129,7 @@ project-runner portfolio-wave-claim \
   --state-db /path/to/operator.sqlite3 \
   --holder operator-instance-1 \
   --lease-ttl 60 \
-  --authorized-repository thebrazenbeard/project-runner
+  --allowed-repository thebrazenbeard/project-runner
 ```
 
 The default wave, corpus, and Operator registry paths point to the repository's
