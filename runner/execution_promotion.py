@@ -1038,8 +1038,16 @@ def _read_durable_promotion(
         "promoted_work_generation": int(row[14]),
     }
     digest = _sha256(payload)
-    if not hmac.compare_digest(str(row[15]), digest):
-        raise ValueError("execution promotion digest mismatch")
+    stored_digest = str(row[15])
+    if not hmac.compare_digest(stored_digest, digest):
+        if request_sha256 is not None:
+            raise ValueError("execution promotion digest mismatch")
+        legacy_payload = dict(payload)
+        legacy_payload.pop("execution_request_sha256", None)
+        legacy_digest = _sha256(legacy_payload)
+        if not hmac.compare_digest(stored_digest, legacy_digest):
+            raise ValueError("execution promotion digest mismatch")
+        digest = legacy_digest
     return ExecutionPromotionReceipt(
         lineage_id=lineage_id,
         work_fingerprint=work_fingerprint_value,
