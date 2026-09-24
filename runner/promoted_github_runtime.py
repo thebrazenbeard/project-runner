@@ -56,6 +56,17 @@ class GitHubSourceWriteRuntimeQualification:
 
 
 @dataclass(frozen=True)
+class GitHubSourceWriteEffectFinalization:
+    status: str
+    reason: str
+    candidate_commit_sha: str
+    candidate_blob_sha: str
+    reconciliation_sha256: str
+    work_generation: int
+    backend_replayed: bool = False
+
+
+@dataclass(frozen=True)
 class GitHubSourceWriteReconciliation:
     outcome: str
     reason: str
@@ -224,6 +235,168 @@ def _classify_unknown_source_write(
         "live GitHub state does not positively prove candidate publication",
         evidence,
     )
+
+
+def finalize_github_source_write_effect_confirmed(
+    *,
+    state_db,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+    transport: GitHubTransport,
+    clock: Callable[[], float] = time.time,
+) -> GitHubSourceWriteEffectFinalization:
+    """Finalize a reconciled GitHub source write without backend replay.
+
+    A conclusive EFFECT_CONFIRMED reconciliation is necessary but not sufficient.
+    The promotion/request/result/fence are revalidated and the exact candidate
+    commit/blob/content must still be current on a stable B0/B1 snapshot before
+    terminal verification is atomically committed.
+    """
+    store = SqliteDispatchAdmissionStore(state_db)
+    try:
+        receipt = _read_durable_promotion(
+            store,
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        if receipt.effect_class != "SOURCE_WRITE":
+            raise ValueError(
+                "effect finalization requires SOURCE_WRITE promotion"
+            )
+
+        result = store.load_result(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        if (
+            result is None
+            or result.succeeded
+            or result.classification != "OUTCOME_UNKNOWN"
+            or len(result.outputs) != 2
+        ):
+            raise ValueError(
+                "effect finalization requires recorded SOURCE_WRITE OUTCOME_UNKNOWN"
+            )
+        candidate_commit_sha, candidate_blob_sha = result.outputs
+        if (
+            _SHA40.fullmatch(candidate_commit_sha) is None
+            or _SHA40.fullmatch(candidate_blob_sha) is None
+        ):
+            raise ValueError(
+                "effect finalization candidate Git object identifiers are invalid"
+            )
+
+        reconciliation = store.load_latest_reconciliation(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        if (
+            reconciliation is None
+            or reconciliation.outcome != "EFFECT_CONFIRMED"
+        ):
+            raise ValueError(
+                "effect finalization requires conclusive EFFECT_CONFIRMED reconciliation"
+            )
+
+        request_payload, request_sha256 = _read_execution_request(
+            store,
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        if request_payload is None or request_sha256 is None:
+            raise ValueError("effect finalization execution request is missing")
+        if receipt.execution_request_sha256 != request_sha256:
+            raise ValueError(
+                "effect finalization request/promotion mismatch"
+            )
+        if request_payload.get("schema") != (
+            "PROJECT_RUNNER_GITHUB_SOURCE_WRITE_V1"
+        ):
+            raise ValueError("unexpected effect-finalization request schema")
+        if request_payload.get("repository") != receipt.repository:
+            raise ValueError("effect finalization repository mismatch")
+        if request_payload.get("ref") != receipt.ref:
+            raise ValueError("effect finalization ref mismatch")
+        if request_payload.get("expected_head") != receipt.exact_head:
+            raise ValueError("effect finalization expected-head mismatch")
+
+        path = str(request_payload.get("path", ""))
+        intended_content = request_payload.get("content")
+        if not path or not isinstance(intended_content, str):
+            raise ValueError("effect finalization request is incomplete")
+
+        verified_at = float(clock())
+        lease = _load_current_lease(store, receipt=receipt)
+        if lease.expires_at <= verified_at:
+            raise ValueError("effect finalization fence has expired")
+
+        observed_head = transport.read_ref(
+            receipt.repository,
+            receipt.ref,
+        )
+        if observed_head != candidate_commit_sha:
+            raise ValueError(
+                "effect finalization candidate commit is no longer current"
+            )
+        observed_file = transport.read_file(
+            receipt.repository,
+            path,
+            observed_head,
+        )
+        observed_head_after = transport.read_ref(
+            receipt.repository,
+            receipt.ref,
+        )
+        if observed_head_after != observed_head:
+            raise ValueError(
+                "effect finalization ref moved during verification snapshot"
+            )
+        if observed_file is None:
+            raise ValueError(
+                "effect finalization target file is missing"
+            )
+        if observed_file.sha != candidate_blob_sha:
+            raise ValueError(
+                "effect finalization candidate blob mismatch"
+            )
+        if observed_file.content != intended_content:
+            raise ValueError(
+                "effect finalization candidate content mismatch"
+            )
+
+        reason = (
+            "EFFECT_CONFIRMED reconciliation revalidated against the exact "
+            "current candidate commit/blob/content; no backend replay performed"
+        )
+        generation = store.finalize_terminal_verification(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+            expected_work_generation=receipt.promoted_work_generation,
+            lease=lease,
+            status=__import__(
+                "runner.work_units",
+                fromlist=["WorkUnitStatus"],
+            ).WorkUnitStatus.COMPLETE,
+            reason=reason,
+            verified_at=verified_at,
+        )
+        return GitHubSourceWriteEffectFinalization(
+            status="COMPLETE",
+            reason=reason,
+            candidate_commit_sha=candidate_commit_sha,
+            candidate_blob_sha=candidate_blob_sha,
+            reconciliation_sha256=reconciliation.sha256,
+            work_generation=generation,
+            backend_replayed=False,
+        )
+    finally:
+        store.close()
 
 
 def reconcile_github_source_write_outcome_unknown(
