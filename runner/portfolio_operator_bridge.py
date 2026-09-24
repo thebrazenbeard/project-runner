@@ -296,7 +296,7 @@ def claim_bound_plan_subject(
     state_db: Path,
     holder: str,
     lease_ttl: float,
-    authorized_repositories: Iterable[str],
+    allowed_repositories: Iterable[str],
     token: str | None = None,
     transport: GitHubTransport | None = None,
     clock: Callable[[], float] = time.time,
@@ -323,7 +323,7 @@ def claim_bound_plan_subject(
         subject_id=subject_id,
     )
     repository = verified.record.repository
-    authorized = frozenset(str(value) for value in authorized_repositories)
+    authorized = frozenset(str(value) for value in allowed_repositories)
     if repository not in authorized:
         raise ValueError("selected repository is not authorized for durable claim")
 
