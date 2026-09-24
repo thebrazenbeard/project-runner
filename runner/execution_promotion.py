@@ -732,7 +732,7 @@ def promote_claimed_to_running(
                 work_fingerprint_value=work_fingerprint_value,
                 fencing_token=fencing_token,
             )
-            work, lease_expires_at = _load_promotion(store, existing)
+            work, lease_expires_at, _request = _load_promotion(store, existing)
             claim = work.payload
             _validate_bindings(
                 claim=claim,
@@ -955,6 +955,36 @@ def promote_claimed_to_running(
     )
 
 
+def _read_execution_request(
+    store: SqliteDispatchAdmissionStore,
+    *,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+) -> tuple[Mapping[str, object] | None, str | None]:
+    _ensure_promotion_schema(store.connection)
+    row = store.connection.execute(
+        """
+        SELECT request_json, request_sha256
+        FROM execution_promotion_requests
+        WHERE lineage_id = ? AND work_fingerprint = ? AND fencing_token = ?
+        """,
+        (lineage_id, work_fingerprint_value, fencing_token),
+    ).fetchone()
+    if row is None:
+        return None, None
+    try:
+        payload = json.loads(str(row[0]))
+    except json.JSONDecodeError as exc:
+        raise ValueError("durable execution request is invalid JSON") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("durable execution request must be an object")
+    digest = _sha256(payload)
+    if not hmac.compare_digest(str(row[1]), digest):
+        raise ValueError("durable execution request digest mismatch")
+    return dict(payload), digest
+
+
 def _read_durable_promotion(
     store: SqliteDispatchAdmissionStore,
     *,
@@ -978,6 +1008,12 @@ def _read_durable_promotion(
     ).fetchone()
     if row is None:
         raise ValueError("execution promotion receipt is not durable")
+    _request, request_sha256 = _read_execution_request(
+        store,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+    )
 
     payload = {
         "schema": _PROMOTION_SCHEMA_ID,
@@ -994,6 +1030,7 @@ def _read_durable_promotion(
         "review_valid_until": float(row[7]),
         "execution_grant_sha256": str(row[8]),
         "execution_valid_until": float(row[9]),
+        "execution_request_sha256": request_sha256,
         "effect_grant_sha256": str(row[10]) if row[10] is not None else None,
         "effect_valid_until": float(row[11]) if row[11] is not None else None,
         "promoted_at": float(row[12]),
@@ -1017,6 +1054,7 @@ def _read_durable_promotion(
         review_valid_until=float(row[7]),
         execution_grant_sha256=str(row[8]),
         execution_valid_until=float(row[9]),
+        execution_request_sha256=request_sha256,
         effect_grant_sha256=str(row[10]) if row[10] is not None else None,
         effect_valid_until=float(row[11]) if row[11] is not None else None,
         promoted_at=float(row[12]),
@@ -1029,7 +1067,7 @@ def _read_durable_promotion(
 def _load_promotion(
     store: SqliteDispatchAdmissionStore,
     receipt: ExecutionPromotionReceipt,
-) -> tuple[WorkUnit, float]:
+) -> tuple[WorkUnit, float, Mapping[str, object] | None]:
     durable_receipt = _read_durable_promotion(
         store,
         lineage_id=receipt.lineage_id,
@@ -1088,7 +1126,15 @@ def _load_promotion(
     if attempt[5] is not None or attempt[6] is not None:
         raise ValueError("promoted execution already has a backend result")
 
-    return work, float(lease[2])
+    execution_request, request_sha256 = _read_execution_request(
+        store,
+        lineage_id=receipt.lineage_id,
+        work_fingerprint_value=receipt.work_fingerprint,
+        fencing_token=receipt.fencing_token,
+    )
+    if receipt.execution_request_sha256 != request_sha256:
+        raise ValueError("promotion/request binding mismatch")
+    return work, float(lease[2]), execution_request
 
 
 def execute_promoted(
@@ -1103,7 +1149,7 @@ def execute_promoted(
     store = SqliteDispatchAdmissionStore(Path(state_db))
     try:
         now = float(clock())
-        work, lease_expires_at = _load_promotion(store, receipt)
+        work, lease_expires_at, execution_request = _load_promotion(store, receipt)
         if now >= lease_expires_at:
             raise ValueError("promoted execution lease is expired")
         if now >= receipt.review_valid_until:
@@ -1129,7 +1175,7 @@ def execute_promoted(
             raise ValueError("promoted execution source head is stale")
 
         execute_at = float(clock())
-        work, lease_expires_at = _load_promotion(store, receipt)
+        work, lease_expires_at, execution_request = _load_promotion(store, receipt)
         if execute_at >= lease_expires_at:
             raise ValueError("promoted execution lease expired before backend call")
         if execute_at >= receipt.review_valid_until:
@@ -1153,6 +1199,7 @@ def execute_promoted(
             work=work,
             operation=receipt.operation,
             effect_class=receipt.effect_class,
+            execution_request=execution_request,
             promotion=receipt,
         )
         result = backend.execute_promoted(execution)
