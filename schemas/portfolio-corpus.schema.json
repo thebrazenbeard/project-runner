@@ -18,16 +18,24 @@
       }
     },
     "private_inventory": {
-      "type":"object","required":["count","normalization","sha256"],"additionalProperties":false,
-      "properties":{"count":{"type":"integer","minimum":0},"normalization":{"const":"utf8_sorted_name_newline_v1"},"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}
+      "type":"object","required":["count","public_commitment_scheme","exact_membership_publicly_committed"],"additionalProperties":false,
+      "properties":{
+        "count":{"type":"integer","minimum":0},
+        "public_commitment_scheme":{"const":"COUNT_ONLY_PUBLIC_V1"},
+        "exact_membership_publicly_committed":{"const":false}
+      }
     },
     "workstream_counts": {
       "type":"object","required":["total","public","private"],"additionalProperties":false,
       "properties":{"total":{"type":"integer","minimum":0},"public":{"type":"integer","minimum":0},"private":{"type":"integer","minimum":0}}
     },
     "private_workstream_inventory": {
-      "type":"object","required":["count","normalization","sha256"],"additionalProperties":false,
-      "properties":{"count":{"type":"integer","minimum":0},"normalization":{"const":"utf8_sorted_id_newline_v1"},"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}
+      "type":"object","required":["count","public_commitment_scheme","exact_membership_publicly_committed"],"additionalProperties":false,
+      "properties":{
+        "count":{"type":"integer","minimum":0},
+        "public_commitment_scheme":{"const":"COUNT_ONLY_PUBLIC_V1"},
+        "exact_membership_publicly_committed":{"const":false}
+      }
     },
     "records": {
       "type":"array",
