@@ -13,6 +13,7 @@ from .execution_promotion import (
 )
 from .github_backend import GitHubFileState, GitHubRestTransport, GitHubTransport
 from .leases import Lease
+from .work_units import WorkUnitStatus
 
 
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
@@ -330,9 +331,9 @@ def finalize_github_source_write_effect_confirmed(
         if not path or not isinstance(intended_content, str):
             raise ValueError("effect finalization request is incomplete")
 
-        verified_at = float(clock())
+        started_at = float(clock())
         lease = _load_current_lease(store, receipt=receipt)
-        if lease.expires_at <= verified_at:
+        if lease.expires_at <= started_at:
             raise ValueError("effect finalization fence has expired")
 
         observed_head = transport.read_ref(
@@ -369,6 +370,12 @@ def finalize_github_source_write_effect_confirmed(
                 "effect finalization candidate content mismatch"
             )
 
+        verified_at = float(clock())
+        if lease.expires_at <= verified_at:
+            raise ValueError(
+                "effect finalization fence expired during verification"
+            )
+
         reason = (
             "EFFECT_CONFIRMED reconciliation revalidated against the exact "
             "current candidate commit/blob/content; no backend replay performed"
@@ -379,10 +386,7 @@ def finalize_github_source_write_effect_confirmed(
             fencing_token=fencing_token,
             expected_work_generation=receipt.promoted_work_generation,
             lease=lease,
-            status=__import__(
-                "runner.work_units",
-                fromlist=["WorkUnitStatus"],
-            ).WorkUnitStatus.COMPLETE,
+            status=WorkUnitStatus.COMPLETE,
             reason=reason,
             verified_at=verified_at,
         )
