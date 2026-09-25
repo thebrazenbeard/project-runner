@@ -31,6 +31,7 @@ from .portfolio_advancement import load_advancement_wave
 from .portfolio_corpus import load_portfolio_corpus
 from .portfolio_operator_binding import bind_wave_to_operator_registry
 from .portfolio_operator_bridge import claim_bound_plan_subject
+from .portfolio_p0_currentness import load_p0_currentness_overlay
 from .portfolio_wave_scheduler import (
     WaveExecutionBudget,
     plan_wave_admission,
@@ -138,7 +139,14 @@ def _load_all():
 
 def _validate() -> int:
     projects, workers = _load_all()
-    print(f"Registries valid: {len(projects)} projects, {len(workers)} workers")
+    overlay_path = ROOT / "portfolio" / "p0-currentness.public.json"
+    corpus_path = ROOT / "portfolio" / "corpus.public.json"
+    overlay = load_p0_currentness_overlay(overlay_path, corpus_path)
+    print(
+        "Registries valid: "
+        f"{len(projects)} projects, {len(workers)} workers; "
+        f"P0 currentness overlay valid: {len(overlay['subjects'])} repositories"
+    )
     return 0
 
 

@@ -1,0 +1,207 @@
+{
+  "schema": "PROJECT_RUNNER_P0_CURRENTNESS_OVERLAY_V1",
+  "observed_at": "2026-09-24T19:56:30-04:00",
+  "corpus_binding": {
+    "repository": "thebrazenbeard/project-runner",
+    "ref": "portfolio/effect-confirmed-finalization-v1-20260924",
+    "commit": "6c8e6827a204380b40b7c7fa07d785ca53cec136",
+    "path": "portfolio/corpus.public.json",
+    "git_blob_sha": "886e9be586c37584c17afdc540c38a1d95deaaa6"
+  },
+  "coverage": {
+    "priority": "P0",
+    "subject_kind": "repository",
+    "repository_count": 10,
+    "complete_for_scope": true
+  },
+  "governance": {
+    "priority_is_authority": false,
+    "effect_ceiling": "SOURCE_ONLY",
+    "merge_authorized": false,
+    "deploy_authorized": false,
+    "credential_or_permission_changes_authorized": false
+  },
+  "subjects": [
+    {
+      "subject_id": "bt2",
+      "repository": "thebrazenbeard/bt2",
+      "default_branch": "main",
+      "default_head": "9f4409c96eb3e5c529da32ab83421f3fdcd5c284",
+      "source_state": "CURRENT_MAIN_PR",
+      "source_status": "WoWSQL is retired by current live user authority. BT2 main is 9f4409c96eb3e5c529da32ab83421f3fdcd5c284; draft PR #49 is based on that exact main and proposes the source transition to PostgreSQL V4. The migration is source-only and is not treated as installed or runtime-qualified.",
+      "frontier": "Hostile-review PR #49 as the current successor-contract migration; qualify PostgreSQL currentness separately and do not revive or fall back to WoWSQL.",
+      "candidate_pr": {
+        "number": 49,
+        "title": "Replace WoWSQL Lantern currentness contract with PostgreSQL V4",
+        "head_ref": "runtime/lantern-postgresql-v4-20260924",
+        "head_sha": "7f4c1d5c5bf03ed1f5d869873efc86e50252e83a",
+        "base_ref": "main",
+        "base_sha": "9f4409c96eb3e5c529da32ab83421f3fdcd5c284",
+        "draft": true,
+        "mergeable": true
+      }
+    },
+    {
+      "subject_id": "discovery",
+      "repository": "thebrazenbeard/discovery",
+      "default_branch": "main",
+      "default_head": "368e8dc8274e89a306039d28462c7547b263e93e",
+      "source_state": "STACKED_PR",
+      "source_status": "Discovery main remains 368e8dc8274e89a306039d28462c7547b263e93e. Draft PR #41 refreshes the census from current main, and draft PR #43 stacks the governed P0 composition on that census line with a 67-repository portfolio cut.",
+      "frontier": "Qualify the census-to-P0 stack in order (#41 then #43) and feed the exact 67-repository descriptive inventory into Project Runner without converting census priority into authority.",
+      "candidate_pr": {
+        "number": 43,
+        "title": "Compose governed P0 manifest onto current 67-repo census",
+        "head_ref": "portfolio/census-67-p0-compose-v1-20260924",
+        "head_sha": "dea7cd5bf54988e0e3ff0e187bfca5604dae3988",
+        "base_ref": "portfolio/census-66-refresh-20260924",
+        "base_sha": "694bba641bdadbf6a50b22463c668c5d13e5f786",
+        "draft": true,
+        "mergeable": true
+      }
+    },
+    {
+      "subject_id": "project-lantern",
+      "repository": "thebrazenbeard/project-lantern",
+      "default_branch": "main",
+      "default_head": "8a7c3bada24bae17bcadac8549bc9cd729cfdf17",
+      "source_state": "NO_CURRENT_PR_REQUIRES_MIGRATION",
+      "source_status": "Project Lantern main is 8a7c3bada24bae17bcadac8549bc9cd729cfdf17. Existing functional package/consolidation drafts (#5-#7) and the P0 manifest draft (#8) are based on older mains; current-main open PRs are dependency updates. WoWSQL is retired, and no current functional PR establishes a successor Lantern currentness contract.",
+      "frontier": "Create a current-main source migration that supersedes the retired WoWSQL runtime contract, or explicitly suspend runtime currentness until a successor is qualified. Do not infer or use a fallback provider.",
+      "candidate_pr": null
+    },
+    {
+      "subject_id": "project-runner",
+      "repository": "thebrazenbeard/project-runner",
+      "default_branch": "main",
+      "default_head": "8aa5da0f55cd029e9cf4da79a090aa50859e662a",
+      "source_state": "STACKED_PR",
+      "source_status": "Project Runner main is 8aa5da0f55cd029e9cf4da79a090aa50859e662a. The current governed execution stack runs through draft PRs #41-#44; PR #44 is the exact effect-confirmed verification/finalization head and remains unmerged.",
+      "frontier": "Preserve the qualified execution stack while advancing independent P0 families. The next local Project Runner frontier is recovery of stranded VERIFYING attempts without source-effect replay.",
+      "candidate_pr": {
+        "number": 44,
+        "title": "Finalize EFFECT_CONFIRMED source writes without backend replay",
+        "head_ref": "portfolio/effect-confirmed-finalization-v1-20260924",
+        "head_sha": "6c8e6827a204380b40b7c7fa07d785ca53cec136",
+        "base_ref": "portfolio/github-source-write-runtime-qualification-v1-20260924",
+        "base_sha": "848c2172e6fa98cdab722b43d1ff4817990c5968",
+        "draft": true,
+        "mergeable": true
+      }
+    },
+    {
+      "subject_id": "vera",
+      "repository": "thebrazenbeard/vera",
+      "default_branch": "main",
+      "default_head": "87aa888cb7543875ffa11c9c7a1eb9e5b60c35cf",
+      "source_state": "STALE_PR_REQUIRES_RESTACK",
+      "source_status": "Vera main is 87aa888cb7543875ffa11c9c7a1eb9e5b60c35cf. Draft PR #200 is based on that exact main and remains mergeable, but its claimed complete live portfolio cut is stale: its 65-repository snapshot overlaps only 46 of the current corpus's 49 public repositories and omits public repositories fuckup, sql-connectome, and vera-mono. Because Vera is public, PR #200 also enumerates private-repository membership that the hardened Project Runner/Discovery public corpus intentionally keeps count-only.",
+      "frontier": "Do not merge PR #200 as the current complete portfolio absorption. Build a public-safe successor/restack from the current corpus: preserve the useful mechanism harvest and exact donor bindings, replace live-completeness claims with current 67-repository evidence, add the three missing public repositories, and keep private membership count-only or on a non-public governed surface.",
+      "candidate_pr": {
+        "number": 200,
+        "title": "Absorb portfolio architecture and reusable implementation into Vera",
+        "head_ref": "work/vera-portfolio-absorption-20260923",
+        "head_sha": "078d2d7242384c58676305d47654406713e599cf",
+        "base_ref": "main",
+        "base_sha": "87aa888cb7543875ffa11c9c7a1eb9e5b60c35cf",
+        "draft": true,
+        "mergeable": true
+      }
+    },
+    {
+      "subject_id": "vera-control-plane",
+      "repository": "thebrazenbeard/vera-control-plane",
+      "default_branch": "main",
+      "default_head": "65ce7908f640ffe53b678ef69c58411a91c23b8a",
+      "source_state": "STALE_PR_REQUIRES_RESTACK",
+      "source_status": "Vera Control Plane main is 65ce7908f640ffe53b678ef69c58411a91c23b8a. Draft PR #131 carries the NO_AUTO_BIND/currentness repair frontier but is based on older main 05212e91ef50044f37aa477c77ce424408df9653. PR #133 is separate current-main Actions hardening.",
+      "frontier": "Restack the NO_AUTO_BIND and hostile-currentness qualification work from PR #131 onto current main, preserving PR #133 as a separate supply-chain hardening subject.",
+      "candidate_pr": {
+        "number": 131,
+        "title": "Restack Vera NO_AUTO_BIND enforcement and repair hostile qualification currentness",
+        "head_ref": "repair/enforce-runtime-source-disposition-v3-20260923",
+        "head_sha": "a2ce761d3de0adf0cba5c64f53103f97ef48569e",
+        "base_ref": "main",
+        "base_sha": "05212e91ef50044f37aa477c77ce424408df9653",
+        "draft": true,
+        "mergeable": true
+      }
+    },
+    {
+      "subject_id": "vera-mesh",
+      "repository": "thebrazenbeard/vera-mesh",
+      "default_branch": "main",
+      "default_head": "98b74ff77981a5478e20a748bbb94565ad9140c8",
+      "source_state": "STACKED_PR",
+      "source_status": "VeraMesh main is 98b74ff77981a5478e20a748bbb94565ad9140c8. Draft PR #40 adds the supported Responses API operator but is stacked on PR #37 rather than current main; the broader VeraPort/WorkBridge/Lappy activation chain remains open.",
+      "frontier": "Collapse the active VeraPort/WorkBridge/Responses stack into one current-source-qualified transport path before broadening machine-control capability.",
+      "candidate_pr": {
+        "number": 40,
+        "title": "Add supported Responses API operator for VeraMesh tunnel",
+        "head_ref": "work/openai-responses-veramesh-operator-v1-20260924",
+        "head_sha": "fe57945f4886641a48b22e83d94a0f40d211e93e",
+        "base_ref": "work/veraport-rdc-control-v1-20260923",
+        "base_sha": "8e886e7859bfc77d6b95a6752aadeea727b489ad",
+        "draft": true,
+        "mergeable": true
+      }
+    },
+    {
+      "subject_id": "vera-model-training",
+      "repository": "thebrazenbeard/vera_model_training",
+      "default_branch": "main",
+      "default_head": "3ea9b345988201d78ad9c073254d9d3df15c9ed9",
+      "source_state": "STACKED_PR",
+      "source_status": "Vera model training main is 3ea9b345988201d78ad9c073254d9d3df15c9ed9. Draft PR #46 preserves the Qwen3.5 4B Hugging Face training plan but is stacked on the unbound-sol behavior integration line rather than current main.",
+      "frontier": "Restack the Qwen3.5 training continuation onto current source with exact model, dataset, corpus and evaluation lineage, then execute one reproducible training line without claiming success from plan existence.",
+      "candidate_pr": {
+        "number": 46,
+        "title": "Persist Qwen3.5 4B HF training plan and continuation",
+        "head_ref": "state/qwen35-hf-training-continuation-20260923-v1",
+        "head_sha": "8a5bd42839bc88d2fa7580a4c77d53c844d03a01",
+        "base_ref": "integration/unbound-sol-behavior-v3-v1-20260923",
+        "base_sha": "f844a7f586c1b669c8cbeec9c7803fb3a6b0d1b5",
+        "draft": true,
+        "mergeable": true
+      }
+    },
+    {
+      "subject_id": "vera-mono",
+      "repository": "thebrazenbeard/vera-mono",
+      "default_branch": "main",
+      "default_head": "337060ff79a9afdc3385f19d0f4c7582f6853b2e",
+      "source_state": "STALE_PR_REQUIRES_RESTACK",
+      "source_status": "Vera Mono main is 337060ff79a9afdc3385f19d0f4c7582f6853b2e. Draft PR #8 targets live source-mutation Windows portability but is based on older main 16ab4186ef4800aa4872f7062607ebbc842a3cf7 and currently reports non-mergeable.",
+      "frontier": "Restack the Windows portability/live-source-mutation qualification on current main and resolve non-mergeability before treating portability as current.",
+      "candidate_pr": {
+        "number": 8,
+        "title": "Qualify Windows portability on live source-mutation runtime",
+        "head_ref": "quality/windows-portability-live-source-mutation-v1-20260924",
+        "head_sha": "ae392dd30fd705ee36ffb5d43dc648e953c5e23a",
+        "base_ref": "main",
+        "base_sha": "16ab4186ef4800aa4872f7062607ebbc842a3cf7",
+        "draft": true,
+        "mergeable": false
+      }
+    },
+    {
+      "subject_id": "workbridgemcp",
+      "repository": "thebrazenbeard/WorkBridgeMCP",
+      "default_branch": "main",
+      "default_head": "8707a2e1eaf7de5ce2316567b5e6f1e805c0537b",
+      "source_state": "STALE_PR_REQUIRES_RESTACK",
+      "source_status": "WorkBridgeMCP main is 8707a2e1eaf7de5ce2316567b5e6f1e805c0537b. Draft PR #6 carries the narrow rootless-tool/listener-ownership repair but is stacked on an older repair branch and currently reports non-mergeable; the P0 manifest PR #9 is also based on an older main.",
+      "frontier": "Restack the narrow rootless/listener-ownership repair onto current main, requalify its VeraMesh integration, and keep machine-control exposure bounded.",
+      "candidate_pr": {
+        "number": 6,
+        "title": "Constrain rootless tools and verify Lappy listener ownership",
+        "head_ref": "fix/workbridge-veramesh-20260923",
+        "head_sha": "db56871f74f641a0819a601fe166e3241352edaf",
+        "base_ref": "repair/workbridge-current-main-v1-20260922",
+        "base_sha": "e89a0b43717a4c9a4aabfd1d7e1c967a375f65c4",
+        "draft": true,
+        "mergeable": false
+      }
+    }
+  ]
+}
