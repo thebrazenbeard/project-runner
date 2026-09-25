@@ -36,6 +36,7 @@ from .portfolio_wave_scheduler import (
     plan_wave_admission,
 )
 from .promoted_github_runtime import (
+    finalize_github_source_write_effect_confirmed,
     qualify_github_source_write_runtime,
     reconcile_github_source_write_outcome_unknown,
 )
@@ -653,6 +654,42 @@ def _github_source_write_runtime_qualify(
     return 0 if result.status == "PASS" else 1
 
 
+def _github_source_write_finalize_effect(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+) -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    if not token:
+        raise ValueError(
+            "PROJECT_RUNNER_GITHUB_TOKEN is required for effect finalization"
+        )
+    result = finalize_github_source_write_effect_confirmed(
+        state_db=state_db,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+        transport=GitHubRestTransport(token=token),
+    )
+    print(json.dumps({
+        "mode": "GITHUB_SOURCE_WRITE_EFFECT_FINALIZATION_V1",
+        "status": result.status,
+        "reason": result.reason,
+        "candidate_commit_sha": result.candidate_commit_sha,
+        "candidate_blob_sha": result.candidate_blob_sha,
+        "reconciliation_sha256": result.reconciliation_sha256,
+        "work_generation": result.work_generation,
+        "verified_at": result.verified_at,
+        "backend_replayed": result.backend_replayed,
+        "finalization_replayed": result.finalization_replayed,
+        "deployment_effect_claimed": False,
+        "installation_effect_claimed": False,
+    }, sort_keys=True))
+    return 0
+
+
 def _github_source_write_reconcile(
     *,
     state_db: Path,
@@ -832,6 +869,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     source_write_qualify.add_argument("--repository", required=True)
     source_write_qualify.add_argument("--ref", required=True)
 
+    source_write_finalize = subparsers.add_parser(
+        "github-source-write-finalize-effect"
+    )
+    source_write_finalize.add_argument("--state-db", type=Path, required=True)
+    source_write_finalize.add_argument("--lineage-id", required=True)
+    source_write_finalize.add_argument("--work-fingerprint", required=True)
+    source_write_finalize.add_argument("--fencing-token", type=int, required=True)
+
     source_write_reconcile = subparsers.add_parser(
         "github-source-write-reconcile"
     )
@@ -900,6 +945,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _github_source_write_runtime_qualify(
             args.repository,
             args.ref,
+        )
+    if args.command == "github-source-write-finalize-effect":
+        return _github_source_write_finalize_effect(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
         )
     if args.command == "github-source-write-reconcile":
         return _github_source_write_reconcile(

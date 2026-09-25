@@ -20,6 +20,7 @@ from runner.portfolio_corpus import load_portfolio_corpus
 from runner.portfolio_operator_bridge import claim_bound_plan_subject
 from runner.promoted_github import source_write_request_sha256
 from runner.promoted_github_runtime import (
+    finalize_github_source_write_effect_confirmed,
     qualify_github_source_write_runtime,
     reconcile_github_source_write_outcome_unknown,
 )
@@ -529,3 +530,546 @@ def test_reconciliation_refuses_non_unknown_recorded_result(tmp_path):
             reconciler="runtime-reconciler",
             clock=lambda: 1002.0,
         )
+
+
+def _confirm_effect(tmp_path, claim, request, candidate_commit, candidate_blob, transport):
+    transport.head = candidate_commit
+    transport.files[
+        (claim.repository, request["path"], candidate_commit)
+    ] = GitHubFileState(
+        sha=candidate_blob,
+        content=request["content"],
+    )
+    return reconcile_github_source_write_outcome_unknown(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        reconciler="runtime-reconciler",
+        clock=lambda: 1002.0,
+    )
+
+
+def test_effect_confirmed_finalization_completes_without_backend_replay(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    reconciliation = _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    assert reconciliation.outcome == "EFFECT_CONFIRMED"
+
+    times = iter((1003.0, 1004.0, 1005.0))
+    result = finalize_github_source_write_effect_confirmed(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        clock=lambda: next(times),
+    )
+
+    assert result.status == "COMPLETE"
+    assert result.backend_replayed is False
+    assert result.finalization_replayed is False
+    assert result.verified_at == 1005.0
+    assert result.candidate_commit_sha == candidate_commit
+    assert result.candidate_blob_sha == candidate_blob
+    assert result.work_generation == 5
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("COMPLETE", 5)
+    with sqlite3.connect(tmp_path / "operator.sqlite3") as db:
+        lease = db.execute(
+            """
+            SELECT holder, fencing_token, completed
+            FROM leases
+            WHERE work_fingerprint = ?
+            """,
+            (claim.work_fingerprint,),
+        ).fetchone()
+        verification = db.execute(
+            """
+            SELECT status, reason
+            FROM execution_verifications
+            WHERE lineage_id = ? AND work_fingerprint = ?
+              AND fencing_token = ?
+            ORDER BY sequence DESC
+            LIMIT 1
+            """,
+            (
+                claim.lineage_id,
+                claim.work_fingerprint,
+                claim.fencing_token,
+            ),
+        ).fetchone()
+    assert lease == (claim.holder, claim.fencing_token, 1)
+    assert verification[0] == "COMPLETE"
+    assert "no backend replay" in verification[1]
+    assert transport.writes == []
+
+
+def test_completed_effect_finalization_receipt_replays_without_backend_or_git_read(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    times = iter((1003.0, 1004.0, 1005.0))
+    first = finalize_github_source_write_effect_confirmed(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        clock=lambda: next(times),
+    )
+    reads_after_first = tuple(transport.reads)
+
+    transport.head = "d" * 40
+    replayed = finalize_github_source_write_effect_confirmed(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        clock=lambda: (_ for _ in ()).throw(
+            AssertionError("terminal receipt replay must not sample runtime time")
+        ),
+    )
+
+    assert replayed.status == "COMPLETE"
+    assert replayed.work_generation == first.work_generation == 5
+    assert replayed.verified_at == first.verified_at == 1005.0
+    assert replayed.reconciliation_sha256 == first.reconciliation_sha256
+    assert replayed.backend_replayed is False
+    assert replayed.finalization_replayed is True
+    assert tuple(transport.reads) == reads_after_first
+    assert transport.writes == []
+
+
+def test_effect_finalization_requires_conclusive_reconciliation(tmp_path):
+    claim, _receipt, _request, _commit, _blob, transport = (
+        _claim_and_promote(tmp_path)
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="requires conclusive EFFECT_CONFIRMED reconciliation",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: 1003.0,
+        )
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("RUNNING", 3)
+    assert transport.writes == []
+
+
+def test_effect_finalization_refuses_indeterminate_reconciliation(tmp_path):
+    claim, _receipt, request, _commit, _blob, transport = (
+        _claim_and_promote(tmp_path)
+    )
+    transport.head = claim.exact_head
+    reconciliation = reconcile_github_source_write_outcome_unknown(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        reconciler="runtime-reconciler",
+        clock=lambda: 1002.0,
+    )
+    assert reconciliation.outcome == "INDETERMINATE"
+
+    with pytest.raises(
+        ValueError,
+        match="requires conclusive EFFECT_CONFIRMED reconciliation",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: 1003.0,
+        )
+    assert transport.writes == []
+
+
+def test_effect_finalization_refuses_candidate_head_movement(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    transport.head = "d" * 40
+
+    with pytest.raises(
+        ValueError,
+        match="candidate commit is no longer current",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: 1003.0,
+        )
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("RUNNING", 3)
+    assert transport.writes == []
+
+
+def test_effect_finalization_refuses_candidate_blob_mismatch(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    transport.files[
+        (claim.repository, request["path"], candidate_commit)
+    ] = GitHubFileState(
+        sha="e" * 40,
+        content=request["content"],
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="candidate blob mismatch",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: 1003.0,
+        )
+    assert transport.writes == []
+
+
+def test_effect_finalization_refuses_content_mismatch_even_with_blob_label(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    transport.files[
+        (claim.repository, request["path"], candidate_commit)
+    ] = GitHubFileState(
+        sha=candidate_blob,
+        content="tampered\n",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="candidate content mismatch",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: 1003.0,
+        )
+    assert transport.writes == []
+
+
+def test_effect_finalization_stops_at_verifying_if_candidate_moves_after_checkpoint(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    transport.ref_sequence = [
+        candidate_commit,
+        candidate_commit,
+        "d" * 40,
+    ]
+
+    times = iter((1003.0, 1004.0))
+    with pytest.raises(
+        ValueError,
+        match="candidate moved after VERIFYING",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: next(times),
+        )
+
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("VERIFYING", 4)
+    assert transport.writes == []
+
+
+def test_effect_finalization_resumes_idempotently_from_verifying(tmp_path):
+    (
+        claim,
+        receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+
+    from runner.durable_dispatch import SqliteDispatchAdmissionStore
+    from runner.leases import Lease
+
+    store = SqliteDispatchAdmissionStore(tmp_path / "operator.sqlite3")
+    lease_row = store.connection.execute(
+        """
+        SELECT holder, fencing_token, expires_at
+        FROM leases
+        WHERE work_fingerprint = ?
+        """,
+        (claim.work_fingerprint,),
+    ).fetchone()
+    lease = Lease(
+        work_fingerprint=claim.work_fingerprint,
+        holder=str(lease_row[0]),
+        fencing_token=int(lease_row[1]),
+        expires_at=float(lease_row[2]),
+    )
+    generation = store.begin_verification(
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        expected_work_generation=receipt.promoted_work_generation,
+        lease=lease,
+        started_at=1003.0,
+    )
+    store.close()
+    assert generation == 4
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("VERIFYING", 4)
+
+    times = iter((1004.0, 1005.0, 1006.0))
+    result = finalize_github_source_write_effect_confirmed(
+        state_db=tmp_path / "operator.sqlite3",
+        lineage_id=claim.lineage_id,
+        work_fingerprint_value=claim.work_fingerprint,
+        fencing_token=claim.fencing_token,
+        transport=transport,
+        clock=lambda: next(times),
+    )
+
+    assert result.status == "COMPLETE"
+    assert result.work_generation == 5
+    assert result.backend_replayed is False
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("COMPLETE", 5)
+    assert transport.writes == []
+
+
+def test_effect_finalization_refuses_fence_expired_before_readback(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="fence has expired",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: 1400.0,
+        )
+    assert transport.writes == []
+
+
+def test_effect_finalization_refuses_fence_expiring_during_readback(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+
+    times = iter((1200.0, 1201.0, 1400.0))
+    with pytest.raises(
+        ValueError,
+        match="expired during verification",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: next(times),
+        )
+    assert _work_state(
+        tmp_path / "operator.sqlite3",
+        claim,
+    ) == ("VERIFYING", 4)
+    assert transport.writes == []
+
+
+def test_effect_finalization_refuses_tampered_reconciliation_receipt(tmp_path):
+    (
+        claim,
+        _receipt,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    ) = _claim_and_promote(tmp_path)
+    _confirm_effect(
+        tmp_path,
+        claim,
+        request,
+        candidate_commit,
+        candidate_blob,
+        transport,
+    )
+    with sqlite3.connect(tmp_path / "operator.sqlite3") as db:
+        db.execute(
+            """
+            UPDATE execution_reconciliations
+            SET reason = 'tampered'
+            WHERE lineage_id = ? AND work_fingerprint = ?
+              AND fencing_token = ?
+            """,
+            (
+                claim.lineage_id,
+                claim.work_fingerprint,
+                claim.fencing_token,
+            ),
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="reconciliation journal digest mismatch",
+    ):
+        finalize_github_source_write_effect_confirmed(
+            state_db=tmp_path / "operator.sqlite3",
+            lineage_id=claim.lineage_id,
+            work_fingerprint_value=claim.work_fingerprint,
+            fencing_token=claim.fencing_token,
+            transport=transport,
+            clock=lambda: 1003.0,
+        )
+    assert transport.writes == []
