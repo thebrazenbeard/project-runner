@@ -94,9 +94,9 @@
       "repository": "thebrazenbeard/vera",
       "default_branch": "main",
       "default_head": "87aa888cb7543875ffa11c9c7a1eb9e5b60c35cf",
-      "source_state": "CURRENT_MAIN_PR",
-      "source_status": "Vera main is 87aa888cb7543875ffa11c9c7a1eb9e5b60c35cf. Draft PR #200, portfolio architecture absorption, is based on that exact main and remains mergeable. PR #202 is a separate current-main supply-chain hardening line.",
-      "frontier": "Review and reconcile PR #200 as the portfolio-absorption frontier while keeping PR #202 as independent hardening; do not create a competing runtime root.",
+      "source_state": "STALE_PR_REQUIRES_RESTACK",
+      "source_status": "Vera main is 87aa888cb7543875ffa11c9c7a1eb9e5b60c35cf. Draft PR #200 is based on that exact main and remains mergeable, but its claimed complete live portfolio cut is stale: its 65-repository snapshot overlaps only 46 of the current corpus's 49 public repositories and omits public repositories fuckup, sql-connectome, and vera-mono. Because Vera is public, PR #200 also enumerates private-repository membership that the hardened Project Runner/Discovery public corpus intentionally keeps count-only.",
+      "frontier": "Do not merge PR #200 as the current complete portfolio absorption. Build a public-safe successor/restack from the current corpus: preserve the useful mechanism harvest and exact donor bindings, replace live-completeness claims with current 67-repository evidence, add the three missing public repositories, and keep private membership count-only or on a non-public governed surface.",
       "candidate_pr": {
         "number": 200,
         "title": "Absorb portfolio architecture and reusable implementation into Vera",
