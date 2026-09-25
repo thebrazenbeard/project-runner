@@ -18,6 +18,7 @@ _SCHEMA_FILES = {
     "portfolio-corpus": _ROOT / "schemas" / "portfolio-corpus.schema.json",
     "portfolio-advancement": _ROOT / "schemas" / "portfolio-advancement.schema.json",
     "p0-project-manifest": _ROOT / "schemas" / "p0-project-manifest.schema.json",
+    "portfolio-p0-currentness": _ROOT / "schemas" / "portfolio-p0-currentness.schema.json",
 }
 
 
