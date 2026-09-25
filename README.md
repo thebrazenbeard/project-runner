@@ -52,6 +52,106 @@ The live CI route still has only `contents: read`; it proves exact-head GitHub c
     project-runner github-read-smoke --repository thebrazenbeard/project-runner --ref main
     python -m pytest -q
 
+## Real operator path
+
+The ordinary CLI now has one deliberately narrow real execution route: a durable, read-only M6 GitHub inspection. It derives one READY INSPECT frontier, persists budget/work/lease/journal state before and during execution, performs exact-ref reads under explicit grants, independently rechecks currentness, and atomically finalizes terminal evidence.
+
+    export PROJECT_RUNNER_GITHUB_TOKEN=<token-with-required-read-access>
+    project-runner run-inspection \
+      --before <previous-observations.yaml> \
+      --after <current-observations.yaml> \
+      --dependencies <dependencies.yaml> \
+      --project <consumer-project-id> \
+      --target-repository <owner/repository> \
+      --target-ref <branch> \
+      --target-head <exact-40-hex-head> \
+      --state-db .project-runner/project-runner.sqlite3
+
+Interrupted or unresolved durable attempts are visible without backend re-execution:
+
+    project-runner operator-status --state-db .project-runner/project-runner.sqlite3
+
+This first operator route is intentionally read-only. A GitHub token's technical permissions do not manufacture write, merge, or deploy authority. The SQLite file is durable only on the filesystem that retains it; an ephemeral CI runner does not become a persistent orchestrator merely because SQLite was involved.
+
+See docs/OPERATOR_EXECUTION_V1.md.
+
+## Durable portfolio currentness
+
+Project Runner can now collect registered dependency refs itself and persist the resulting scheduler state:
+
+    export PROJECT_RUNNER_GITHUB_TOKEN=<token-with-required-read-access>
+    project-runner portfolio-cycle \
+      --dependencies topology/dependencies.yaml \
+      --state-db .project-runner/project-runner.sqlite3
+
+The first cycle for a dependency-topology digest establishes an observation baseline and schedules nothing. Project- or worker-registry changes on the same topology preserve observation continuity: unresolved exact-subject work is recovered from durable history, re-evaluated under current capabilities/scheduling/target/worker-route authority, and carried forward when still relevant. Later cycles atomically persist the new snapshot plus READY/BLOCKED scheduler decisions.
+
+    project-runner portfolio-status \
+      --state-db .project-runner/project-runner.sqlite3
+
+Collection is read-only. Dependency selectors manufacture neither provider scope nor write authority: provider/consumer IDs must exist in the current project registry, selector repositories must belong to the declared provider, refs must be exact, and READ_REF grants are derived only after those checks. If any required read fails, the durable snapshot does not advance.
+
+The durable queue now has a bounded read-only consumer. Projects declare exact `execution_targets` by work type; without one, otherwise-runnable work becomes `WAITING_AUTHORITY`.
+
+    project-runner consume-queue \
+      --dependencies topology/dependencies.yaml \
+      --state-db .project-runner/project-runner.sqlite3
+
+Queue claims use monotonic fencing and collision-domain exclusion. Unchanged observation cycles do not erase pending queue work; compatible historical rows remain claimable only while their full exact provider subject is still current. The consumer binds the declared target ref to an exact current commit and persists that binding. INSPECT may use the built-in durable GitHub read operator. Other supported read-only work types require an explicitly bound worker whose exact route is VERIFIED and whose route contract is READ_ONLY. Reclaimed INSPECT claims reconcile existing terminal operator state without re-execution; nonterminal durable operator state becomes `OUTCOME_UNKNOWN` rather than being blindly retried.
+
+    project-runner queue-status \
+      --state-db .project-runner/project-runner.sqlite3
+
+Read-only worker handoffs are persisted in a digest-bound outbox and can be summarized without invoking a worker:
+
+    project-runner worker-route-status \
+      --state-db .project-runner/project-runner.sqlite3
+
+A qualified worker route uses a fenced pull/receipt protocol. Delivery rechecks the current worker/route qualification and the provider exact subject; superseded provider work is retired before a worker can pull it. The packet is written to a `0600` owner-only file rather than echoed to ordinary logs. With an external/private project registry, the packet must be written outside the public checkout:
+
+    project-runner claim-worker-route \
+      --worker-id <worker-id> \
+      --route <verified-route> \
+      --holder <claimant-id> \
+      --payload-out /secure/path/packet.json \
+      --state-db .project-runner/project-runner.sqlite3
+
+A built-in reference endpoint exercises the same delivery protocol with real GitHub READ_REF currentness checks:
+
+    PROJECT_RUNNER_GITHUB_TOKEN=<read-token> \
+    project-runner run-reference-worker \
+      --holder project-runner-reference-read-worker \
+      --state-db .project-runner/project-runner.sqlite3
+
+The reference worker is read-only and emits only route/receipt summary metadata.
+
+    project-runner record-worker-receipt \
+      --route-id <route-id> \
+      --worker-id <worker-id> \
+      --route <verified-route> \
+      --holder <same-claimant-id> \
+      --expected-fencing-token <delivery-fence> \
+      --receipt-class SUCCEEDED \
+      --receipt-sha256 <sha256> \
+      --state-db .project-runner/project-runner.sqlite3
+
+SAFE routes may reclaim expired delivery claims. RECONCILE_REQUIRED routes freeze expired claims into ambiguity until explicit reconciliation; NEVER routes are not replay-releasable.
+
+Ambiguous or routed queue items retain their collision reservation until explicit evidence-bound reconciliation:
+
+    project-runner reconcile-queue \
+      --snapshot-id <id> \
+      --frontier-fingerprint <sha256> \
+      --expected-fencing-token <token> \
+      --resolution CONFIRM_COMPLETE \
+      --evidence-sha256 <sha256> \
+      --reconciler <identity> \
+      --state-db .project-runner/project-runner.sqlite3
+
+A read-only retry release advances the durable attempt generation and uses a new deterministic lineage. SAFE routes permit automatic expired-claim replay and explicit retry release; RECONCILE_REQUIRED permits retry only through explicit reconciliation; NEVER does not permit retry release. Routed `CONFIRM_COMPLETE` also re-reads both the provider ref and bound consumer target ref live—worker success alone is not completion.
+
+The committed public registry binds Project Runner's built-in `INSPECT` target and a `REREVIEW` target to the Project Runner reference read worker. The 12 Custom GPT records remain REGISTERED with UNVERIFIED routes and are not silently activated. The reference worker is separate: a GITHUB_ACTION worker with a VERIFIED `RUNNER_ACTION_PULL` READ_ONLY/SAFE route that is live-proven in CI. Other work remains blocked until its target and qualified route are explicitly declared; Project Runner does not infer `main`, choose the first repository, or manufacture routing authority.
+
 ## Private portfolio registry
 
 The committed `registry/projects.yaml` is a public-safe seed. It may name repositories that were already part of Project Runner's historical public baseline, but it must not expand the public repository with additional private project identifiers merely because those projects are relevant to orchestration.

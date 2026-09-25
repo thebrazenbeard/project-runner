@@ -86,6 +86,56 @@
               "SENSITIVE_HELD",
               "DECISION_HELD"
             ]
+          },
+          "execution_targets": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": [
+                "work_type",
+                "repository",
+                "ref"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "work_type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "repository": {
+                  "type": "string",
+                  "pattern": "^[^/]+/[^/]+$"
+                },
+                "ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "worker_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "worker_route": {
+                  "enum": [
+                    "CHATGPT_INVOCATION",
+                    "RUNNER_ACTION_PULL",
+                    "DIRECT_EXTERNAL_DISPATCH",
+                    "PLUGIN_TOOL_CALL",
+                    "OPENAI_AGENT_API",
+                    "GITHUB_ACTION",
+                    "HUMAN_MANUAL"
+                  ]
+                }
+              },
+              "dependentRequired": {
+                "worker_id": [
+                  "worker_route"
+                ],
+                "worker_route": [
+                  "worker_id"
+                ]
+              }
+            }
           }
         }
       }

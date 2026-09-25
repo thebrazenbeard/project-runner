@@ -30,7 +30,7 @@ A checkpoint timestamp or newer-looking branch does not win by itself. If two du
 
 ## Worker records and locators
 
-`registry/workers.yaml` contains registered endpoint/worker records. A ChatGPT Custom GPT share URL or GPT ID is a locator, not durable authority, currentness, assignment, memory, or successful dispatch evidence. Routes explicitly marked `UNVERIFIED` remain unusable as proof of an executable path.
+`registry/workers.yaml` contains registered endpoint/worker records. A ChatGPT Custom GPT share URL or GPT ID is a locator, not durable authority, currentness, assignment, memory, or successful dispatch evidence. Routes explicitly marked `UNVERIFIED` remain unusable as proof of an executable path. The Project Runner reference read worker is different: its durable reconstruction path points to `runner/reference_worker.py`, its route ceiling is READ_ONLY/SAFE, and its VERIFIED state is qualified by the repository's live reference-worker workflow proof rather than by a Custom GPT locator.
 
 Named workers such as Radar, One, Two, Three, Four, Hephaestus, Parallax, Noah, reviewers, and project-specific workers derive their identity, routing, scope, and authority from their own durable repository/Bus contracts and current assignments. Project Runner must not reconstruct them from a remembered chat personality or a conversation URL.
 
