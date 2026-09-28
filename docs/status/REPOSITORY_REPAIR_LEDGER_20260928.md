@@ -22,8 +22,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | # | Repository | Visibility | Default branch | Repair state |
 |---:|---|---|---|---|
 | 1 | `abil` | public | `main` | COMPLETE — `a93e345da27028df77e8c9047d1d32780038550b` |
-| 2 | `Attune` | public | `main` | IN_PROGRESS |
-| 3 | `axle` | public | `main` | PENDING |
+| 2 | `Attune` | public | `main` | COMPLETE — `46461057e4d9ea25ec91a051fc17020e1113329a` |
+| 3 | `axle` | public | `main` | IN_PROGRESS |
 | 4 | `brigit` | private | `main` | PENDING |
 | 5 | `brigit-unbound` | private | `main` | PENDING |
 | 6 | `bt2` | public | `main` | PENDING |
@@ -111,6 +111,20 @@ Evidence:
 - PR exact-head hosted validation: PASS;
 - post-merge main validation run status: []
 
+### 2. Attune
+
+Canonical main after repair:
+
+`46461057e4d9ea25ec91a051fc17020e1113329a`
+
+Evidence:
+
+- foundation influence/memory contract suite: 9/9 PASS on exact merged main;
+- compileall: PASS;
+- stale implementation/branch status corrected;
+- qualification workflow now targets canonical main;
+- hosted PR exact-head qualification: PASS.
+
 ## Current repository
 
-`Attune` — sequential repair repository 2 of 71.
+`axle` — sequential repair repository 3 of 71.
