@@ -21,8 +21,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 
 | # | Repository | Visibility | Default branch | Repair state |
 |---:|---|---|---|---|
-| 1 | `abil` | public | `main` | IN_PROGRESS |
-| 2 | `Attune` | public | `main` | PENDING |
+| 1 | `abil` | public | `main` | COMPLETE — `a93e345da27028df77e8c9047d1d32780038550b` |
+| 2 | `Attune` | public | `main` | IN_PROGRESS |
 | 3 | `axle` | public | `main` | PENDING |
 | 4 | `brigit` | private | `main` | PENDING |
 | 5 | `brigit-unbound` | private | `main` | PENDING |
@@ -93,14 +93,24 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 70 | `conditioning` | private | `main` | ARCHIVED_REVIEW_PENDING |
 | 71 | `self` | private | `main` | ARCHIVED_REVIEW_PENDING |
 
+## Completed checkpoints
+
+### 1. abil
+
+Canonical main after repair:
+
+`a93e345da27028df77e8c9047d1d32780038550b`
+
+Evidence:
+
+- current architecture/R2 canonicalization preserved;
+- 64 missing historical research/recovery artifacts recovered without overwriting canonical architecture;
+- exact-source consolidation manifest added;
+- repository validator and hosted validation workflow added;
+- Windows/Lappy exact-main validation: PASS;
+- PR exact-head hosted validation: PASS;
+- post-merge main validation run status: []
+
 ## Current repository
 
-`abil` — current canonical main before repair:
-`13b989be46a986c95c75612e332779a75c0f0f1f`
-
-Initial finding: current main already contains the successor architecture and R2
-non-actuating substrate design through later integration commits. Older PRs #2/#3
-are superseded ancestry and will not be merged again. The remaining repair target
-is to reconcile useful non-normative research/recovery material from stale open
-branches onto current main and establish a mechanically verifiable docs/research
-baseline.
+`Attune` — sequential repair repository 2 of 71.
