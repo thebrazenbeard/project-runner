@@ -14,11 +14,11 @@ This does not make Project Runner the semantic owner of every project.
 
 ## Estate cut
 
-The audited GitHub estate contains 67 repositories:
+The audited GitHub estate contains 71 repositories:
 
-- 49 public;
+- 53 public;
 - 18 private;
-- 64 unarchived;
+- 69 unarchived;
 - 2 archived, both private.
 
 The audit also identified 15 durable non-repository workstreams that should not be double-counted as repositories:
@@ -142,8 +142,8 @@ The live estate advanced after the original 66-repository cut.
 
 Current public-safe membership is now:
 
-- 67 total repositories;
-- 49 public;
+- 71 total repositories;
+- 53 public;
 - 18 private;
 - 2 archived private repositories.
 
@@ -151,3 +151,26 @@ The only public addition relative to the prior corpus is `thebrazenbeard/sql-con
 It is admitted descriptively as an active P1 `language-and-semantics` subject. This
 does not grant it P0 status, scheduling authority, database authority, or permission
 to replace BT2/Lantern provider contracts without separate qualification.
+
+
+## 2026-09-28 live membership refresh
+
+The live estate advanced again after the 67-repository cut.
+
+Current public-safe membership is:
+
+- 71 total repositories;
+- 53 public;
+- 18 private;
+- 2 archived private repositories.
+
+The four public additions relative to the 67-repository cut are:
+
+- `thebrazenbeard/axle`;
+- `thebrazenbeard/ingest`;
+- `thebrazenbeard/lgcm`;
+- `thebrazenbeard/pro-run`.
+
+They are descriptive corpus subjects only. Their presence does not manufacture
+scheduling, mutation, runtime, provider, or effect authority. The ten-subject
+public P0 set is unchanged by this refresh.
