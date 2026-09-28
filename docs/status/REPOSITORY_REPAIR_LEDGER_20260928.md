@@ -30,8 +30,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 7 | `bugops` | public | `main` | COMPLETE — `f77a346314bf51a362a77b0da3f0f4e469442bff` |
 | 8 | `build-team-2.0` | public | `main` | COMPLETE — `05640213e09ab164e3a950cce5a3f3e4adeb6704` |
 | 9 | `ccb-core` | public | `main` | COMPLETE — `81254afff7fa6a44ea1b32fcc5f114909061d12f` |
-| 10 | `chat-communication-bus` | private | `main` | IN_PROGRESS |
-| 11 | `conations` | public | `main` | PENDING |
+| 10 | `chat-communication-bus` | private | `main` | COMPLETE — `e0bcb5eb18630693de55a1af2066411c7af079bb` |
+| 11 | `conations` | public | `main` | IN_PROGRESS |
 | 12 | `deepmemorystorage` | public | `main` | PENDING |
 | 13 | `discovery` | public | `main` | PENDING |
 | 14 | `driftguard` | public | `main` | PENDING |
@@ -240,6 +240,23 @@ Evidence:
 - dependency review: PASS;
 - no separate post-merge workflow run was observed on the merge commit.
 
+### 10. chat-communication-bus
+
+Canonical main after repair:
+
+`e0bcb5eb18630693de55a1af2066411c7af079bb`
+
+Evidence:
+
+- private repository role is now explicitly branch-vault/deployment-overlay rather than reusable implementation authority;
+- reusable CCB/Radar control code is pinned to qualified CCB Base `273c93bc46683580024c1521fd2c523a8a6593bd` / tree `6594f71965e3e1a504f2265363b75b43f5fbd3de`;
+- writer-lane and trusted-projector workflows use the exact qualified CCB Base pin;
+- private topology/cutover inputs remain explicit and private;
+- source-level overlay contract validation: PASS;
+- private hosted Actions fail before exposing any executed step/log, so hosted qualification remains infrastructure-unavailable rather than source-failed;
+- canonical merge tree exactly matches the source-qualified PR #366 tree;
+- historical/open branch-vault PRs remain provenance/review surfaces and do not constitute a second implementation authority.
+
 ## Current repository
 
-`chat-communication-bus` — sequential repair repository 10 of 71.
+`conations` — sequential repair repository 11 of 71.
