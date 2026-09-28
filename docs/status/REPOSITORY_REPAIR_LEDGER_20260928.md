@@ -26,9 +26,9 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 3 | `axle` | public | `main` | COMPLETE — `d470544fb64875cb4789472ad4ef1b30f1fa65ee` |
 | 4 | `brigit` | private | `main` | COMPLETE — `9f24b88fe5154e073a6f79a6c71e8f484c9fec79` |
 | 5 | `brigit-unbound` | private | `main` | COMPLETE — `f1350ef794acd0e8a657bb38d21e66f4775501a0` |
-| 6 | `bt2` | public | `main` | COMPLETE — `f01836a31ce9d1152cd596dfa120ef6a83a7fae4` |
-| 7 | `bugops` | public | `main` | IN_PROGRESS |
-| 8 | `build-team-2.0` | public | `main` | PENDING |
+| 6 | `bt2` | public | `main` | COMPLETE — `66ecc19b60036c14f6c0327787bddf9e2cb6b132` |
+| 7 | `bugops` | public | `main` | COMPLETE — `f77a346314bf51a362a77b0da3f0f4e469442bff` |
+| 8 | `build-team-2.0` | public | `main` | IN_PROGRESS |
 | 9 | `ccb-core` | public | `main` | PENDING |
 | 10 | `chat-communication-bus` | private | `main` | PENDING |
 | 11 | `conations` | public | `main` | PENDING |
@@ -193,6 +193,22 @@ Evidence:
 - predecessor PRs #14/#23/#32/#40/#41/#42/#43/#44/#45/#46/#47/#49 closed as superseded;
 - no provider retirement, Project installation, producer enablement, or branch deletion performed.
 
+### 7. bugops
+
+Canonical main after repair:
+
+`f77a346314bf51a362a77b0da3f0f4e469442bff`
+
+Evidence:
+
+- BUG-0002/0003 lifecycle metadata repaired to actual merged PRs;
+- BUG-0004 issue #14 reopened because every closure condition remained unchecked;
+- incident registry binds all four reports to issue, branch, and merged PR;
+- source validator enforces report structure and required lifecycle metadata;
+- hosted live validation requires OPEN reports to map to open issues and source-review PRs to be merged;
+- exact post-merge main workflow run 36489930725: PASS;
+- no underlying behavioral bug is claimed fixed by repository repair alone.
+
 ## Current repository
 
-`bugops` — sequential repair repository 7 of 71.
+`build-team-2.0` — sequential repair repository 8 of 71.
