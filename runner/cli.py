@@ -18,12 +18,27 @@ from .dedup import deduplicate_frontiers, frontier_fingerprint
 from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
+from .execution_promotion import (
+    effect_authority_key_from_environment,
+    execution_authority_key_from_environment,
+    load_json_document,
+    promote_claimed_to_running,
+    review_key_from_environment,
+)
 from .leases import InMemoryLeaseStore
 from .models import FrontierStatus, ProjectSchedulingState
 from .portfolio_advancement import load_advancement_wave
+from .portfolio_corpus import load_portfolio_corpus
+from .portfolio_operator_binding import bind_wave_to_operator_registry
+from .portfolio_operator_bridge import claim_bound_plan_subject
 from .portfolio_wave_scheduler import (
     WaveExecutionBudget,
     plan_wave_admission,
+)
+from .promoted_github_runtime import (
+    finalize_github_source_write_effect_confirmed,
+    qualify_github_source_write_runtime,
+    reconcile_github_source_write_outcome_unknown,
 )
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
@@ -480,6 +495,235 @@ def _portfolio_wave_plan(
     return 0
 
 
+def _portfolio_operator_bindings(
+    wave_path: Path,
+    corpus_path: Path,
+    projects_path: Path,
+) -> int:
+    wave = load_advancement_wave(wave_path)
+    corpus = load_portfolio_corpus(corpus_path, public_safe=True)
+    registry = load_project_snapshot(projects_path)
+    report = bind_wave_to_operator_registry(
+        wave,
+        corpus,
+        registry,
+        public_safe=True,
+    )
+    payload = {
+        "mode": "PORTFOLIO_OPERATOR_BINDING_REPORT_V1",
+        "execution_authority": False,
+        "summary": report.summary(),
+        "decisions": [
+            {
+                "subject_kind": item.subject_kind,
+                "subject_id": item.subject_id,
+                "repository": item.repository,
+                "state": item.state,
+                "reason": item.reason,
+                "operator_project_id": item.operator_project_id,
+            }
+            for item in report.decisions
+        ],
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
+def _portfolio_wave_claim(
+    *,
+    plan_path: Path,
+    wave_path: Path,
+    corpus_path: Path,
+    projects_path: Path,
+    subject_id: str,
+    state_db: Path,
+    holder: str,
+    lease_ttl: float,
+    allowed_repositories: Sequence[str],
+) -> int:
+    claim = claim_bound_plan_subject(
+        plan_path=plan_path,
+        wave_path=wave_path,
+        corpus_path=corpus_path,
+        projects_path=projects_path,
+        subject_id=subject_id,
+        state_db=state_db,
+        holder=holder,
+        lease_ttl=lease_ttl,
+        allowed_repositories=allowed_repositories,
+        token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+    )
+    payload = {
+        "mode": "PORTFOLIO_BOUND_PLAN_CLAIM_V1",
+        "execution_authority": False,
+        "protected_effects_authorized": False,
+        "backend_execution_performed": False,
+        "subject_id": claim.subject_id,
+        "repository": claim.repository,
+        "ref": claim.ref,
+        "exact_head": claim.exact_head,
+        "plan_sha256": claim.plan_sha256,
+        "wave_sha256": claim.wave_sha256,
+        "work_fingerprint": claim.work_fingerprint,
+        "lineage_id": claim.lineage_id,
+        "holder": claim.holder,
+        "fencing_token": claim.fencing_token,
+        "lease_expires_at": claim.lease_expires_at,
+        "budget_generation": claim.budget_generation,
+        "work_generation": claim.work_generation,
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
+def _portfolio_wave_promote(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+    holder: str,
+    review_path: Path,
+    execution_grant_path: Path,
+    effect_grant_path: Path | None,
+) -> int:
+    review_document = load_json_document(review_path)
+    execution_grant_document = load_json_document(execution_grant_path)
+    effect_grant_document = (
+        load_json_document(effect_grant_path)
+        if effect_grant_path is not None
+        else None
+    )
+    receipt = promote_claimed_to_running(
+        state_db=state_db,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+        holder=holder,
+        review_document=review_document,
+        execution_grant_document=execution_grant_document,
+        effect_grant_document=effect_grant_document,
+        review_key=review_key_from_environment(),
+        execution_authority_key=execution_authority_key_from_environment(),
+        effect_authority_key=effect_authority_key_from_environment(),
+        token=os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN"),
+    )
+    payload = {
+        "mode": "PORTFOLIO_EXECUTION_PROMOTION_V1",
+        "backend_execution_performed": False,
+        "lineage_id": receipt.lineage_id,
+        "work_fingerprint": receipt.work_fingerprint,
+        "fencing_token": receipt.fencing_token,
+        "holder": receipt.holder,
+        "repository": receipt.repository,
+        "ref": receipt.ref,
+        "exact_head": receipt.exact_head,
+        "operation": receipt.operation,
+        "effect_class": receipt.effect_class,
+        "review_sha256": receipt.review_sha256,
+        "review_valid_until": receipt.review_valid_until,
+        "execution_grant_sha256": receipt.execution_grant_sha256,
+        "execution_valid_until": receipt.execution_valid_until,
+        "execution_request_sha256": receipt.execution_request_sha256,
+        "effect_grant_sha256": receipt.effect_grant_sha256,
+        "effect_valid_until": receipt.effect_valid_until,
+        "promoted_at": receipt.promoted_at,
+        "attempt_work_generation": receipt.attempt_work_generation,
+        "promoted_work_generation": receipt.promoted_work_generation,
+        "promotion_sha256": receipt.promotion_sha256,
+    }
+    print(json.dumps(payload, sort_keys=True))
+    return 0
+
+
+def _github_source_write_runtime_qualify(
+    repository: str,
+    ref: str,
+) -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    if not token:
+        raise ValueError(
+            "PROJECT_RUNNER_GITHUB_TOKEN is required for runtime qualification"
+        )
+    result = qualify_github_source_write_runtime(
+        repository=repository,
+        ref=ref,
+        transport=GitHubRestTransport(token=token),
+    )
+    print(json.dumps(result.to_dict(), sort_keys=True))
+    return 0 if result.status == "PASS" else 1
+
+
+def _github_source_write_finalize_effect(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+) -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    if not token:
+        raise ValueError(
+            "PROJECT_RUNNER_GITHUB_TOKEN is required for effect finalization"
+        )
+    result = finalize_github_source_write_effect_confirmed(
+        state_db=state_db,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+        transport=GitHubRestTransport(token=token),
+    )
+    print(json.dumps({
+        "mode": "GITHUB_SOURCE_WRITE_EFFECT_FINALIZATION_V1",
+        "status": result.status,
+        "reason": result.reason,
+        "candidate_commit_sha": result.candidate_commit_sha,
+        "candidate_blob_sha": result.candidate_blob_sha,
+        "reconciliation_sha256": result.reconciliation_sha256,
+        "work_generation": result.work_generation,
+        "verified_at": result.verified_at,
+        "backend_replayed": result.backend_replayed,
+        "finalization_replayed": result.finalization_replayed,
+        "deployment_effect_claimed": False,
+        "installation_effect_claimed": False,
+    }, sort_keys=True))
+    return 0
+
+
+def _github_source_write_reconcile(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+    reconciler: str,
+) -> int:
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    if not token:
+        raise ValueError(
+            "PROJECT_RUNNER_GITHUB_TOKEN is required for source-write reconciliation"
+        )
+    result = reconcile_github_source_write_outcome_unknown(
+        state_db=state_db,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+        transport=GitHubRestTransport(token=token),
+        reconciler=reconciler,
+    )
+    print(json.dumps({
+        "mode": "GITHUB_SOURCE_WRITE_OUTCOME_RECONCILIATION_V1",
+        "backend_replayed": False,
+        "outcome": result.outcome,
+        "reason": result.reason,
+        "evidence": list(result.evidence),
+        "observed_head": result.observed_head,
+        "observed_blob_sha": result.observed_blob_sha,
+        "work_generation": result.work_generation,
+    }, sort_keys=True))
+    return 0 if result.outcome != "INDETERMINATE" else 2
+
+
 def _github_read_smoke(repository: str, ref: str, expected_head: str | None) -> int:
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     backend = GitHubBackend(
@@ -565,6 +809,83 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=[],
     )
 
+    operator_bindings = subparsers.add_parser("portfolio-operator-bindings")
+    operator_bindings.add_argument(
+        "--wave",
+        type=Path,
+        default=ROOT / "portfolio" / "advancement_wave.public.json",
+    )
+    operator_bindings.add_argument(
+        "--corpus",
+        type=Path,
+        default=ROOT / "portfolio" / "corpus.public.json",
+    )
+    operator_bindings.add_argument(
+        "--projects",
+        type=Path,
+        default=ROOT / "registry" / "projects.yaml",
+    )
+
+    wave_claim = subparsers.add_parser("portfolio-wave-claim")
+    wave_claim.add_argument("--plan", type=Path, required=True)
+    wave_claim.add_argument(
+        "--wave",
+        type=Path,
+        default=ROOT / "portfolio" / "advancement_wave.public.json",
+    )
+    wave_claim.add_argument(
+        "--corpus",
+        type=Path,
+        default=ROOT / "portfolio" / "corpus.public.json",
+    )
+    wave_claim.add_argument(
+        "--projects",
+        type=Path,
+        default=ROOT / "registry" / "projects.yaml",
+    )
+    wave_claim.add_argument("--subject-id", required=True)
+    wave_claim.add_argument("--state-db", type=Path, required=True)
+    wave_claim.add_argument("--holder", required=True)
+    wave_claim.add_argument("--lease-ttl", type=float, required=True)
+    wave_claim.add_argument(
+        "--allowed-repository",
+        action="append",
+        default=[],
+    )
+
+    wave_promote = subparsers.add_parser("portfolio-wave-promote")
+    wave_promote.add_argument("--state-db", type=Path, required=True)
+    wave_promote.add_argument("--lineage-id", required=True)
+    wave_promote.add_argument("--work-fingerprint", required=True)
+    wave_promote.add_argument("--fencing-token", type=int, required=True)
+    wave_promote.add_argument("--holder", required=True)
+    wave_promote.add_argument("--review", type=Path, required=True)
+    wave_promote.add_argument("--execution-grant", type=Path, required=True)
+    wave_promote.add_argument("--effect-grant", type=Path)
+
+    source_write_qualify = subparsers.add_parser(
+        "github-source-write-runtime-qualify"
+    )
+    source_write_qualify.add_argument("--repository", required=True)
+    source_write_qualify.add_argument("--ref", required=True)
+
+    source_write_finalize = subparsers.add_parser(
+        "github-source-write-finalize-effect"
+    )
+    source_write_finalize.add_argument("--state-db", type=Path, required=True)
+    source_write_finalize.add_argument("--lineage-id", required=True)
+    source_write_finalize.add_argument("--work-fingerprint", required=True)
+    source_write_finalize.add_argument("--fencing-token", type=int, required=True)
+
+    source_write_reconcile = subparsers.add_parser(
+        "github-source-write-reconcile"
+    )
+    source_write_reconcile.add_argument("--state-db", type=Path, required=True)
+    source_write_reconcile.add_argument("--lineage-id", required=True)
+    source_write_reconcile.add_argument("--work-fingerprint", required=True)
+    source_write_reconcile.add_argument("--fencing-token", type=int, required=True)
+    source_write_reconcile.add_argument("--reconciler", required=True)
+
     github_smoke = subparsers.add_parser("github-read-smoke")
     github_smoke.add_argument("--repository", required=True)
     github_smoke.add_argument("--ref", required=True)
@@ -590,6 +911,55 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_per_identity=args.max_per_identity,
             max_per_family=args.max_per_family,
             occupied_collision_keys=args.occupied_collision_key,
+        )
+    if args.command == "portfolio-operator-bindings":
+        return _portfolio_operator_bindings(
+            args.wave,
+            args.corpus,
+            args.projects,
+        )
+    if args.command == "portfolio-wave-claim":
+        return _portfolio_wave_claim(
+            plan_path=args.plan,
+            wave_path=args.wave,
+            corpus_path=args.corpus,
+            projects_path=args.projects,
+            subject_id=args.subject_id,
+            state_db=args.state_db,
+            holder=args.holder,
+            lease_ttl=args.lease_ttl,
+            allowed_repositories=args.allowed_repository,
+        )
+    if args.command == "portfolio-wave-promote":
+        return _portfolio_wave_promote(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            holder=args.holder,
+            review_path=args.review,
+            execution_grant_path=args.execution_grant,
+            effect_grant_path=args.effect_grant,
+        )
+    if args.command == "github-source-write-runtime-qualify":
+        return _github_source_write_runtime_qualify(
+            args.repository,
+            args.ref,
+        )
+    if args.command == "github-source-write-finalize-effect":
+        return _github_source_write_finalize_effect(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+        )
+    if args.command == "github-source-write-reconcile":
+        return _github_source_write_reconcile(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            reconciler=args.reconciler,
         )
     return _github_read_smoke(args.repository, args.ref, args.expected_head)
 
