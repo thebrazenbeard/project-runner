@@ -29,7 +29,7 @@ def test_public_wave_covers_public_corpus_exactly():
     workstream_items = [
         item for item in wave.items if item.subject_kind == "workstream"
     ]
-    assert len(repo_items) == 49
+    assert len(repo_items) == 53
     assert len(workstream_items) == 2
 
 
@@ -105,7 +105,7 @@ def test_summary_and_identity_projection_are_deterministic():
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
     summary = wave.summary()
-    assert summary["subjects"] == 51
+    assert summary["subjects"] == 55
     assert summary["held"] >= 1
     one_items = wave.for_identity("ONE")
     assert all(item.lead_identity == "ONE" for item in one_items)
@@ -125,3 +125,20 @@ def test_sql_connectome_is_admitted_without_effect_authority():
     assert item.effect_ceiling == "SOURCE_ONLY"
     assert item.execution_state == "QUEUED"
     assert item.priority == "P1"
+
+
+def test_20260928_new_public_repositories_are_source_only():
+    wave = load_advancement_wave(
+        ROOT / "portfolio" / "advancement_wave.public.json"
+    )
+    expected = {"axle", "ingest", "lgcm", "pro-run"}
+    items = {
+        item.subject_id: item
+        for item in wave.items
+        if item.subject_kind == "repository"
+        and item.subject_id in expected
+    }
+    assert set(items) == expected
+    assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
+    assert all(item.execution_state == "QUEUED" for item in items.values())
+    assert all(item.review_gate == "EXACT_HEAD_REVIEW" for item in items.values())
