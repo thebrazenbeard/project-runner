@@ -25,8 +25,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 2 | `Attune` | public | `main` | COMPLETE — `46461057e4d9ea25ec91a051fc17020e1113329a` |
 | 3 | `axle` | public | `main` | COMPLETE — `d470544fb64875cb4789472ad4ef1b30f1fa65ee` |
 | 4 | `brigit` | private | `main` | COMPLETE — `9f24b88fe5154e073a6f79a6c71e8f484c9fec79` |
-| 5 | `brigit-unbound` | private | `main` | IN_PROGRESS |
-| 6 | `bt2` | public | `main` | PENDING |
+| 5 | `brigit-unbound` | private | `main` | COMPLETE — `f1350ef794acd0e8a657bb38d21e66f4775501a0` |
+| 6 | `bt2` | public | `main` | IN_PROGRESS |
 | 7 | `bugops` | public | `main` | PENDING |
 | 8 | `build-team-2.0` | public | `main` | PENDING |
 | 9 | `ccb-core` | public | `main` | PENDING |
@@ -157,6 +157,20 @@ Evidence:
 - issues #1/#6/#7 remain open with provider/raw-byte/branch-deletion blockers;
 - no provider mutation or branch deletion performed.
 
+### 5. brigit-unbound
+
+Canonical main after repair:
+
+`f1350ef794acd0e8a657bb38d21e66f4775501a0`
+
+Evidence:
+
+- exact merged-main archive validator: PASS;
+- 17 historical response records bound contiguously from 0001 through 0017;
+- exact path, byte-size, and SHA-256 manifest added;
+- archive mutation/deletion/unmanifested-addition detection added;
+- no current-state, standing-consent, or runtime-authority claim promoted from historical records.
+
 ## Current repository
 
-`brigit-unbound` — sequential repair repository 5 of 71.
+`bt2` — sequential repair repository 6 of 71.
