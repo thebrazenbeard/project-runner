@@ -1,14 +1,14 @@
 {
   "wave_id": "PROJECT_RUNNER_PORTFOLIO_ADVANCEMENT_WAVE_V1",
-  "generated_at": "2026-09-24T17:16:00-04:00",
+  "generated_at": "2026-09-28T05:32:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/project-runner-corpus-v1-20260924",
-    "commit": "381559dd07e52105b4e352a90e207a03c6793ff0",
+    "commit": "634abe6a7caf944b0d7b9a64ba071f725ae97771",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "886e9be586c37584c17afdc540c38a1d95deaaa6",
-    "public_repository_count": 49,
-    "total_repository_count": 67,
+    "git_blob_sha": "4112da68dcf9e008f042c3284653b006d081f1e3",
+    "public_repository_count": 53,
+    "total_repository_count": 71,
     "private_repository_count": 18,
     "public_workstream_count": 2,
     "total_workstream_count": 15,
@@ -72,6 +72,25 @@
       "review_gate": "CONSUMER_EVIDENCE",
       "frontier": "Use only when a concrete runtime needs attunement.",
       "source_status": "Foundation contracts are merged; no current pull request."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "axle",
+      "repository": "thebrazenbeard/axle",
+      "priority": "P1",
+      "family_id": "industrial-intelligence",
+      "activity_state": "ACTIVE_HEAVY",
+      "lead_identity": "HEPHAESTUS",
+      "reviewer_identities": [
+        "ACHILLES",
+        "REZON"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "QUEUED",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Complete bounded wake-word and bench hardware qualification while preserving the read-only vehicle boundary.",
+      "source_status": "Executable core and hardware contract are on main; production hardware remains unqualified."
     },
     {
       "subject_kind": "repository",
@@ -337,6 +356,25 @@
     },
     {
       "subject_kind": "repository",
+      "subject_id": "ingest",
+      "repository": "thebrazenbeard/ingest",
+      "priority": "P1",
+      "family_id": "memory-and-provenance",
+      "activity_state": "ACTIVE_HEAVY",
+      "lead_identity": "ROOTS",
+      "reviewer_identities": [
+        "VOSS",
+        "REZON"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "QUEUED",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Finish filesystem durability/integrity hardening and keep intake distinct from truth, currentness, authority, and activation.",
+      "source_status": "V0.1 source implementation is on main; filesystem hardening PR #7 is green and open."
+    },
+    {
+      "subject_kind": "repository",
       "subject_id": "intranel",
       "repository": "thebrazenbeard/intranel",
       "priority": "P2",
@@ -352,6 +390,24 @@
       "review_gate": "EXACT_HEAD_REVIEW",
       "frontier": "Close governance bypass paths and freeze a narrow reusable contract.",
       "source_status": "Hostile hardening and constructor-boundary work remain open."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "lgcm",
+      "repository": "thebrazenbeard/lgcm",
+      "priority": "P1",
+      "family_id": "cognitive-architecture",
+      "activity_state": "ACTIVE",
+      "lead_identity": "REZON",
+      "reviewer_identities": [
+        "VOSS"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "QUEUED",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Run stronger continual-learning evaluation and preserve the standalone research boundary before any Vera integration.",
+      "source_status": "LGCM-0 implementation is on main and remains in active qualification."
     },
     {
       "subject_kind": "repository",
@@ -465,6 +521,25 @@
       "review_gate": "EXACT_HEAD_REVIEW",
       "frontier": "Establish measurable behavior without laundering self-description into phenomenology.",
       "source_status": "Current work separates self-appraisal from phenomenology."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "pro-run",
+      "repository": "thebrazenbeard/pro-run",
+      "priority": "P1",
+      "family_id": "coordination",
+      "activity_state": "ACTIVE_HEAVY",
+      "lead_identity": "ONE",
+      "reviewer_identities": [
+        "ACHILLES",
+        "REZON"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "QUEUED",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Integrate verified Windows/Qwen runtime and recovery fixes while preserving exact effect and reconciliation boundaries.",
+      "source_status": "Core runtime is on main; PR #7 and PR #8 are green current-main successors."
     },
     {
       "subject_kind": "repository",
