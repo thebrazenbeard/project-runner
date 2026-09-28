@@ -28,8 +28,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 5 | `brigit-unbound` | private | `main` | COMPLETE — `f1350ef794acd0e8a657bb38d21e66f4775501a0` |
 | 6 | `bt2` | public | `main` | COMPLETE — `66ecc19b60036c14f6c0327787bddf9e2cb6b132` |
 | 7 | `bugops` | public | `main` | COMPLETE — `f77a346314bf51a362a77b0da3f0f4e469442bff` |
-| 8 | `build-team-2.0` | public | `main` | IN_PROGRESS |
-| 9 | `ccb-core` | public | `main` | PENDING |
+| 8 | `build-team-2.0` | public | `main` | COMPLETE — `05640213e09ab164e3a950cce5a3f3e4adeb6704` |
+| 9 | `ccb-core` | public | `main` | IN_PROGRESS |
 | 10 | `chat-communication-bus` | private | `main` | PENDING |
 | 11 | `conations` | public | `main` | PENDING |
 | 12 | `deepmemorystorage` | public | `main` | PENDING |
@@ -209,6 +209,22 @@ Evidence:
 - exact post-merge main workflow run 36489930725: PASS;
 - no underlying behavioral bug is claimed fixed by repository repair alone.
 
+### 8. build-team-2.0
+
+Canonical main after repair:
+
+`05640213e09ab164e3a950cce5a3f3e4adeb6704`
+
+Evidence:
+
+- repository role corrected from nonexistent legacy app runtime to training/continuity compatibility source;
+- canonical BT2 authority explicitly points to `thebrazenbeard/bt2`;
+- source validator checks registry paths, immutable source commits, startup overlays, and stale setup claims;
+- Protocol V2 startup gaps in Four and Hephaestus were found and repaired;
+- duplicate Four checkpoint-test collection collision was repaired in CI;
+- exact PR head hosted repository-integrity workflow: PASS;
+- no post-merge workflow run was observed on the merge commit, so no post-merge CI claim is made.
+
 ## Current repository
 
-`build-team-2.0` — sequential repair repository 8 of 71.
+`ccb-core` — sequential repair repository 9 of 71.
