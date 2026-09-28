@@ -26,8 +26,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 3 | `axle` | public | `main` | COMPLETE — `d470544fb64875cb4789472ad4ef1b30f1fa65ee` |
 | 4 | `brigit` | private | `main` | COMPLETE — `9f24b88fe5154e073a6f79a6c71e8f484c9fec79` |
 | 5 | `brigit-unbound` | private | `main` | COMPLETE — `f1350ef794acd0e8a657bb38d21e66f4775501a0` |
-| 6 | `bt2` | public | `main` | IN_PROGRESS |
-| 7 | `bugops` | public | `main` | PENDING |
+| 6 | `bt2` | public | `main` | COMPLETE — `f01836a31ce9d1152cd596dfa120ef6a83a7fae4` |
+| 7 | `bugops` | public | `main` | IN_PROGRESS |
 | 8 | `build-team-2.0` | public | `main` | PENDING |
 | 9 | `ccb-core` | public | `main` | PENDING |
 | 10 | `chat-communication-bus` | private | `main` | PENDING |
@@ -171,6 +171,28 @@ Evidence:
 - archive mutation/deletion/unmanifested-addition detection added;
 - no current-state, standing-consent, or runtime-authority claim promoted from historical records.
 
+### 6. bt2
+
+Canonical main after repair:
+
+`f01836a31ce9d1152cd596dfa120ef6a83a7fae4`
+
+Evidence:
+
+- PostgreSQL V4 / SQL Connectome provider-neutral runtime source integrated;
+- database package digest `68eb79d473aecb0bb40b0efe50cb3633e944af47188a3730a6f68a89270696c3`;
+- PostgreSQL 16 canonical full blank rebuild: PASS;
+- PostgreSQL 16 true multi-session Lantern concurrency: PASS;
+- PostgreSQL 17 managed-owner compatibility rebuild: PASS;
+- PostgreSQL 17 true multi-session Lantern concurrency: PASS;
+- V4 native package binding: PASS;
+- adversarial posture tests: 4/4 PASS;
+- Exodus topology validator: PASS, 13 workers / 3 interfaces;
+- local full unittest suite on exact merged main: 18/18 PASS;
+- issues #7 and #31 closed with exact qualification/provenance evidence;
+- predecessor PRs #14/#23/#32/#40/#41/#42/#43/#44/#45/#46/#47/#49 closed as superseded;
+- no provider retirement, Project installation, producer enablement, or branch deletion performed.
+
 ## Current repository
 
-`bt2` — sequential repair repository 6 of 71.
+`bugops` — sequential repair repository 7 of 71.
