@@ -133,7 +133,17 @@ Current Bus workflows still explicitly checkout that exact CCB Base revision, so
 
 Open PR #4 was checked against current `main`.
 
-Eight of its nine changed files are already byte-identical on `main`. The remaining file is the GitHub Actions workflow, where current `main` differs from the old PR. The PR is therefore not blindly merged or closed as “identical”; it remains a separate stale/diverged workflow-hardening subject until that difference is evaluated on its own merits.
+Eight of its nine changed files were already byte-identical on `main`. The remaining delta was immutable pinning of `actions/checkout@v4` and `actions/setup-python@v5`.
+
+On 2026-09-28:
+
+- the current official v4/v5 tags were resolved to immutable commit SHAs;
+- `firesafe/main` was updated to pin those exact commits;
+- the exact seven manifest-validator tests were reproduced successfully against the main source outside GitHub Actions;
+- the resulting GitHub-hosted workflow still failed before runner allocation, with empty runner/step metadata and an unavailable job-log blob, so no hosted-CI GREEN claim is made;
+- PR #4 was then closed as superseded because its unique source/security intent had been preserved on `main`.
+
+The unresolved GitHub-hosted runner failure remains infrastructure evidence, not a source-regression claim.
 
 ## Portfolio result
 
