@@ -23,8 +23,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 |---:|---|---|---|---|
 | 1 | `abil` | public | `main` | COMPLETE — `a93e345da27028df77e8c9047d1d32780038550b` |
 | 2 | `Attune` | public | `main` | COMPLETE — `46461057e4d9ea25ec91a051fc17020e1113329a` |
-| 3 | `axle` | public | `main` | IN_PROGRESS |
-| 4 | `brigit` | private | `main` | PENDING |
+| 3 | `axle` | public | `main` | COMPLETE — `d470544fb64875cb4789472ad4ef1b30f1fa65ee` |
+| 4 | `brigit` | private | `main` | IN_PROGRESS |
 | 5 | `brigit-unbound` | private | `main` | PENDING |
 | 6 | `bt2` | public | `main` | PENDING |
 | 7 | `bugops` | public | `main` | PENDING |
@@ -125,6 +125,22 @@ Evidence:
 - qualification workflow now targets canonical main;
 - hosted PR exact-head qualification: PASS.
 
+### 3. axle
+
+Canonical main after repair:
+
+`d470544fb64875cb4789472ad4ef1b30f1fa65ee`
+
+Evidence:
+
+- exact merged-main validator: 30/30 unit tests PASS;
+- Python source/test compile: PASS;
+- TOML and hardware JSON parse: PASS;
+- touchscreen JavaScript parse: PASS;
+- stale V1 integration state superseded by current V2 continuation;
+- canonical cross-platform validator wired into CI;
+- hosted PR exact-head CI: PASS.
+
 ## Current repository
 
-`axle` — sequential repair repository 3 of 71.
+`brigit` — sequential repair repository 4 of 71.
