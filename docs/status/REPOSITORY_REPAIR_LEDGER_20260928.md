@@ -29,8 +29,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 6 | `bt2` | public | `main` | COMPLETE — `66ecc19b60036c14f6c0327787bddf9e2cb6b132` |
 | 7 | `bugops` | public | `main` | COMPLETE — `f77a346314bf51a362a77b0da3f0f4e469442bff` |
 | 8 | `build-team-2.0` | public | `main` | COMPLETE — `05640213e09ab164e3a950cce5a3f3e4adeb6704` |
-| 9 | `ccb-core` | public | `main` | IN_PROGRESS |
-| 10 | `chat-communication-bus` | private | `main` | PENDING |
+| 9 | `ccb-core` | public | `main` | COMPLETE — `81254afff7fa6a44ea1b32fcc5f114909061d12f` |
+| 10 | `chat-communication-bus` | private | `main` | IN_PROGRESS |
 | 11 | `conations` | public | `main` | PENDING |
 | 12 | `deepmemorystorage` | public | `main` | PENDING |
 | 13 | `discovery` | public | `main` | PENDING |
@@ -225,6 +225,21 @@ Evidence:
 - exact PR head hosted repository-integrity workflow: PASS;
 - no post-merge workflow run was observed on the merge commit, so no post-merge CI claim is made.
 
+### 9. ccb-core
+
+Canonical main after repair:
+
+`81254afff7fa6a44ea1b32fcc5f114909061d12f`
+
+Evidence:
+
+- trusted projection and writer-lane CLIs no longer default to private deployment files absent from public CCB Base;
+- private topology/cutover paths are explicit required inputs;
+- regressions prove missing overlay inputs fail at CLI admission;
+- exact PR head CI matrix: PASS on Python 3.11 and 3.12;
+- dependency review: PASS;
+- no separate post-merge workflow run was observed on the merge commit.
+
 ## Current repository
 
-`ccb-core` — sequential repair repository 9 of 71.
+`chat-communication-bus` — sequential repair repository 10 of 71.
