@@ -24,8 +24,8 @@ Current estate: 71 repositories — 69 active, 2 archived.
 | 1 | `abil` | public | `main` | COMPLETE — `a93e345da27028df77e8c9047d1d32780038550b` |
 | 2 | `Attune` | public | `main` | COMPLETE — `46461057e4d9ea25ec91a051fc17020e1113329a` |
 | 3 | `axle` | public | `main` | COMPLETE — `d470544fb64875cb4789472ad4ef1b30f1fa65ee` |
-| 4 | `brigit` | private | `main` | IN_PROGRESS |
-| 5 | `brigit-unbound` | private | `main` | PENDING |
+| 4 | `brigit` | private | `main` | COMPLETE — `9f24b88fe5154e073a6f79a6c71e8f484c9fec79` |
+| 5 | `brigit-unbound` | private | `main` | IN_PROGRESS |
 | 6 | `bt2` | public | `main` | PENDING |
 | 7 | `bugops` | public | `main` | PENDING |
 | 8 | `build-team-2.0` | public | `main` | PENDING |
@@ -141,6 +141,22 @@ Evidence:
 - canonical cross-platform validator wired into CI;
 - hosted PR exact-head CI: PASS.
 
+### 4. brigit
+
+Canonical main after repair:
+
+`9f24b88fe5154e073a6f79a6c71e8f484c9fec79`
+
+Evidence:
+
+- historical cleanup/reconstruction PR #5 restacked onto current licensed main;
+- exact visual canon blob identities verified;
+- all local Markdown links and JSON validation: PASS;
+- exact merged-main local repository validator: PASS;
+- stale PR #5 closed as superseded;
+- issues #1/#6/#7 remain open with provider/raw-byte/branch-deletion blockers;
+- no provider mutation or branch deletion performed.
+
 ## Current repository
 
-`brigit` — sequential repair repository 4 of 71.
+`brigit-unbound` — sequential repair repository 5 of 71.
