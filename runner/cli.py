@@ -1470,9 +1470,61 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _record_worker_receipt(args)
     if args.command == "run-reference-worker":
         return _run_reference_worker(args)
+    if args.command == "portfolio-wave-plan":
+        return _portfolio_wave_plan(
+            args.wave,
+            max_parallel=args.max_parallel,
+            max_per_identity=args.max_per_identity,
+            max_per_family=args.max_per_family,
+            occupied_collision_keys=args.occupied_collision_key,
+        )
+    if args.command == "portfolio-operator-bindings":
+        return _portfolio_operator_bindings(args.wave, args.corpus, args.projects)
+    if args.command == "portfolio-wave-claim":
+        return _portfolio_wave_claim(
+            plan_path=args.plan,
+            wave_path=args.wave,
+            corpus_path=args.corpus,
+            projects_path=args.projects,
+            subject_id=args.subject_id,
+            state_db=args.state_db,
+            holder=args.holder,
+            lease_ttl=args.lease_ttl,
+            allowed_repositories=args.allowed_repository,
+        )
+    if args.command == "portfolio-wave-promote":
+        return _portfolio_wave_promote(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            holder=args.holder,
+            review_path=args.review,
+            execution_grant_path=args.execution_grant,
+            effect_grant_path=args.effect_grant,
+        )
+    if args.command == "github-source-write-runtime-qualify":
+        return _github_source_write_runtime_qualify(args.repository, args.ref)
+    if args.command == "github-source-write-finalize-effect":
+        return _github_source_write_finalize_effect(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+        )
+    if args.command == "github-source-write-reconcile":
+        return _github_source_write_reconcile(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            reconciler=args.reconciler,
+        )
+    if args.command == "github-read-smoke":
+        return _github_read_smoke(args.repository, args.ref, args.expected_head)
     if args.command == "reconcile-queue":
         return _reconcile_queue(args)
-    return _github_read_smoke(args.repository, args.ref, args.expected_head)
+    raise AssertionError(f"unhandled command: {args.command}")
 
 
 def entrypoint() -> None:
