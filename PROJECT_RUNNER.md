@@ -98,8 +98,48 @@ CI retains `contents: read`. The live smoke test is connectivity/currentness evi
 - stale output becomes SUPERSEDED rather than COMPLETE;
 - unresolved currentness or fencing becomes bounded OUTCOME_UNKNOWN.
 
+## M6 operator route
+
+The ordinary CLI exposes a bounded real operator route through run-inspection. It accepts only an already-derived READY/INSPECT frontier, binds an exact target repository/ref/head and the current project-registry digest into durable work identity, persists budget/work/lease/journal state, uses the real GitHub read backend, independently rechecks exact subject currentness, and atomically finalizes terminal verification evidence.
+
+operator-status reports unresolved durable recovery classes without re-executing backend work. An ADMITTED attempt with no recorded result remains an ambiguous-effect state and is never blindly retried.
+
+The default state database is local SQLite. Its durability is scoped to the filesystem retaining that database; ephemeral CI storage is not cross-run persistence.
+
+## M6 durable portfolio currentness
+
+Portfolio currentness is a separate read-only durability boundary from execution admission.
+
+A portfolio cycle must use one exact project-registry snapshot, one exact dependency-registry snapshot, and one exact worker-registry snapshot. Dependency edges may create READ_REF target grants only after the provider and consumer exist in that project snapshot, the selector repository is registered to the declared provider, and the selector has an exact ref.
+
+The first successful cycle for a dependency-registry digest establishes the observation baseline. Project- and worker-registry changes on that same dependency topology do not discard observation history or unresolved work: current exact-subject frontiers are recovered from durable topology history and re-evaluated under the current scheduling/authority state. A dependency-topology digest change still establishes a new observation baseline.
+
+All required ref reads must succeed before a snapshot can advance. Snapshot persistence and scheduler decisions are one SQLite transaction. The transaction rechecks the exact latest compatible predecessor under `BEGIN IMMEDIATE`; a stale concurrent collector must fail rather than overwrite or double-schedule from an obsolete predecessor.
+
+READY frontiers are persisted as `QUEUED`; non-ready frontiers are persisted as `BLOCKED`. A frontier is not READY for execution unless the current project snapshot contains one explicit execution target for its work type. Repository membership alone does not authorize a ref, and `main` is never inferred.
+
+## M6 fenced queue consumption
+
+Queue consumption is separately fenced from operator execution. A consumer may claim only a READY supported work item from the latest snapshot whose project/dependency/worker digests equal the current configuration. Claims use monotonic fencing tokens and respect live collision domains across snapshots.
+
+The exact declared target repository/ref is stored with the queue claim. Its resolved exact head is persisted before operator execution and remains stable across reclaim; a reclaimed attempt cannot silently select a newer target head.
+
+The queue derives a deterministic operator lineage from durable snapshot/frontier identity. Before execution it reconstructs the exact expected operator work fingerprint. Existing terminal operator state is reconciliation evidence and must be consumed without backend re-execution. Existing nonterminal state is ambiguous and must become queue `OUTCOME_UNKNOWN`; it does not authorize blind replay.
+
+Pending queue work is semantic, not tied to the newest observation row. Unclaimed or retryable work remains recoverable across compatible snapshots while its full exact provider subject is still current. A newer subject makes the older frontier non-claimable. Historical terminal state acts as a tombstone for that semantic fingerprint, preventing resurrection from an older row. Queue state remains coordination/evidence, not downstream mutation authority.
+
+## M6 queue reconciliation and read-only worker routing
+
+A project may bind an execution target to a worker ID and exact invocation route. That binding becomes runnable only when the exact worker-registry snapshot contains one matching worker that is `EXECUTABLE`, the target route is `VERIFIED`, and the same route has an explicit `READ_ONLY` effect contract. Worker registration, locator presence, connected state, or a verified different route does not qualify the target route.
+
+Qualified non-INSPECT work is handed off through a durable worker-route outbox. Queue transition to `ROUTED` and outbox insertion are one transaction. The outbox payload binds worker-registry digest, queue fencing token, worker/route identity, replay policy, exact target head, and exact frontier payload. Creating the envelope is routing evidence, not proof that an external worker ran. Delivery is separately fenced: the exact current worker registry must still show the worker EXECUTABLE, the exact route VERIFIED, and the route READ_ONLY before an envelope can be pulled. The provider exact subject is rechecked against the latest compatible portfolio currentness before delivery; stale packets are superseded rather than handed to a worker. Worker packets are local sensitive artifacts: CLI delivery writes them `0600` and refuses external/private portfolio packets inside the public checkout. A worker receipt is accepted only from the exact route identity, holder, and delivery fence.
+
+`ROUTED` and `OUTCOME_UNKNOWN` reserve their collision domains until explicit reconciliation. SAFE delivery routes may reclaim an expired delivery fence. RECONCILE_REQUIRED routes turn an expired claim into ambiguous delivery state and require explicit reconciliation before another attempt; NEVER routes cannot be retry-released. Reconciliation requires the exact queue subject/fence plus an evidence SHA-256 and reconciler identity. Routed receipt classes must be compatible with the requested resolution. `CONFIRM_COMPLETE` additionally re-reads the provider ref and exact bound target ref live and rejects stale work even when the worker receipt says SUCCEEDED. A terminal confirmation updates queue state and any matching routed outbox in the same transaction. Any permitted retry release increments attempt generation and derives a new deterministic lineage; the old execution identity is never reused as fresh work.
+
+The evidence digest binds the operator's reconciliation record; it is not independently self-authenticating proof of the external event.
+
 ## Current effect ceiling
 
-M5 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission.
+M6 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission. The first operator route is intentionally read-only.
 
-The twelve Custom GPT records remain registrations with UNVERIFIED routes until an end-to-end executable path is independently demonstrated.
+The twelve Custom GPT records remain registrations with UNVERIFIED routes until an end-to-end executable path is independently demonstrated. They are not promoted by the reference worker. Project Runner separately owns one GITHUB_ACTION reference read worker whose `RUNNER_ACTION_PULL` route is VERIFIED only at the READ_ONLY/SAFE ceiling and whose exact-head CI proof must live-read the configured GitHub ref and persist a fenced receipt.

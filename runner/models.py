@@ -22,6 +22,30 @@ class RouteState(str, Enum):
     UNAVAILABLE = "UNAVAILABLE"
 
 
+class RouteEffectClass(str, Enum):
+    READ_ONLY = "READ_ONLY"
+    MUTATING = "MUTATING"
+
+
+class ReplayPolicy(str, Enum):
+    SAFE = "SAFE"
+    RECONCILE_REQUIRED = "RECONCILE_REQUIRED"
+    NEVER = "NEVER"
+
+
+@dataclass(frozen=True)
+class WorkerRouteContract:
+    effect_class: RouteEffectClass
+    replay_policy: ReplayPolicy
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> "WorkerRouteContract":
+        return cls(
+            effect_class=RouteEffectClass(str(data["effect_class"])),
+            replay_policy=ReplayPolicy(str(data["replay_policy"])),
+        )
+
+
 class WorkerType(str, Enum):
     CHATGPT_CUSTOM_GPT = "CHATGPT_CUSTOM_GPT"
     CHATGPT_PLUGIN = "CHATGPT_PLUGIN"
@@ -54,6 +78,7 @@ class WorkerDefinition:
     locators: Mapping[str, str]
     roles: tuple[str, ...]
     routes: Mapping[InvocationRoute, RouteState]
+    route_contracts: Mapping[InvocationRoute, WorkerRouteContract]
     reconstruction: Mapping[str, str] | None
 
     @classmethod
@@ -62,11 +87,14 @@ class WorkerDefinition:
         lifecycle = WorkerLifecycle(str(data["lifecycle"]))
         raw_locators = data.get("locators", {})
         raw_routes = data.get("routes", {})
+        raw_route_contracts = data.get("route_contracts", {})
         raw_reconstruction = data.get("reconstruction")
         if not isinstance(raw_locators, Mapping):
             raise ValueError("locators must be a mapping")
         if not isinstance(raw_routes, Mapping):
             raise ValueError("routes must be a mapping")
+        if not isinstance(raw_route_contracts, Mapping):
+            raise ValueError("route_contracts must be a mapping")
 
         locators = {str(k): str(v) for k, v in raw_locators.items()}
 
@@ -98,6 +126,16 @@ class WorkerDefinition:
             InvocationRoute(str(route)): RouteState(str(state))
             for route, state in raw_routes.items()
         }
+        route_contracts: dict[InvocationRoute, WorkerRouteContract] = {}
+        for route, raw_contract in raw_route_contracts.items():
+            invocation_route = InvocationRoute(str(route))
+            if invocation_route not in routes:
+                raise ValueError("route contract requires a declared worker route")
+            if not isinstance(raw_contract, Mapping):
+                raise ValueError("route contract must be a mapping")
+            route_contracts[invocation_route] = WorkerRouteContract.from_mapping(
+                raw_contract
+            )
         route_states = set(routes.values())
         if lifecycle is WorkerLifecycle.CONNECTED and not (
             RouteState.CONNECTED in route_states or RouteState.VERIFIED in route_states
@@ -126,6 +164,7 @@ class WorkerDefinition:
             locators=locators,
             roles=tuple(str(role) for role in raw_roles),
             routes=routes,
+            route_contracts=route_contracts,
             reconstruction=reconstruction,
         )
 
@@ -139,6 +178,52 @@ class ProjectAssignmentScope(str, Enum):
 class ProjectReviewScope(str, Enum):
     NONE = "NONE"
     STANDING = "STANDING"
+
+
+@dataclass(frozen=True)
+class ProjectExecutionTarget:
+    work_type: str
+    repository: str
+    ref: str
+    worker_id: str | None = None
+    worker_route: InvocationRoute | None = None
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> "ProjectExecutionTarget":
+        work_type = str(data.get("work_type", "")).strip()
+        repository = str(data.get("repository", "")).strip()
+        ref = str(data.get("ref", "")).strip()
+        worker_id_raw = data.get("worker_id")
+        worker_route_raw = data.get("worker_route")
+        worker_id = (
+            str(worker_id_raw).strip()
+            if worker_id_raw is not None
+            else None
+        )
+        worker_route = (
+            InvocationRoute(str(worker_route_raw))
+            if worker_route_raw is not None
+            else None
+        )
+        if (worker_id is None) != (worker_route is None):
+            raise ValueError(
+                "execution target worker_id and worker_route must be declared together"
+            )
+        if worker_id == "":
+            raise ValueError("execution target worker_id must not be empty")
+        if not work_type:
+            raise ValueError("execution target work_type is required")
+        if _REPOSITORY_RE.fullmatch(repository) is None:
+            raise ValueError("execution target repository must be owner/repo")
+        if not ref:
+            raise ValueError("execution target ref is required")
+        return cls(
+            work_type=work_type,
+            repository=repository,
+            ref=ref,
+            worker_id=worker_id,
+            worker_route=worker_route,
+        )
 
 
 class ProjectSchedulingState(str, Enum):
@@ -165,16 +250,20 @@ class ProjectDefinition:
     review_scope: ProjectReviewScope
     scheduling_state: ProjectSchedulingState
     family_id: str
+    execution_targets: tuple[ProjectExecutionTarget, ...] = ()
     scope_note: str | None = None
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, object]) -> "ProjectDefinition":
         raw_repositories = data.get("repositories", [])
         raw_capabilities = data.get("capabilities", [])
+        raw_execution_targets = data.get("execution_targets", [])
         if not isinstance(raw_repositories, list):
             raise ValueError("repositories must be a list")
         if not isinstance(raw_capabilities, list):
             raise ValueError("capabilities must be a list")
+        if not isinstance(raw_execution_targets, list):
+            raise ValueError("execution_targets must be a list")
         visibility = str(data["visibility"])
         if visibility not in {"public", "private"}:
             raise ValueError("visibility must be public or private")
@@ -183,11 +272,27 @@ class ProjectDefinition:
         if not family_id:
             raise ValueError("family_id must not be empty")
         scope_note = data.get("scope_note")
+        repositories = tuple(str(repo) for repo in raw_repositories)
+        execution_targets = tuple(
+            ProjectExecutionTarget.from_mapping(item)
+            for item in raw_execution_targets
+        )
+        target_work_types: set[str] = set()
+        for target in execution_targets:
+            if target.repository not in repositories:
+                raise ValueError(
+                    "execution target repository must belong to project repositories"
+                )
+            if target.work_type in target_work_types:
+                raise ValueError(
+                    "project execution target work_type must be unique"
+                )
+            target_work_types.add(target.work_type)
         return cls(
             id=project_id,
             name=str(data["name"]),
             visibility=visibility,
-            repositories=tuple(str(repo) for repo in raw_repositories),
+            repositories=repositories,
             capabilities=tuple(str(capability) for capability in raw_capabilities),
             assignment_scope=ProjectAssignmentScope(
                 str(data.get("assignment_scope", ProjectAssignmentScope.NONE.value))
@@ -204,6 +309,7 @@ class ProjectDefinition:
                 )
             ),
             family_id=family_id,
+            execution_targets=execution_targets,
             scope_note=str(scope_note) if scope_note is not None else None,
         )
 

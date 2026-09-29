@@ -143,3 +143,22 @@ workers:
     RUNNER_ACTION_PULL: UNVERIFIED
     DIRECT_EXTERNAL_DISPATCH: UNVERIFIED
     PLUGIN_TOOL_CALL: UNVERIFIED
+- id: project-runner-reference-read-worker
+  name: Project Runner Reference Read Worker
+  worker_type: GITHUB_ACTION
+  lifecycle: EXECUTABLE
+  locators:
+    workflow: .github/workflows/test.yml
+    command: project-runner run-reference-worker
+  roles:
+  - reference-read-worker
+  routes:
+    RUNNER_ACTION_PULL: VERIFIED
+  route_contracts:
+    RUNNER_ACTION_PULL:
+      effect_class: READ_ONLY
+      replay_policy: SAFE
+  reconstruction:
+    repository: thebrazenbeard/project-runner
+    path: runner/reference_worker.py
+    commit: 50af885c961d78aef0e5f8a735f699a6108a42af

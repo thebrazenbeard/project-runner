@@ -246,7 +246,7 @@ class SqliteDispatchAdmissionStore:
         work: WorkUnit,
         effective_capabilities,
     ) -> tuple[int, int]:
-        """Atomically seed root budget and immutable root work state."""
+        """Atomically seed the root budget and root recursive work record."""
         if budget.scope_id != "root":
             raise ValueError("root initialization requires the root budget scope")
         if work.recursion_depth != 0 or work.parent_work_id is not None:
