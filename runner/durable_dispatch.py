@@ -84,6 +84,26 @@ CREATE TABLE IF NOT EXISTS execution_reconciliations (
 
 
 @dataclass(frozen=True)
+class DurableExecutionVerification:
+    sequence: int
+    status: WorkUnitStatus
+    reason: str
+    verified_at: float
+    sha256: str
+
+
+@dataclass(frozen=True)
+class DurableExecutionReconciliation:
+    sequence: int
+    outcome: str
+    reason: str
+    evidence: tuple[str, ...]
+    reconciler: str
+    observed_at: float
+    sha256: str
+
+
+@dataclass(frozen=True)
 class DurableExecutionJournalEntry:
     lineage_id: str
     work_fingerprint: str
@@ -1191,6 +1211,115 @@ class SqliteDispatchAdmissionStore:
             raise ValueError("execution result journal fingerprint mismatch")
         return result
 
+    def load_latest_verification(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+    ) -> DurableExecutionVerification | None:
+        self._attempt_row(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        row = self.connection.execute(
+            """
+            SELECT sequence, status, reason, verified_at, verification_sha256
+            FROM execution_verifications
+            WHERE lineage_id = ?
+              AND work_fingerprint = ?
+              AND fencing_token = ?
+            ORDER BY sequence DESC
+            LIMIT 1
+            """,
+            (
+                lineage_id,
+                work_fingerprint_value,
+                fencing_token,
+            ),
+        ).fetchone()
+        if row is None:
+            return None
+        status = WorkUnitStatus(str(row[1]))
+        expected = _verification_digest(
+            status=status,
+            reason=str(row[2]),
+            verified_at=float(row[3]),
+        )
+        if not hmac.compare_digest(str(row[4]), expected):
+            raise ValueError("execution verification journal digest mismatch")
+        return DurableExecutionVerification(
+            sequence=int(row[0]),
+            status=status,
+            reason=str(row[2]),
+            verified_at=float(row[3]),
+            sha256=str(row[4]),
+        )
+
+
+    def load_latest_reconciliation(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+    ) -> DurableExecutionReconciliation | None:
+        self._attempt_row(
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+        row = self.connection.execute(
+            """
+            SELECT sequence, outcome, reason, evidence_json, reconciler,
+                   observed_at, reconciliation_sha256
+            FROM execution_reconciliations
+            WHERE lineage_id = ?
+              AND work_fingerprint = ?
+              AND fencing_token = ?
+            ORDER BY sequence DESC
+            LIMIT 1
+            """,
+            (
+                lineage_id,
+                work_fingerprint_value,
+                fencing_token,
+            ),
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            evidence_data = json.loads(str(row[3]))
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "execution reconciliation evidence is invalid JSON"
+            ) from exc
+        if not isinstance(evidence_data, list):
+            raise ValueError(
+                "execution reconciliation evidence is structurally invalid"
+            )
+        evidence = tuple(str(item) for item in evidence_data)
+        expected = _reconciliation_digest(
+            outcome=str(row[1]),
+            reason=str(row[2]),
+            evidence=evidence,
+            reconciler=str(row[4]),
+            observed_at=float(row[5]),
+        )
+        if not hmac.compare_digest(str(row[6]), expected):
+            raise ValueError("execution reconciliation journal digest mismatch")
+        return DurableExecutionReconciliation(
+            sequence=int(row[0]),
+            outcome=str(row[1]),
+            reason=str(row[2]),
+            evidence=evidence,
+            reconciler=str(row[4]),
+            observed_at=float(row[5]),
+            sha256=str(row[6]),
+        )
+
+
     def record_verification(
         self,
         *,
@@ -1293,6 +1422,108 @@ class SqliteDispatchAdmissionStore:
         else:
             self.connection.commit()
         return sequence
+
+    def begin_verification(
+        self,
+        *,
+        lineage_id: str,
+        work_fingerprint_value: str,
+        fencing_token: int,
+        expected_work_generation: int,
+        lease: Lease,
+        started_at: float,
+    ) -> int:
+        """Atomically move observed RUNNING work into VERIFYING under the same fence.
+
+        Replay is idempotent if the exact work is already VERIFYING at the one
+        expected successor generation.
+        """
+        if lease.fencing_token != fencing_token:
+            raise ValueError("execution verification fencing token mismatch")
+
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            attempt = self._attempt_row(
+                lineage_id=lineage_id,
+                work_fingerprint_value=work_fingerprint_value,
+                fencing_token=fencing_token,
+            )
+            if attempt[5] is None or attempt[6] is None:
+                raise ValueError(
+                    "execution result must be recorded before verification"
+                )
+
+            work_row = self.connection.execute(
+                """
+                SELECT status, generation
+                FROM recursive_work_state
+                WHERE lineage_id = ? AND work_fingerprint = ?
+                """,
+                (lineage_id, work_fingerprint_value),
+            ).fetchone()
+            if work_row is None:
+                raise ValueError("recursive work state not found")
+            current_status = WorkUnitStatus(str(work_row[0]))
+            current_generation = int(work_row[1])
+
+            _validate_active_lease_state(
+                self.connection,
+                work_fingerprint_value=work_fingerprint_value,
+                lease=lease,
+                now=started_at,
+            )
+
+            if (
+                current_status is WorkUnitStatus.VERIFYING
+                and current_generation == expected_work_generation + 1
+            ):
+                self.connection.rollback()
+                return current_generation
+
+            if current_generation != expected_work_generation:
+                raise ValueError("recursive work generation mismatch")
+            if current_status is not WorkUnitStatus.RUNNING:
+                raise ValueError(
+                    "verification start requires RUNNING work"
+                )
+            allowed = _ALLOWED_STATUS_TRANSITIONS.get(
+                current_status,
+                frozenset(),
+            )
+            if WorkUnitStatus.VERIFYING not in allowed:
+                raise ValueError(
+                    "recursive work lifecycle transition is invalid: "
+                    f"{current_status.value} -> VERIFYING"
+                )
+
+            updated = self.connection.execute(
+                """
+                UPDATE recursive_work_state
+                SET status = ?, generation = generation + 1
+                WHERE lineage_id = ?
+                  AND work_fingerprint = ?
+                  AND status = ?
+                  AND generation = ?
+                """,
+                (
+                    WorkUnitStatus.VERIFYING.value,
+                    lineage_id,
+                    work_fingerprint_value,
+                    WorkUnitStatus.RUNNING.value,
+                    expected_work_generation,
+                ),
+            )
+            if updated.rowcount != 1:
+                raise ValueError(
+                    "recursive work changed during verification start"
+                )
+        except BaseException:
+            self.connection.rollback()
+            raise
+        else:
+            self.connection.commit()
+        return expected_work_generation + 1
+
 
     def finalize_terminal_verification(
         self,
