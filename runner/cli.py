@@ -39,6 +39,16 @@ from .operator import (
     summarize_recovery_state,
 )
 from .portfolio import collect_and_schedule_portfolio, summarize_portfolio_state
+from .portfolio_advancement import load_advancement_wave
+from .portfolio_corpus import load_portfolio_corpus
+from .portfolio_operator_binding import bind_wave_to_operator_registry
+from .portfolio_operator_bridge import claim_bound_plan_subject
+from .portfolio_wave_scheduler import WaveExecutionBudget, plan_wave_admission
+from .promoted_github_runtime import (
+    finalize_github_source_write_effect_confirmed,
+    qualify_github_source_write_runtime,
+    reconcile_github_source_write_outcome_unknown,
+)
 from .queue_consumer import (
     consume_next_queued_read_only_work,
     reconcile_queue_item,
@@ -1450,6 +1460,69 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _frontier_report(args.before, args.after, args.dependencies)
     if args.command == "dispatch-report":
         return _dispatch_report(args.before, args.after, args.dependencies)
+    if args.command == "portfolio-wave-plan":
+        return _portfolio_wave_plan(
+            args.wave,
+            max_parallel=args.max_parallel,
+            max_per_identity=args.max_per_identity,
+            max_per_family=args.max_per_family,
+            occupied_collision_keys=args.occupied_collision_key,
+        )
+    if args.command == "portfolio-operator-bindings":
+        return _portfolio_operator_bindings(
+            args.wave,
+            args.corpus,
+            args.projects,
+        )
+    if args.command == "portfolio-wave-claim":
+        return _portfolio_wave_claim(
+            plan_path=args.plan,
+            wave_path=args.wave,
+            corpus_path=args.corpus,
+            projects_path=args.projects,
+            subject_id=args.subject_id,
+            state_db=args.state_db,
+            holder=args.holder,
+            lease_ttl=args.lease_ttl,
+            allowed_repositories=args.allowed_repository,
+        )
+    if args.command == "portfolio-wave-promote":
+        return _portfolio_wave_promote(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            holder=args.holder,
+            review_path=args.review,
+            execution_grant_path=args.execution_grant,
+            effect_grant_path=args.effect_grant,
+        )
+    if args.command == "github-source-write-runtime-qualify":
+        return _github_source_write_runtime_qualify(
+            args.repository,
+            args.ref,
+        )
+    if args.command == "github-source-write-finalize-effect":
+        return _github_source_write_finalize_effect(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+        )
+    if args.command == "github-source-write-reconcile":
+        return _github_source_write_reconcile(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
+            reconciler=args.reconciler,
+        )
+    if args.command == "github-read-smoke":
+        return _github_read_smoke(
+            args.repository,
+            args.ref,
+            args.expected_head,
+        )
     if args.command == "run-inspection":
         return _run_inspection(args)
     if args.command == "operator-status":
@@ -1472,7 +1545,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_reference_worker(args)
     if args.command == "reconcile-queue":
         return _reconcile_queue(args)
-    return _github_read_smoke(args.repository, args.ref, args.expected_head)
+    parser.error(f"unhandled command: {args.command}")
 
 
 def entrypoint() -> None:
