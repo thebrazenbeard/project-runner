@@ -1,0 +1,100 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "COGNITIVE_CORRECTION",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "fuckup",
+      "repository": "thebrazenbeard/fuckup",
+      "exact_main": "a87dea38a58c4cff75bc7d123d87f63a5e110895",
+      "exact_main_qualification": {
+        "run": 36355338549,
+        "name": "qualification",
+        "conclusion": "success"
+      },
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "hc-brain",
+      "repository": "thebrazenbeard/hc-brain",
+      "exact_main": "80a55949b0bb7549b7f678fba8ecedce854e3c0e",
+      "exact_main_qualification": [
+        {
+          "run": 36065590441,
+          "name": "Cognitive Core",
+          "conclusion": "success"
+        },
+        {
+          "run": 36065590452,
+          "name": "Architecture Conformance",
+          "conclusion": "success"
+        },
+        {
+          "run": 36065590338,
+          "name": "Reference Kernel",
+          "conclusion": "success"
+        }
+      ],
+      "open_drafts": [
+        21,
+        22,
+        23
+      ],
+      "caveat": "Open drafts remain separate branch subjects and are not promoted over exact current main by this audit.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "lgcm",
+      "repository": "thebrazenbeard/lgcm",
+      "exact_main": "0043c60419de9ef0b52363b62aed8c0a52ef63f5",
+      "exact_main_qualification": null,
+      "older_observed_automation": {
+        "head": "8a32de8f13f844b56af3f50a8fa54b864945915a",
+        "run": 36182460418,
+        "name": "Graph Update: pip in /. #1592280519",
+        "conclusion": "success"
+      },
+      "delta_from_older_head": {
+        "ahead_by": 16,
+        "substantive_source_and_tests_changed": true
+      },
+      "caveat": "Dependency-graph automation is not source qualification. Current main must remain unqualified until executable tests are run against the exact head.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "noema",
+      "repository": "thebrazenbeard/noema",
+      "exact_main": "697d1fac6f9fea158994888a861e651ac8fac282",
+      "exact_main_qualification": [
+        {
+          "run": 36204170237,
+          "name": "Noema source tests",
+          "conclusion": "success"
+        },
+        {
+          "run": 36204170262,
+          "name": "Noema I1",
+          "conclusion": "success"
+        }
+      ],
+      "open_drafts": [
+        32,
+        33,
+        34,
+        36,
+        37,
+        38,
+        43,
+        44
+      ],
+      "caveat": "Draft research/recovery branches are not promoted over exact current main by this audit.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "A green dependency graph update is not executable source qualification.",
+    "Exact-main qualification does not grant source-write or runtime authority.",
+    "Open cognitive research drafts must not silently outrank a newer qualified main."
+  ]
+}
