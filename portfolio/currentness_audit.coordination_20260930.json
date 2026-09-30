@@ -1,0 +1,66 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "COORDINATION_CONTINUOUS_EXECUTION",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "ccb-core",
+      "repository": "thebrazenbeard/ccb-core",
+      "exact_main": "273c93bc46683580024c1521fd2c523a8a6593bd",
+      "exact_main_qualification": {
+        "run": 36493854093,
+        "name": "ci",
+        "conclusion": "success"
+      },
+      "same_head_dependency_checks": [
+        {
+          "run": 36758321166,
+          "conclusion": "success"
+        },
+        {
+          "run": 36758321304,
+          "conclusion": "success"
+        }
+      ],
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "pro-run",
+      "repository": "thebrazenbeard/pro-run",
+      "exact_main": "0ffc95351db34afed091c3239614f57f371c04ad",
+      "merged_pr": {
+        "pr": 10,
+        "head": "2632de241604b27eb6e85544ecf29774d73aa2ec",
+        "run": 36641890383,
+        "conclusion": "success"
+      },
+      "main_delta_paths": [
+        "tests/test_http_tool_loop_integration.py"
+      ],
+      "caveat": "Exact main differs from the tested PR head; require exact-main requalification before source expansion.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "workbridgecommander",
+      "repository": "thebrazenbeard/workbridgecommander",
+      "exact_main": "c2b95be79ca011a539c20bfee60fcbc46cfea177",
+      "merged_pr": {
+        "pr": 4,
+        "head": "bc4ae82d78e4b5dd2051700f145b8d5f53d1aa1c",
+        "run": 36629389444,
+        "conclusion": "success"
+      },
+      "main_delta_paths": [
+        "docs/runtime/MEDIA_LIBRARY_DIRECT_UNC_EVIDENCE_20260929.md"
+      ],
+      "caveat": "Exact main differs from the tested PR head; repository runtime-evidence text is not independent proof of a currently reachable endpoint or workstation effect.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "A source repository that describes a runtime proof cannot self-authenticate current runtime effect.",
+    "Merged PR-head CI does not qualify a different merge/main tree without explicit evidence.",
+    "Exact-main CI on CCB Core establishes source qualification only; it does not create a consumer or justify expansion."
+  ]
+}
