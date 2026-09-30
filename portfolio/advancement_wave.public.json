@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-assurance-tranche-v1-20260930",
-    "commit": "e8cba8df33f55512437078a3c24735f5eef86b5c",
+    "ref": "portfolio/audit-coordination-tranche-v1-20260930",
+    "commit": "a86448fe9cbe8b9e8344dd16f9572b07487309e5",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "54d76c4d6f0cf21d6ef3c4fc908a6dfaf9b64aad",
+    "git_blob_sha": "c3d5217ac875b92d8055cc36b4e1979161e0d396",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -161,12 +161,12 @@
         "ACHILLES",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Keep the public core narrow while operational transport evolves separately.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Initial sanitized extraction is complete."
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Keep the sanitized public coordination core narrow and require a concrete consumer before expansion; Runner registers it read/analyze/propose only and HELD.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@273c93bc46683580024c1521fd2c523a8a6593bd observed with no open PRs. CI push run 36493854093 passes at that exact head; dependency update checks on the same head also pass."
     },
     {
       "subject_kind": "repository",
@@ -534,12 +534,12 @@
         "ACHILLES",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Integrate verified Windows/Qwen runtime and recovery fixes while preserving exact effect and reconciliation boundaries.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Core durable runtime is on main; Windows/local-Qwen runtime and stale-error recovery successors are green and open."
+      "review_gate": "EXACT_MAIN_REQUALIFICATION",
+      "frontier": "Requalify exact current main before new source work, then identify the next concrete durable-execution consumer or defect; Runner has no source-write execution target for Pro-Run.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@0ffc95351db34afed091c3239614f57f371c04ad observed with no open PRs. Merged PR #10 head 2632de241604b27eb6e85544ecf29774d73aa2ec passed test run 36641890383, but comparison to current main includes tests/test_http_tool_loop_integration.py, so exact-main qualification is not inferred."
     },
     {
       "subject_kind": "repository",
@@ -1072,9 +1072,9 @@
       "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Qualify endpoint/authentication, revocation, session isolation, exact routing, and workstation-payload binding without laundering remote reachability into workstation authority.",
-      "source_status": "EXACT_SOURCE_CLASSIFIED_NO_REGISTERED_EXECUTION_TARGET — Exact-source classification at c2b95be79ca011a539c20bfee60fcbc46cfea177: remote service/device-agent source is on main; source preserves Desktop Commander workstation semantics and does not establish deployment or workstation effect."
+      "review_gate": "EXACT_MAIN_REQUALIFICATION",
+      "frontier": "Requalify exact current main and separately verify endpoint/authentication/device binding/runtime reachability before any remote-control claim; Runner keeps the subject HELD with no execution target.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@c2b95be79ca011a539c20bfee60fcbc46cfea177 observed with no open PRs. Merged PR #4 head bc4ae82d78e4b5dd2051700f145b8d5f53d1aa1c passed CI run 36629389444, but current main differs by docs/runtime/MEDIA_LIBRARY_DIRECT_UNC_EVIDENCE_20260929.md; exact-main qualification and live endpoint effect are not inferred."
     },
     {
       "subject_kind": "repository",
