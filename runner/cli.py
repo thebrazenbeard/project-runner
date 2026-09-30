@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 from collections import Counter
 from dataclasses import replace
 import hashlib
@@ -8,6 +9,9 @@ import hmac
 import json
 import os
 from pathlib import Path
+import re
+import subprocess
+import tempfile
 import time
 from typing import Sequence
 
@@ -20,6 +24,8 @@ from .dispatch import dispatch_ready
 from .frontier import derive_frontiers
 from .github_backend import GitHubBackend, GitHubOperation, GitHubRestTransport, TargetAuthorityGrant
 from .execution_promotion import (
+    execute_promoted,
+    load_durable_promotion_receipt,
     effect_authority_key_from_environment,
     execution_authority_key_from_environment,
     load_json_document,
@@ -44,6 +50,7 @@ from .portfolio_corpus import load_portfolio_corpus
 from .portfolio_operator_binding import bind_wave_to_operator_registry
 from .portfolio_operator_bridge import claim_bound_plan_subject
 from .portfolio_wave_scheduler import WaveExecutionBudget, plan_wave_admission
+from .promoted_github import PromotedGitHubSourceWriteBackend
 from .promoted_github_runtime import (
     finalize_github_source_write_effect_confirmed,
     qualify_github_source_write_runtime,
@@ -669,6 +676,45 @@ def _portfolio_wave_promote(
     return 0
 
 
+def _github_source_write_execute(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+) -> int:
+    """Execute an already-promoted exact source write; never mint authority."""
+    token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
+    if not token:
+        raise ValueError("PROJECT_RUNNER_GITHUB_TOKEN is required for source writes")
+    receipt = load_durable_promotion_receipt(
+        state_db=state_db,
+        lineage_id=lineage_id,
+        work_fingerprint_value=work_fingerprint_value,
+        fencing_token=fencing_token,
+    )
+    transport = GitHubRestTransport(token=token)
+    result = execute_promoted(
+        state_db=state_db,
+        receipt=receipt,
+        backend=PromotedGitHubSourceWriteBackend(transport=transport),
+        transport=transport,
+    )
+    print(json.dumps({
+        "mode": "GITHUB_SOURCE_WRITE_EXECUTION_V1",
+        "lineage_id": lineage_id,
+        "work_fingerprint": result.work_fingerprint,
+        "fencing_token": fencing_token,
+        "status": result.classification,
+        "succeeded": result.succeeded,
+        "outputs": list(result.outputs),
+        "evidence": list(result.evidence),
+        "backend_executed": True,
+        "deployment_effect_claimed": False,
+    }, sort_keys=True))
+    return 0 if result.succeeded else (2 if result.classification == "OUTCOME_UNKNOWN" else 1)
+
+
 def _github_source_write_runtime_qualify(
     repository: str,
     ref: str,
@@ -1006,6 +1052,24 @@ def _worker_route_status(args) -> int:
     return 0
 
 
+def _secure_windows_worker_packet(path: Path) -> None:
+    """Remove broad inherited NTFS permissions before writing private data."""
+    identity = subprocess.run(
+        ["whoami", "/user", "/fo", "csv", "/nh"],
+        check=True, text=True, capture_output=True,
+    ).stdout.strip()
+    try:
+        sid = next(csv.reader([identity]))[1]
+    except (IndexError, StopIteration) as exc:
+        raise ValueError("cannot resolve Windows worker-packet owner") from exc
+    if re.fullmatch(r"S-\d+(?:-\d+)+", sid) is None:
+        raise ValueError("invalid Windows worker-packet owner SID")
+    subprocess.run(
+        ["icacls", str(path), "/inheritance:r", "/grant:r", f"*{sid}:(F)"],
+        check=True, text=True, capture_output=True,
+    )
+
+
 def _claim_worker_route(args) -> int:
     payload_out = args.payload_out.expanduser().resolve()
     root = ROOT.resolve()
@@ -1043,23 +1107,21 @@ def _claim_worker_route(args) -> int:
         }, sort_keys=True))
         return 0
 
-    temporary = payload_out.with_name(payload_out.name + ".tmp")
-    descriptor = os.open(
-        temporary,
-        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-        0o600,
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{payload_out.name}.", suffix=".tmp", dir=payload_out.parent,
     )
+    temporary = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            if os.name == "nt":
+                _secure_windows_worker_packet(temporary)
             handle.write(json.dumps(claim.payload, sort_keys=True) + "\n")
+        os.replace(temporary, payload_out)
+        if os.name != "nt":
+            os.chmod(payload_out, 0o600)
     except BaseException:
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
+        temporary.unlink(missing_ok=True)
         raise
-    os.replace(temporary, payload_out)
-    os.chmod(payload_out, 0o600)
 
     print(json.dumps({
         "mode": "M6_WORKER_ROUTE_PULL",
@@ -1255,6 +1317,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     wave_promote.add_argument("--review", type=Path, required=True)
     wave_promote.add_argument("--execution-grant", type=Path, required=True)
     wave_promote.add_argument("--effect-grant", type=Path)
+
+    source_write_execute = subparsers.add_parser("github-source-write-execute")
+    source_write_execute.add_argument("--state-db", type=Path, required=True)
+    source_write_execute.add_argument("--lineage-id", required=True)
+    source_write_execute.add_argument("--work-fingerprint", required=True)
+    source_write_execute.add_argument("--fencing-token", type=int, required=True)
 
     source_write_qualify = subparsers.add_parser(
         "github-source-write-runtime-qualify"
@@ -1496,6 +1564,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             review_path=args.review,
             execution_grant_path=args.execution_grant,
             effect_grant_path=args.effect_grant,
+        )
+    if args.command == "github-source-write-execute":
+        return _github_source_write_execute(
+            state_db=args.state_db,
+            lineage_id=args.lineage_id,
+            work_fingerprint_value=args.work_fingerprint,
+            fencing_token=args.fencing_token,
         )
     if args.command == "github-source-write-runtime-qualify":
         return _github_source_write_runtime_qualify(

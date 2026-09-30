@@ -631,3 +631,48 @@ def test_adapter_rejects_request_target_divergence_without_mutation(tmp_path):
     assert result.succeeded is False
     assert result.classification == "PROMOTION_BINDING_MISMATCH"
     assert transport.mutations == []
+
+
+def test_cli_executes_only_previously_promoted_write(tmp_path, monkeypatch, capsys):
+    from runner import cli as cli_module
+
+    claim, transport = _claim(tmp_path)
+    request = _request(claim)
+    review, execution, effect = _evidence(claim, request)
+    receipt = _promote(tmp_path, claim, transport, review, execution, effect)
+    monkeypatch.setenv("PROJECT_RUNNER_GITHUB_TOKEN", "fixture-only-token")
+    monkeypatch.setattr(cli_module, "GitHubRestTransport", lambda *, token: transport)
+    monkeypatch.setattr(
+        cli_module, "execute_promoted",
+        lambda **kwargs: execute_promoted(**kwargs, clock=lambda: 1001.0),
+    )
+    argv = [
+        "github-source-write-execute",
+        "--state-db", str(tmp_path / "operator.sqlite3"),
+        "--lineage-id", receipt.lineage_id,
+        "--work-fingerprint", receipt.work_fingerprint,
+        "--fencing-token", str(receipt.fencing_token),
+    ]
+    assert main(argv) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["status"] == "SUCCEEDED"
+    assert output["backend_executed"] is True
+    assert len(transport.mutations) == 1
+
+    with pytest.raises(ValueError, match="already has a backend result"):
+        main(argv)
+    assert len(transport.mutations) == 1
+
+
+def test_cli_refuses_source_write_without_durable_promotion(tmp_path, monkeypatch):
+    claim, transport = _claim(tmp_path)
+    monkeypatch.setenv("PROJECT_RUNNER_GITHUB_TOKEN", "fixture-only-token")
+    with pytest.raises(ValueError, match="not durable"):
+        main([
+            "github-source-write-execute",
+            "--state-db", str(tmp_path / "operator.sqlite3"),
+            "--lineage-id", claim.lineage_id,
+            "--work-fingerprint", claim.work_fingerprint,
+            "--fencing-token", str(claim.fencing_token),
+        ])
+    assert transport.mutations == []

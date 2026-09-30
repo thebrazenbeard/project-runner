@@ -1,6 +1,8 @@
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -1246,6 +1248,14 @@ def test_cli_worker_route_pull_and_receipt_round_trip(
         ),
     )
     payload_out = tmp_path / "worker-packet.json"
+    if os.name == "nt":
+        # Private packets must not inherit a broadly readable parent ACL.
+        subprocess.run(
+            ["icacls", str(tmp_path), "/grant", "*S-1-5-32-545:(OI)(CI)(RX)"],
+            check=True, capture_output=True, text=True,
+        )
+        # Replacement must not preserve an older, overly broad file ACL.
+        payload_out.write_text("stale fixture", encoding="utf-8")
 
     assert main(
         [
@@ -1269,7 +1279,21 @@ def test_cli_worker_route_pull_and_receipt_round_trip(
     assert claimed["route_id"] == envelope.route_id
     assert claimed["delivery_fencing_token"] == 1
     packet = json.loads(payload_out.read_text(encoding="utf-8"))
-    assert payload_out.stat().st_mode & 0o777 == 0o600
+    if os.name == "nt":
+        # Python's Windows st_mode does not represent NTFS discretionary ACLs.
+        # Verify that the packet has no broadly readable default grants instead.
+        acl = subprocess.run(
+            ["icacls", str(payload_out)], check=True, text=True,
+            capture_output=True,
+        ).stdout.lower()
+        assert "(f)" in acl
+        for broad_principal in (
+            "everyone:", "authenticated users:", "builtin\\users:",
+            "s-1-1-0:", "s-1-5-11:", "s-1-5-32-545:",
+        ):
+            assert broad_principal not in acl
+    else:
+        assert payload_out.stat().st_mode & 0o777 == 0o600
     assert packet["target_repository"] == "example/consumer"
     assert packet["target_ref"] == "review"
     assert packet["target_head"] == "c" * 40

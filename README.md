@@ -52,6 +52,28 @@ The live CI route still has only `contents: read`; it proves exact-head GitHub c
     project-runner github-read-smoke --repository thebrazenbeard/project-runner --ref main
     python -m pytest -q
 
+## Governed read/write execution
+
+Project Runner has both read-only inspection routes and a narrowly scoped GitHub
+source-write backend. After a portfolio claim is durably promoted to `RUNNING`
+with an exact signed execution request, separate review, protected-effect
+authority, and a current fencing token, the operator can invoke:
+
+    project-runner github-source-write-execute \
+      --state-db .project-runner/project-runner.sqlite3 \
+      --lineage-id <lineage-id> \
+      --work-fingerprint <fingerprint> \
+      --fencing-token <token>
+
+This command requires `PROJECT_RUNNER_GITHUB_TOKEN` in the environment. It
+recovers the exact existing promotion from durable storage: callers cannot
+supply fresh repository, ref, path, or content arguments. Runtime execution
+rechecks lease, review and authority expiry, live source head, expected blob,
+non-force ref CAS, and post-publication readback. An uncertain outcome is
+recorded as `OUTCOME_UNKNOWN` and must be reconciled, never blindly replayed.
+The current adapter supports only `PUT_FILE` on an exact authorized branch;
+it does not merge PRs, deploy, or grant itself new permissions.
+
 ## Real operator path
 
 The ordinary CLI now has one deliberately narrow real execution route: a durable, read-only M6 GitHub inspection. It derives one READY INSPECT frontier, persists budget/work/lease/journal state before and during execution, performs exact-ref reads under explicit grants, independently rechecks currentness, and atomically finalizes terminal evidence.
@@ -107,7 +129,7 @@ Read-only worker handoffs are persisted in a digest-bound outbox and can be summ
     project-runner worker-route-status \
       --state-db .project-runner/project-runner.sqlite3
 
-A qualified worker route uses a fenced pull/receipt protocol. Delivery rechecks the current worker/route qualification and the provider exact subject; superseded provider work is retired before a worker can pull it. The packet is written to a `0600` owner-only file rather than echoed to ordinary logs. With an external/private project registry, the packet must be written outside the public checkout:
+A qualified worker route uses a fenced pull/receipt protocol. Delivery rechecks the current worker/route qualification and the provider exact subject; superseded provider work is retired before a worker can pull it. The packet is written to a `0600` owner-only file on POSIX, or to a file with explicit owner-only NTFS permissions on Windows, rather than echoed to ordinary logs. On Windows, inherited access is removed from a fresh temporary file before its private contents are written. With an external/private project registry, the packet must be written outside the public checkout:
 
     project-runner claim-worker-route \
       --worker-id <worker-id> \
