@@ -910,3 +910,132 @@ Discovery's full public evidence generation was executed by GitHub Actions and v
 2. If #47 is current, bind Runner's refreshed Discovery record to its exact qualified subject in a successor checkpoint without claiming merge.
 3. Begin exact-source currentness audits for held non-P0 Runner subjects in dependency order rather than reactivating all 49 held subjects at once.
 4. Keep the four newly classified Runner subjects HELD unless a bounded execution target is separately registered.
+
+---
+
+# J. P1 currentness closure and held-route expansion — 2026-09-30 V4
+
+This section extends the V3 checkpoint after the 76/57/19 corpus refresh and records the completed public P1 currentness pass.
+
+## Stacked Project Runner chain
+
+The following draft PRs are stacked in order and remain unmerged:
+
+- PR #54 — `portfolio/corpus-76-wave-v2-20260930`
+  - qualified head after Discovery rebind: `bfacb69a46ca29e7f10ae1c83b3b944a460def4d`
+  - push + PR suites PASS.
+- PR #55 — `portfolio/audit-assurance-tranche-v1-20260930`
+  - qualified head: `7178a32bcea30a426d6a43ce0628b817c2e0aded`
+  - push + PR suites PASS.
+- PR #56 — `portfolio/audit-coordination-tranche-v1-20260930`
+  - qualified head: `3dc85dcb1fadb019b032b77d7821fc903586bc50`
+  - test suite PASS.
+- PR #57 — `portfolio/audit-cognitive-tranche-v1-20260930`
+  - qualified head: `7769bc6cdcdab5057caeb1c7f36a8d37378fb370`
+  - push + PR suites PASS after removing LGCM from the stale inherited-new assertion.
+- PR #58 — `portfolio/audit-industrial-tranche-v1-20260930`
+  - qualified head: `c2c400a6cf02f329da29024c64bc6d50132286fa`
+  - push + PR suites PASS.
+- PR #59 — `portfolio/audit-language-tranche-v1-20260930`
+  - qualified head: `f940885f2279dac0a555eaee8ea415530f9af6d6`
+  - push + PR suites PASS after updating SQL Connectome from stale CURRENTNESS_AUDIT to its held EFFECT_AUTHORITY_SEPARATION gate.
+- PR #60 — `portfolio/audit-unbound-sol-v1-20260930`
+  - qualified head: `28ad61c6950ff57e8783f9e17b53e61006e318a6`
+  - push + PR suites PASS.
+- PR #61 — `portfolio/audit-final-p1-v1-20260930`
+  - exact head: `c185f7d6adbefaca9172bdab6095f587d995d5e8`
+  - push run `36793730183`: PASS.
+  - PR run `36793752765`: PASS.
+  - registry validation, live read-only GitHub smoke, M6 reference-worker proof, and M6 recursive-restart proof pass at this exact head.
+
+## Registry state at PR #61
+
+Public/operator-visible project registry count is 35.
+
+Every newly added/normalized non-P0 subject in the P1 pass is:
+
+- `EXTERNAL_BOUNDED`
+- `HELD`
+- capabilities exactly `read`, `analyze`, `propose`
+- no execution target
+- no inferred source-write, merge, deployment, installation, model-training, research-promotion, database, hardware, plant, or runtime authority.
+
+## P1 exact-source currentness closure
+
+A regression at PR #61 requires that no P1 repository remain in inherited `CURRENTNESS_AUDIT`.
+
+Exact-main source-qualified P1 subjects include:
+
+- Rezon — merged PR #96 content qualified; current main also carries later CodeQL repair, so qualification ceiling remains source-specific.
+- DriftGuard — current main observed; PR #40 green but unmerged and separate.
+- Ingest — current main / merged PR #23 green, no file-content delta from tested head.
+- Fuckup — exact-main qualification PASS.
+- HC-Brain — exact-main Cognitive Core, Architecture Conformance, and Reference Kernel PASS.
+- Noema — exact-main source tests + I1 PASS.
+- CCB Core — exact-main CI PASS.
+- ABIL — exact-main validate PASS; open research DAG remains separate.
+- AXLE — exact-main CI PASS; hardware/vehicle effects remain unqualified.
+- SQL Connectome — exact-main CI, conformance, real-engine qualification, and CodeQL PASS.
+- Roots — exact-main receipt-claim-boundary PASS.
+- World Zero — exact-main tests and offline-bootstrap verification PASS.
+- MESO-CRCT — exact-main tests PASS.
+- Unbound Sol main — exact-main continuity PASS.
+- Unbound Sol PR #40 — `cdcf573589849110e0bf872067db24e424620760`, 145 commits ahead / 0 behind current main, continuity PASS; remains a separate unadmitted candidate.
+
+Current-but-not-exact-main-qualified P1 subjects:
+
+- LGCM main `0043c60419de9ef0b52363b62aed8c0a52ef63f5`
+  - no CI workflow in current tree;
+  - only recent green automation was dependency-graph update at older head `8a32de8f13f844b56af3f50a8fa54b864945915a`;
+  - current main is 16 commits ahead with substantive source/tests;
+  - gate: `EXACT_MAIN_QUALIFICATION`.
+- UNVTRSLR main `33edef682181e1bea6b36c5afc588d261f0c1289`
+  - merged executable stack but no exact-main executable qualification;
+  - sole source workflow is a pull-request-targeted MASSIVE V1 packet;
+  - dependency-graph automation is not source qualification;
+  - gate: `EXACT_MAIN_QUALIFICATION`.
+- Testament main `20517788763e76863a35e02ba3cc9051d0a227bb`
+  - no GitHub Actions workflows in current tree;
+  - draft PR #20 is open/non-mergeable and has no qualification run;
+  - gate: `EXACT_MAIN_QUALIFICATION`.
+
+Current red P1 subject:
+
+- On-Theo main `2fdc9614fa4f45eb038772d736b146809e10a7f1`
+  - Validate registries run `36353652038`: FAIL.
+  - result: 1 failed / 55 passed.
+  - failing test:
+    `tests/test_registry_rebase_preconditions.py::test_divergent_extension_referential_preconditions_are_equivalent`
+  - gate: `EXACT_MAIN_VALIDATION_REPAIR`.
+  - The large open research DAG must not be promoted downstream while exact main is red.
+
+## Evidence/authority boundaries preserved
+
+> Fresh currentness does not create source-write authority.
+
+> A green historical PR head does not qualify a different merge/main tree.
+
+> A green dependency-graph update is not executable source qualification.
+
+> Repository ingestion breadth and continuity-green status are not AGI, consciousness, durable identity, model-training effect, or runtime-effect evidence.
+
+> Research/literary richness does not override a red validator or missing exact-main qualification.
+
+> Source qualification for SQL/database, vehicle/hardware, plant, synthetic-affect, or scientific systems does not grant protected physical/runtime effects.
+
+## Next frontier
+
+P0 and P1 public repository currentness are now refreshed on the PR #61 stack.
+
+The remaining inherited public repository set is P2+ only. Continue by dependency-aware P2 tranches rather than round-robin activity:
+
+1. assurance/governance: BugOps, RepairTracker, Intranel;
+2. cognitive subsystems: Attune, Conations, Empathy, Personification, SemanticAtlas;
+3. memory/time: DeepMemoryStorage, Temporal;
+4. portfolio/model composition: Mosaic, WIP;
+5. language experiment: SPM;
+6. specialist workers/reasoning: FreeRowCochKar, Hephaestus, Masamune, Voss;
+7. speculative cognition: God-Brain, Transcendence;
+8. Vera lineage/runtime: vera-R9A0, vera-habitat, vera-synology.
+
+Keep all newly refreshed P2 subjects HELD unless an exact operator execution target and separate authority are deliberately admitted.
