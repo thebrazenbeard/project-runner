@@ -271,3 +271,45 @@ projects:
   family_id: assurance-and-repair
   scheduling_state: HELD
   scope_note: Security-review subject registered for currentness and review only; no source-write or merge execution target is admitted.
+- id: pro-run
+  name: Pro-Run
+  visibility: public
+  repositories:
+  - thebrazenbeard/pro-run
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: coordination
+  scheduling_state: HELD
+  scope_note: Continuous-execution subject registered for currentness and review only; no source-write or execution target is admitted.
+- id: ccb-core
+  name: CCB Core
+  visibility: public
+  repositories:
+  - thebrazenbeard/ccb-core
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: coordination
+  scheduling_state: HELD
+  scope_note: Coordination-base subject registered for currentness and review only; no source-write or execution target is admitted.
+- id: workbridgecommander
+  name: WorkBridge Commander
+  visibility: public
+  repositories:
+  - thebrazenbeard/workbridgecommander
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: coordination
+  scheduling_state: HELD
+  scope_note: Remote orchestration subject registered for currentness and review only; workstation and transport effects remain separately authority-gated.

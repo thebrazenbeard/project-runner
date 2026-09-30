@@ -133,7 +133,7 @@ def test_20260928_new_public_repositories_are_source_only():
     wave = load_advancement_wave(
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
-    expected = {"axle", "lgcm", "pro-run"}
+    expected = {"axle", "lgcm"}
     items = {
         item.subject_id: item
         for item in wave.items
@@ -185,7 +185,11 @@ def test_20260930_new_public_subjects_are_classified_but_held():
     assert set(items) == expected
     assert all(item.execution_state == "HELD" for item in items.values())
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
-    assert all("EXACT_SOURCE_CLASSIFIED" in item.source_status for item in items.values())
+    assert all(
+        "EXACT_SOURCE_CLASSIFIED" in item.source_status
+        or "CURRENTNESS_REFRESHED_EXACT_SOURCE" in item.source_status
+        for item in items.values()
+    )
 
 
 def test_inherited_non_p0_repository_status_is_currentness_gated():
@@ -206,6 +210,8 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "driftguard",
             "ingest",
             "project-achilles",
+            "ccb-core",
+            "pro-run",
         }
     ]
     assert inherited

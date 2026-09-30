@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records plus the four-subject assurance/provenance tranche (Rezon, DriftGuard, Ingest, Project Achilles) were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 39 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, and three coordination records were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 36 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -155,8 +155,8 @@
       "family_id": "coordination",
       "activity_state": "STABLE",
       "purpose": "Sanitized distributable Chat Communications Bus core.",
-      "status": "Initial sanitized extraction is complete.",
-      "current_frontier": "Keep the public core narrow while operational transport evolves separately."
+      "status": "Exact main@273c93bc46683580024c1521fd2c523a8a6593bd observed with no open PRs. CI push run 36493854093 passes at that exact head; dependency update checks on the same head also pass.",
+      "current_frontier": "Keep the sanitized public coordination core narrow and require a concrete consumer before expansion; Runner registers it read/analyze/propose only and HELD."
     },
     {
       "id": "conations",
@@ -435,8 +435,8 @@
       "family_id": "coordination",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Durable continuous execution environment for tool-using language models with recovery, leases, and effect fencing.",
-      "status": "Core durable runtime is on main; Windows/local-Qwen runtime and stale-error recovery successors are green and open.",
-      "current_frontier": "Integrate verified Windows/Qwen runtime and recovery fixes while preserving exact effect and reconciliation boundaries."
+      "status": "Exact main@0ffc95351db34afed091c3239614f57f371c04ad observed with no open PRs. Merged PR #10 head 2632de241604b27eb6e85544ecf29774d73aa2ec passed test run 36641890383, but comparison to current main includes tests/test_http_tool_loop_integration.py, so exact-main qualification is not inferred.",
+      "current_frontier": "Requalify exact current main before new source work, then identify the next concrete durable-execution consumer or defect; Runner has no source-write execution target for Pro-Run."
     },
     {
       "id": "project-achilles",
@@ -827,8 +827,8 @@
       "family_id": "coordination",
       "activity_state": "ACTIVE",
       "purpose": "Remote MCP ingress, authenticated device attachment, and orchestration surface for the WorkBridge Commander path.",
-      "status": "Exact-source classification at c2b95be79ca011a539c20bfee60fcbc46cfea177: remote service/device-agent source is on main; source preserves Desktop Commander workstation semantics and does not establish deployment or workstation effect.",
-      "current_frontier": "Qualify endpoint/authentication, revocation, session isolation, exact routing, and workstation-payload binding without laundering remote reachability into workstation authority."
+      "status": "Exact main@c2b95be79ca011a539c20bfee60fcbc46cfea177 observed with no open PRs. Merged PR #4 head bc4ae82d78e4b5dd2051700f145b8d5f53d1aa1c passed CI run 36629389444, but current main differs by docs/runtime/MEDIA_LIBRARY_DIRECT_UNC_EVIDENCE_20260929.md; exact-main qualification and live endpoint effect are not inferred.",
+      "current_frontier": "Requalify exact current main and separately verify endpoint/authentication/device binding/runtime reachability before any remote-control claim; Runner keeps the subject HELD with no execution target."
     },
     {
       "id": "workbridgemcp",
