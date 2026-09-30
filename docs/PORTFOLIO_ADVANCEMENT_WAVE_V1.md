@@ -1,6 +1,6 @@
-# Portfolio Advancement Wave V1
+# Portfolio Advancement Wave V2
 
-Status: source-execution wave / no merge / no deployment / no credential or permission changes
+Status: source-only currentness-gated wave / no merge / no deployment / no credential or permission changes
 
 ## Purpose
 
@@ -28,9 +28,11 @@ These names are role identities for independent passes. They do not imply separa
 
 Every corpus subject receives exactly one disposition.
 
-Active subjects execute their current frontier. Stable subjects must identify a real consumer or remain held. Incubators run a minimum falsifiable proof rather than accumulating architecture. Quiet subjects receive a currentness refresh and hold. Archived and superseded subjects are preserve-only.
+For the 2026-09-30 V2 cut, authenticated membership is 76 accessible repositories: 57 public and 19 private. Private membership remains count-only in public source.
 
-This prevents "advance the whole portfolio" from degenerating into touching every repository merely to create activity.
+Only the ten P0 repositories that were freshly re-read from live GitHub are QUEUED. Semantic state inherited from the prior 2026-09-28 corpus is HELD behind CURRENTNESS_AUDIT until exact source is refreshed. The four repositories newly present in the public corpus are exact-source classified but HELD until an execution route is separately admitted. Archived and superseded subjects remain preserve-only.
+
+This prevents "advance the whole portfolio" from turning stale descriptive status into executable currentness or from turning repository membership into authority.
 
 ## Review independence
 
@@ -45,7 +47,7 @@ Every queued subject has at least one independent reviewer. High-risk families u
 
 ## Execution ceiling
 
-The V1 default ceiling is **SOURCE_ONLY**.
+The V2 default ceiling is **SOURCE_ONLY**.
 
 Allowed work includes:
 
@@ -86,15 +88,13 @@ The full private wave is an external execution artifact. Exact private membershi
 
 ## Initial execution order
 
-The wave is corpus-wide, but execution is dependency-aware rather than round-robin.
+The wave is corpus-wide, but V2 execution is deliberately narrower than the descriptive corpus.
 
-1. Project Runner / Discovery / BT2 / coordination-currentness spine.
-2. Vera runtime/control/transport/model-training convergence.
-3. Assurance and reasoning systems needed to review downstream work.
-4. High-leverage active research/product fronts.
-5. P2 subsystems when a concrete consumer exists.
-6. P3 domain/creative work when its own project goal is active.
-7. P4 remains preserve-only.
+1. Fresh P0 source/currentness work may proceed under SOURCE_ONLY.
+2. Discovery must finish the 57-public deterministic evidence refresh before its stale watch can become current.
+3. Newly classified subjects remain HELD until a bounded execution route is admitted.
+4. Inherited non-P0 subjects receive exact-source currentness refresh before their prior frontier can execute.
+5. Archived and superseded work remains preserve-only.
 
 Independent work may proceed in parallel when it does not share mutable source/effect boundaries.
 
