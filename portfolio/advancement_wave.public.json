@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-cognitive-tranche-v1-20260930",
-    "commit": "e00dadcfed1f1a1ee6dd2d057936c0cec87bfb1c",
+    "ref": "portfolio/audit-industrial-tranche-v1-20260930",
+    "commit": "0007c0475294d543dc488a4b4f5d6811df0cc4d4",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "19e968a3901f53465f05ffcbdc8f04ca082862d5",
+    "git_blob_sha": "1706e623dd1fb3199968c4cd923af9b63906c580",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -48,12 +48,12 @@
         "REZON",
         "ACHILLES"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Reconcile the research stack into an executable bounded industrial-intelligence path.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large active research/assurance stack spans currentness, execution evidence, anti-replay and governance."
+      "review_gate": "DRAFT_RECONCILIATION_AND_ROUTE_ADMISSION",
+      "frontier": "Use exact current main as the qualified source baseline; reconcile only still-valid draft research into a bounded executable industrial path, and require explicit route/effect authority before any commissioning or plant action.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@a93e345da27028df77e8c9047d1d32780038550b observed. Validate push run 36409821467 passes at that exact head. A large draft research DAG remains open; newest draft PR #26@e7b5439bd886c0dcc0127852a4d3557cfa169028 is diverged from current main (7 commits ahead, 8 behind) and is not promoted over main by this audit."
     },
     {
       "subject_kind": "repository",
@@ -85,12 +85,12 @@
         "ACHILLES",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Complete bounded wake-word and bench hardware qualification while preserving the read-only vehicle boundary.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Executable core and hardware contract are on main; vehicle-bus effects remain explicitly read-only and production hardware remains unqualified."
+      "review_gate": "HARDWARE_EFFECT_QUALIFICATION",
+      "frontier": "Treat current main as the qualified source baseline; require separate bench/hardware and vehicle-bus effect qualification before any physical-control claim or expansion beyond the existing read-only boundary.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@d470544fb64875cb4789472ad4ef1b30f1fa65ee observed with no open PRs. CI push run 36410637487 passes at that exact head."
     },
     {
       "subject_kind": "repository",
