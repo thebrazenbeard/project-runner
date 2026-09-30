@@ -1,0 +1,88 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "ASSURANCE_PROVENANCE_SECURITY",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "rezon",
+      "repository": "thebrazenbeard/rezon",
+      "exact_main": "ec401810990337bf07a5d6473782ba13eba1bb3f",
+      "open_pr_count": 17,
+      "merged_qualification": {
+        "pr": 96,
+        "head": "c60ea9c42e02cc9d8803040cc13ddd904d9e1245",
+        "runs": [
+          36659272201,
+          36659272230
+        ],
+        "conclusions": [
+          "success",
+          "success"
+        ]
+      },
+      "caveat": "Current main additionally contains the CodeQL workflow repair relative to the tested PR head; exact-main qualification is not inferred.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "driftguard",
+      "repository": "thebrazenbeard/driftguard",
+      "exact_main": "52fa829c629fa0f3e729204912db9f9f783f322a",
+      "current_candidate": {
+        "pr": 40,
+        "head": "33b75523a1130c614c270f3de45417e1acf4e32b",
+        "base": "52fa829c629fa0f3e729204912db9f9f783f322a",
+        "runs": [
+          35940813553,
+          35940813564,
+          35940813596
+        ],
+        "conclusions": [
+          "success",
+          "success",
+          "success"
+        ]
+      },
+      "caveat": "Candidate is source-qualified but unmerged.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "ingest",
+      "repository": "thebrazenbeard/ingest",
+      "exact_main": "27764c9fb97c84d178a3f66e0da2d669df645ed6",
+      "merged_qualification": {
+        "pr": 23,
+        "head": "c4d8607227f46f8292a87812cb637b56bcf5da5c",
+        "run": 36695681509,
+        "conclusion": "success",
+        "main_comparison_file_changes": 0
+      },
+      "caveat": "No open PR; no new work is implied without a concrete consumer or defect.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "project-achilles",
+      "repository": "thebrazenbeard/project-achilles",
+      "exact_main": "99bc4e8cf7bd60d022fb25222d701a8cf42f80c0",
+      "merged_qualification": {
+        "pr": 3,
+        "head": "00420de5d6fcce1241ffdc3f06482170181a42d6",
+        "run": 36061880001,
+        "conclusion": "success"
+      },
+      "main_delta_paths": [
+        ".github/workflows/verify.yml",
+        "security/PROJECT_RUNNER_PORTFOLIO_WAVE_V1_REVIEW.md",
+        "security/portfolio_publication_guard.py",
+        "tests/test_portfolio_publication_guard.py"
+      ],
+      "caveat": "Exact main contains additional content relative to the tested PR head; require exact-main requalification before source expansion.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "Fresh currentness does not create source-write authority; all four subjects remain HELD in Runner.",
+    "A green historical PR head does not automatically qualify a different merge/main tree.",
+    "An unmerged green candidate is not current main and must remain a separate exact subject."
+  ]
+}
