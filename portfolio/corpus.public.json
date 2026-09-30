@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, and two industrial-intelligence records were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 30 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, two industrial-intelligence records, and two language/semantics records were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 28 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -575,8 +575,8 @@
       "family_id": "language-and-semantics",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Provider-neutral multi-dialect SQL semantic connectome with governed PostgreSQL execution/currentness substrate.",
-      "status": "New active repository; PostgreSQL 17 CI is green while semantic/translation qualification continues advancing on main.",
-      "current_frontier": "Stabilize semantic/execution boundaries and compose with BT2 database/Lantern work without turning translation or connectivity into effect authority."
+      "status": "Exact main@f81ff43e5358f798f23bab8a718bda743c93e930 observed with no open PRs. CI run 36642233865, Conformance Snapshot run 36642233944, Real Engine Qualification run 36642233876, and CodeQL run 36642233873 all pass at that exact head; scheduled CodeQL run 36733336748 also passes.",
+      "current_frontier": "Use exact current main as the qualified semantic/database source baseline; keep translation, engine reachability, query generation, and database effect authority as separate evidence classes before any BT2/Lantern composition."
     },
     {
       "id": "temporal",
@@ -659,8 +659,8 @@
       "family_id": "language-and-semantics",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Acoustic/semantic learning toward mathematical interlingua and target realization.",
-      "status": "Large stack has reached real held-out MASSIVE 1.0 qualification work.",
-      "current_frontier": "Complete reproducible held-out qualification and keep claims measurement-bound."
+      "status": "Exact main@33edef682181e1bea6b36c5afc588d261f0c1289 observed. Merged PR #21 integrated the executable research stack, but neither its head nor current main has executable qualification runs. Current main's only attached green run is dependency-graph automation. The sole source workflow is a pull-request-targeted MASSIVE 1.0 packet and does not qualify current main. A large draft translation/held-out research DAG remains open.",
+      "current_frontier": "Obtain executable exact-main qualification before promoting the integrated stack or stronger held-out claims; reconcile the open research DAG only against that qualified baseline and keep Runner execution HELD."
     },
     {
       "id": "vera",

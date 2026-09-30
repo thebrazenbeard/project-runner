@@ -388,3 +388,31 @@ projects:
   family_id: industrial-intelligence
   scheduling_state: HELD
   scope_note: Vehicle/industrial edge subject registered for currentness and review only; hardware and vehicle-bus effects remain separately qualified.
+- id: sql-connectome
+  name: SQL Connectome
+  visibility: public
+  repositories:
+  - thebrazenbeard/sql-connectome
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: language-and-semantics
+  scheduling_state: HELD
+  scope_note: Semantic/database translation subject registered for currentness and review only; query translation and connectivity do not grant database effect authority.
+- id: unvtrslr
+  name: UNVTRSLR
+  visibility: public
+  repositories:
+  - thebrazenbeard/unvtrslr
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: language-and-semantics
+  scheduling_state: HELD
+  scope_note: Multilingual research subject registered for currentness and review only; exact current main lacks executable qualification evidence.
