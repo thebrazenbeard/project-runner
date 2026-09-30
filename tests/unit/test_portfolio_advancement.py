@@ -212,6 +212,10 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "project-achilles",
             "ccb-core",
             "pro-run",
+            "fuckup",
+            "hc-brain",
+            "lgcm",
+            "noema",
         }
     ]
     assert inherited
