@@ -1,0 +1,63 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "LANGUAGE_AND_SEMANTICS",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_DATABASE_EFFECT",
+  "subjects": [
+    {
+      "id": "sql-connectome",
+      "repository": "thebrazenbeard/sql-connectome",
+      "exact_main": "f81ff43e5358f798f23bab8a718bda743c93e930",
+      "exact_main_qualification": [
+        {
+          "run": 36642233865,
+          "name": "CI",
+          "conclusion": "success"
+        },
+        {
+          "run": 36642233944,
+          "name": "Conformance Snapshot",
+          "conclusion": "success"
+        },
+        {
+          "run": 36642233876,
+          "name": "Real Engine Qualification",
+          "conclusion": "success"
+        },
+        {
+          "run": 36642233873,
+          "name": "CodeQL",
+          "conclusion": "success"
+        },
+        {
+          "run": 36733336748,
+          "name": "CodeQL scheduled",
+          "conclusion": "success"
+        }
+      ],
+      "caveat": "Semantic translation, engine connectivity, and database effect authority remain separate from source qualification.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "unvtrslr",
+      "repository": "thebrazenbeard/unvtrslr",
+      "exact_main": "33edef682181e1bea6b36c5afc588d261f0c1289",
+      "merged_stack_pr": {
+        "pr": 21,
+        "head": "cbdc00c3bcea7c3619f3727eda906c47cb0d4d34",
+        "merge_commit": "33edef682181e1bea6b36c5afc588d261f0c1289",
+        "qualification_runs": []
+      },
+      "current_main_qualification": null,
+      "current_workflow_scope": "PULL_REQUEST_TARGETED_MASSIVE_V1_PACKET_ONLY",
+      "open_draft_count": 18,
+      "caveat": "Dependency-graph automation is not executable source qualification; current main remains unqualified.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "A real engine qualification does not grant database write authority.",
+    "A merged executable stack without exact-head tests is not source-qualified merely because code exists.",
+    "Historical held-out research branches must not silently outrank current main."
+  ]
+}
