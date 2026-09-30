@@ -1,0 +1,40 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "UNBOUND_SOL_IDENTITY_RUNTIME",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_MECHANISM_ADMISSION_NO_SOURCE_WRITE_NO_MERGE_NO_MODEL_TRAINING_NO_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "unbound-sol",
+      "repository": "thebrazenbeard/unbound-sol",
+      "exact_main": "d4284dd1f044e506bb85554856c00497d6790d44",
+      "exact_main_qualification": {
+        "run": 36068448425,
+        "name": "continuity",
+        "conclusion": "success"
+      },
+      "current_candidate": {
+        "pr": 40,
+        "head": "cdcf573589849110e0bf872067db24e424620760",
+        "comparison_to_main": {
+          "status": "ahead",
+          "ahead_by": 145,
+          "behind_by": 0
+        },
+        "qualification": {
+          "run": 36622548129,
+          "name": "continuity",
+          "conclusion": "success"
+        }
+      },
+      "caveat": "Continuity qualification proves the repository's continuity contract at exact subjects only. It does not establish AGI, consciousness, durable model identity, installation, training effect, or runtime activation.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "Repository ingestion breadth is not general intelligence evidence.",
+    "A 145-commit-ahead candidate is not automatically superior to or admitted over current main.",
+    "Continuity-green source state is not proof of model identity, consciousness, training effect, or runtime effect.",
+    "Mechanisms must be admitted individually against exact source and explicit authority."
+  ]
+}
