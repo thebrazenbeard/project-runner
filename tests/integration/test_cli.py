@@ -1248,6 +1248,14 @@ def test_cli_worker_route_pull_and_receipt_round_trip(
         ),
     )
     payload_out = tmp_path / "worker-packet.json"
+    if os.name == "nt":
+        # Private packets must not inherit a broadly readable parent ACL.
+        subprocess.run(
+            ["icacls", str(tmp_path), "/grant", "*S-1-5-32-545:(OI)(CI)(RX)"],
+            check=True, capture_output=True, text=True,
+        )
+        # Replacement must not preserve an older, overly broad file ACL.
+        payload_out.write_text("stale fixture", encoding="utf-8")
 
     assert main(
         [

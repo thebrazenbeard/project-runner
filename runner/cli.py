@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 from collections import Counter
 from dataclasses import replace
 import hashlib
@@ -8,6 +9,9 @@ import hmac
 import json
 import os
 from pathlib import Path
+import re
+import subprocess
+import tempfile
 import time
 from typing import Sequence
 
@@ -1048,6 +1052,24 @@ def _worker_route_status(args) -> int:
     return 0
 
 
+def _secure_windows_worker_packet(path: Path) -> None:
+    """Remove broad inherited NTFS permissions before writing private data."""
+    identity = subprocess.run(
+        ["whoami", "/user", "/fo", "csv", "/nh"],
+        check=True, text=True, capture_output=True,
+    ).stdout.strip()
+    try:
+        sid = next(csv.reader([identity]))[1]
+    except (IndexError, StopIteration) as exc:
+        raise ValueError("cannot resolve Windows worker-packet owner") from exc
+    if re.fullmatch(r"S-\d+(?:-\d+)+", sid) is None:
+        raise ValueError("invalid Windows worker-packet owner SID")
+    subprocess.run(
+        ["icacls", str(path), "/inheritance:r", "/grant:r", f"*{sid}:(F)"],
+        check=True, text=True, capture_output=True,
+    )
+
+
 def _claim_worker_route(args) -> int:
     payload_out = args.payload_out.expanduser().resolve()
     root = ROOT.resolve()
@@ -1085,23 +1107,21 @@ def _claim_worker_route(args) -> int:
         }, sort_keys=True))
         return 0
 
-    temporary = payload_out.with_name(payload_out.name + ".tmp")
-    descriptor = os.open(
-        temporary,
-        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-        0o600,
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{payload_out.name}.", suffix=".tmp", dir=payload_out.parent,
     )
+    temporary = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            if os.name == "nt":
+                _secure_windows_worker_packet(temporary)
             handle.write(json.dumps(claim.payload, sort_keys=True) + "\n")
+        os.replace(temporary, payload_out)
+        if os.name != "nt":
+            os.chmod(payload_out, 0o600)
     except BaseException:
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
+        temporary.unlink(missing_ok=True)
         raise
-    os.replace(temporary, payload_out)
-    os.chmod(payload_out, 0o600)
 
     print(json.dumps({
         "mode": "M6_WORKER_ROUTE_PULL",
