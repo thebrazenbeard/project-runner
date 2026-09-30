@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-unbound-sol-v1-20260930",
-    "commit": "4128e25b00b51af9d79cb7dbd0ddac1357347efa",
+    "ref": "portfolio/audit-final-p1-v1-20260930",
+    "commit": "268e6a3cffc1c9edb2b87a4ac29d0ea7f405083c",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "2e1939b351d15c2d502b3dde80682a6834c01df3",
+    "git_blob_sha": "4e2c3b8f7e410450ec4c68dfb9fd71eb9970668f",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -440,12 +440,12 @@
         "ACHILLES",
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Qualify the executable transition and welfare constraints.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — V2 architecture is active; executable salience-to-recruitment transition is under review."
+      "review_gate": "WELFARE_AND_EFFECT_QUALIFICATION",
+      "frontier": "Use exact current main as the qualified executable source baseline; separately qualify welfare constraints, salience-to-recruitment behavior, activation boundaries, and any runtime effect.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@060d0feeb9dc9eb23801082bd8f1c4a7cb06184d observed. test push run 36188280937 passes at that exact head. Draft PRs #1-#4 remain as older foundation/architecture/transition lineages and are not promoted over current main."
     },
     {
       "subject_kind": "repository",
@@ -497,12 +497,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Continue claim-centered hostile review and separate speculation from baseline evidence.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large active Yeshua/Nature-of-Existence/divination research frontier."
+      "review_gate": "EXACT_MAIN_VALIDATION_REPAIR",
+      "frontier": "Repair and rerun exact-main registry validation before promoting any current research packet or consuming the open Yeshua/mythos/divination DAG downstream; preserve claim-by-claim evidence ceilings.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 observed with a large open research DAG. Validate registries run 36353652038 FAILS at that exact head: 1 failed / 55 passed, specifically tests/test_registry_rebase_preconditions.py::test_divergent_extension_referential_preconditions_are_equivalent. The failure is a registry-rebase referential-precondition mismatch; current main is not source-qualified."
     },
     {
       "subject_kind": "repository",
@@ -649,12 +649,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Reuse broadly without making Roots a global truth authority.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Qualified engine is canonical on main; no current pull request."
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Reuse the qualified engine only through concrete consumers and keep provenance/receipt claims separate from global truth or instruction authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@1bc3af6aec0bebe383f60f56ad3070e83f0f40b5 observed with no open PRs. receipt-claim-boundary push run 36701316349 passes at that exact head; same-head dependency update checks also pass."
     },
     {
       "subject_kind": "repository",
@@ -760,12 +760,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Consume survived source claims without promoting literary hypotheses upstream.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation restack, ON_THEO handoff and historical/literary review lanes remain open."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Obtain executable exact-main qualification and reconcile the foundation/restack before consuming On-Theo claims; keep downstream literary synthesis from feeding hypotheses back upstream as evidence.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@20517788763e76863a35e02ba3cc9051d0a227bb observed. The current tree contains no GitHub Actions workflows and no exact-main qualification run. Draft PR #20@0e48a349412193c15d1527c69835821fc55f548b remains open and non-mergeable, with additional literary/research drafts behind it."
     },
     {
       "subject_kind": "repository",
@@ -1107,12 +1107,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Complete frozen temporal qualification before interpreting later performance.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Frozen 2018-to-2019 mass-normalization execution remains open."
+      "review_gate": "RESULT_INTERPRETATION_REVIEW",
+      "frontier": "Treat the frozen 2018→2019 mass-normalization source as qualified; keep scientific interpretation, temporal generalization, and downstream causal claims behind separate review.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@07c5b998d081cbe61091ac3ae5592f8ac33b4bbf observed with no open PRs. test run 36785566910 and Verify offline bootstrap bundles run 36785566852 both pass at that exact head."
     },
     {
       "subject_kind": "workstream",
