@@ -1,0 +1,87 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "FINAL_P1_SOURCE_CRITICAL_SCIENTIFIC_AFFECT",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_RESEARCH_PROMOTION_NO_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "roots",
+      "repository": "thebrazenbeard/roots",
+      "exact_main": "1bc3af6aec0bebe383f60f56ad3070e83f0f40b5",
+      "exact_main_qualification": {
+        "run": 36701316349,
+        "name": "receipt-claim-boundary",
+        "conclusion": "success"
+      },
+      "open_pr_count": 0,
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "world-zero",
+      "repository": "thebrazenbeard/world-zero",
+      "exact_main": "07c5b998d081cbe61091ac3ae5592f8ac33b4bbf",
+      "exact_main_qualification": [
+        {
+          "run": 36785566910,
+          "name": "test",
+          "conclusion": "success"
+        },
+        {
+          "run": 36785566852,
+          "name": "Verify offline bootstrap bundles",
+          "conclusion": "success"
+        }
+      ],
+      "open_pr_count": 0,
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "on-theo",
+      "repository": "thebrazenbeard/on-theo",
+      "exact_main": "2fdc9614fa4f45eb038772d736b146809e10a7f1",
+      "exact_main_qualification": {
+        "run": 36353652038,
+        "name": "Validate registries",
+        "conclusion": "failure",
+        "summary": "1 failed, 55 passed",
+        "failing_test": "tests/test_registry_rebase_preconditions.py::test_divergent_extension_referential_preconditions_are_equivalent"
+      },
+      "caveat": "Current main is not source-qualified; open research branches must not be promoted downstream until the exact-main validation defect is repaired.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "testament",
+      "repository": "thebrazenbeard/testament",
+      "exact_main": "20517788763e76863a35e02ba3cc9051d0a227bb",
+      "exact_main_qualification": null,
+      "workflow_count": 0,
+      "current_foundation_candidate": {
+        "pr": 20,
+        "head": "0e48a349412193c15d1527c69835821fc55f548b",
+        "mergeable": false,
+        "qualification_runs": []
+      },
+      "caveat": "No exact-main executable qualification exists; downstream literary synthesis must not become upstream historical evidence.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "meso-crct",
+      "repository": "thebrazenbeard/meso-crct",
+      "exact_main": "060d0feeb9dc9eb23801082bd8f1c4a7cb06184d",
+      "exact_main_qualification": {
+        "run": 36188280937,
+        "name": "test",
+        "conclusion": "success"
+      },
+      "caveat": "Source qualification does not establish welfare adequacy, phenomenology, activation, or runtime effect.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "A research repository with a red validator is not current merely because its corpus is rich.",
+    "No CI workflow means UNKNOWN source qualification, not an implicit PASS.",
+    "Scientific test success does not by itself justify causal or temporal interpretation.",
+    "Synthetic-affect source tests do not establish welfare adequacy or phenomenology.",
+    "Downstream literary synthesis must not feed hypotheses back upstream as historical evidence."
+  ]
+}
