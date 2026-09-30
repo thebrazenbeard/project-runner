@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership refreshed to 76 accessible repositories (57 public, 19 private). Ten P0 records were re-read from live GitHub on 2026-09-30; semantic status for the other prior 43 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "status_basis": "Authenticated GitHub membership refreshed to 76 accessible repositories (57 public, 19 private). Ten P0 records were re-read from live GitHub on 2026-09-30, including Discovery PR #47 exact qualified 76/57/19 source currentness; semantic status for the other prior 43 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -197,8 +197,8 @@
       "family_id": "portfolio-spine",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Whole-portfolio census, overlap analysis and governed capability discovery.",
-      "status": "Live main@620c09b2a1c96256cc7523877f3e986ad75f8f0a remains the 74/55/19 canonical cut. Draft PR #45 records authenticated drift to 76/57/19 and draft PR #46 exact-head classifies the four public additions; structural validation passes while public-currentness correctly remains stale.",
-      "current_frontier": "Regenerate the full 57-public census, graph, intake, and blob evidence; do not suppress or reinterpret the stale currentness watch."
+      "status": "Live main@620c09b2a1c96256cc7523877f3e986ad75f8f0a remains the merged 74/55/19 baseline. Draft PR #47@bd8ec768112efced943b6a69d29089f66d0f726a is the complete deterministic 76/57/19 refresh and passes Discovery validation, composed lifecycle validation, and the live public-currentness watch.",
+      "current_frontier": "Preserve PR #47 as the exact qualified 57-public source candidate; keep merge/current-main promotion separate from source currentness and continue consuming it descriptively until separately integrated."
     },
     {
       "id": "driftguard",
