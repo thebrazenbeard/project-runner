@@ -1145,6 +1145,26 @@ def _load_promotion(
     return work, float(lease[2]), execution_request
 
 
+def load_durable_promotion_receipt(
+    *,
+    state_db: Path,
+    lineage_id: str,
+    work_fingerprint_value: str,
+    fencing_token: int,
+) -> ExecutionPromotionReceipt:
+    """Recover and digest-verify an existing authorized promotion."""
+    store = SqliteDispatchAdmissionStore(Path(state_db))
+    try:
+        return _read_durable_promotion(
+            store,
+            lineage_id=lineage_id,
+            work_fingerprint_value=work_fingerprint_value,
+            fencing_token=fencing_token,
+        )
+    finally:
+        store.close()
+
+
 def execute_promoted(
     *,
     state_db: Path,
