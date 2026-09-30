@@ -1,0 +1,47 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "INDUSTRIAL_INTELLIGENCE",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_COMMISSIONING_NO_PHYSICAL_EFFECT",
+  "subjects": [
+    {
+      "id": "abil",
+      "repository": "thebrazenbeard/abil",
+      "exact_main": "a93e345da27028df77e8c9047d1d32780038550b",
+      "exact_main_qualification": {
+        "run": 36409821467,
+        "name": "validate",
+        "conclusion": "success"
+      },
+      "newest_open_draft": {
+        "pr": 26,
+        "head": "e7b5439bd886c0dcc0127852a4d3557cfa169028",
+        "comparison_to_main": {
+          "status": "diverged",
+          "ahead_by": 7,
+          "behind_by": 8
+        }
+      },
+      "caveat": "The open research DAG is not promoted over current main. Source qualification does not grant commissioning or plant-effect authority.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "axle",
+      "repository": "thebrazenbeard/axle",
+      "exact_main": "d470544fb64875cb4789472ad4ef1b30f1fa65ee",
+      "exact_main_qualification": {
+        "run": 36410637487,
+        "name": "CI",
+        "conclusion": "success"
+      },
+      "open_pr_count": 0,
+      "caveat": "Source qualification does not establish bench hardware, production hardware, vehicle-bus write authority, or physical effect.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "A large research DAG is not an executable integration plan unless reconciled against current main.",
+    "Green source CI does not establish hardware or plant effect.",
+    "Read-only vehicle boundaries must not be broadened by portfolio scheduling."
+  ]
+}

@@ -360,3 +360,31 @@ projects:
   family_id: cognitive-architecture
   scheduling_state: HELD
   scope_note: Empirical cognition-research subject registered for currentness and review only; no source-write or execution target is admitted.
+- id: abil
+  name: ABIL
+  visibility: public
+  repositories:
+  - thebrazenbeard/abil
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: industrial-intelligence
+  scheduling_state: HELD
+  scope_note: Industrial-intelligence subject registered for currentness and review only; no source-write, commissioning, or plant-effect target is admitted.
+- id: axle
+  name: AXLE
+  visibility: public
+  repositories:
+  - thebrazenbeard/axle
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: industrial-intelligence
+  scheduling_state: HELD
+  scope_note: Vehicle/industrial edge subject registered for currentness and review only; hardware and vehicle-bus effects remain separately qualified.
