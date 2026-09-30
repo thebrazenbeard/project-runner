@@ -220,6 +220,8 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "noema",
             "abil",
             "axle",
+            "sql-connectome",
+            "unvtrslr",
         }
     ]
     assert inherited
