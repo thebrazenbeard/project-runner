@@ -129,11 +129,11 @@ def test_sql_connectome_is_admitted_without_effect_authority():
     assert item.priority == "P1"
 
 
-def test_20260928_new_public_repositories_are_source_only():
+def test_20260928_new_public_repositories_are_now_currentness_refreshed():
     wave = load_advancement_wave(
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
-    expected = {"axle"}
+    expected = {"axle", "ingest", "lgcm", "pro-run"}
     items = {
         item.subject_id: item
         for item in wave.items
@@ -143,8 +143,10 @@ def test_20260928_new_public_repositories_are_source_only():
     assert set(items) == expected
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
     assert all(item.execution_state == "HELD" for item in items.values())
-    assert all(item.action == "CURRENTNESS_AUDIT" for item in items.values())
-    assert all(item.review_gate == "CURRENTNESS_CHECK" for item in items.values())
+    assert all(
+        item.source_status.startswith("CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD")
+        for item in items.values()
+    )
 
 
 def test_fresh_p0_subjects_are_the_only_queued_repositories():
@@ -216,6 +218,8 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "hc-brain",
             "lgcm",
             "noema",
+            "abil",
+            "axle",
         }
     ]
     assert inherited
