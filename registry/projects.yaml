@@ -95,6 +95,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: reasoning-and-assurance
+  scheduling_state: HELD
+  scope_note: Currentness and assurance review are admitted; no source-write or merge execution target is registered.
 - id: world-zero
   name: World Zero
   visibility: public
@@ -140,6 +145,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: assurance-and-repair
+  scheduling_state: HELD
+  scope_note: Currentness and regression review are admitted; no source-write or merge execution target is registered.
 - id: discovery
   name: Discovery
   visibility: public
@@ -233,3 +243,31 @@ projects:
   family_id: vera-runtime
   scheduling_state: HELD
   scope_note: Public P0 corpus subject registered for source and review routing only; machine-facing execution remains separately authority-gated.
+- id: ingest
+  name: Ingest
+  visibility: public
+  repositories:
+  - thebrazenbeard/ingest
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: memory-and-provenance
+  scheduling_state: HELD
+  scope_note: Public intake/provenance subject registered for currentness and review only; no source-write or merge execution target is admitted.
+- id: project-achilles
+  name: Project Achilles
+  visibility: public
+  repositories:
+  - thebrazenbeard/project-achilles
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: assurance-and-repair
+  scheduling_state: HELD
+  scope_note: Security-review subject registered for currentness and review only; no source-write or merge execution target is admitted.
