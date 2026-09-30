@@ -4,9 +4,9 @@
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/corpus-76-wave-v2-20260930",
-    "commit": "d7f8821a73a5c34ad0d80c542ba1296e4e717e77",
+    "commit": "ce2922f7a00facacbbb5b9145af20bd84d3dbfb4",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "496596484719cc25188628d03979fecca2f2c67a",
+    "git_blob_sha": "7e9678fd36524f5a7212e5162769592a1690191e",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -221,8 +221,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Regenerate the full 57-public census, graph, intake, and blob evidence; do not suppress or reinterpret the stale currentness watch.",
-      "source_status": "Live main@620c09b2a1c96256cc7523877f3e986ad75f8f0a remains the 74/55/19 canonical cut. Draft PR #45 records authenticated drift to 76/57/19 and draft PR #46 exact-head classifies the four public additions; structural validation passes while public-currentness correctly remains stale."
+      "frontier": "Preserve PR #47 as the exact qualified 57-public source candidate; keep merge/current-main promotion separate from source currentness and continue consuming it descriptively until separately integrated.",
+      "source_status": "Live main@620c09b2a1c96256cc7523877f3e986ad75f8f0a remains the merged 74/55/19 baseline. Draft PR #47@bd8ec768112efced943b6a69d29089f66d0f726a is the complete deterministic 76/57/19 refresh and passes Discovery validation, composed lifecycle validation, and the live public-currentness watch."
     },
     {
       "subject_kind": "repository",
