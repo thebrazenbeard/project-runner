@@ -29,7 +29,7 @@ def test_public_wave_covers_public_corpus_exactly():
     workstream_items = [
         item for item in wave.items if item.subject_kind == "workstream"
     ]
-    assert len(repo_items) == 53
+    assert len(repo_items) == 57
     assert len(workstream_items) == 2
 
 
@@ -105,7 +105,7 @@ def test_summary_and_identity_projection_are_deterministic():
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
     summary = wave.summary()
-    assert summary["subjects"] == 55
+    assert summary["subjects"] == 59
     assert summary["held"] >= 1
     one_items = wave.for_identity("ONE")
     assert all(item.lead_identity == "ONE" for item in one_items)
@@ -123,7 +123,9 @@ def test_sql_connectome_is_admitted_without_effect_authority():
     )
     assert item.repositories == ("thebrazenbeard/sql-connectome",)
     assert item.effect_ceiling == "SOURCE_ONLY"
-    assert item.execution_state == "QUEUED"
+    assert item.execution_state == "HELD"
+    assert item.action == "CURRENTNESS_AUDIT"
+    assert item.review_gate == "CURRENTNESS_CHECK"
     assert item.priority == "P1"
 
 
@@ -140,5 +142,69 @@ def test_20260928_new_public_repositories_are_source_only():
     }
     assert set(items) == expected
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
-    assert all(item.execution_state == "QUEUED" for item in items.values())
-    assert all(item.review_gate == "EXACT_HEAD_REVIEW" for item in items.values())
+    assert all(item.execution_state == "HELD" for item in items.values())
+    assert all(item.action == "CURRENTNESS_AUDIT" for item in items.values())
+    assert all(item.review_gate == "CURRENTNESS_CHECK" for item in items.values())
+
+
+def test_fresh_p0_subjects_are_the_only_queued_repositories():
+    wave = load_advancement_wave(
+        ROOT / "portfolio" / "advancement_wave.public.json"
+    )
+    queued = {
+        item.subject_id
+        for item in wave.items
+        if item.subject_kind == "repository"
+        and item.execution_state == "QUEUED"
+    }
+    assert queued == {
+        "bt2",
+        "discovery",
+        "project-lantern",
+        "project-runner",
+        "vera",
+        "vera-control-plane",
+        "vera-mesh",
+        "vera-model-training",
+        "vera-mono",
+        "workbridgemcp",
+    }
+
+
+def test_20260930_new_public_subjects_are_classified_but_held():
+    wave = load_advancement_wave(
+        ROOT / "portfolio" / "advancement_wave.public.json"
+    )
+    expected = {"semiotics", "thebrazenbeard", "workbridge", "workbridgecommander"}
+    items = {
+        item.subject_id: item
+        for item in wave.items
+        if item.subject_kind == "repository"
+        and item.subject_id in expected
+    }
+    assert set(items) == expected
+    assert all(item.execution_state == "HELD" for item in items.values())
+    assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
+    assert all("EXACT_SOURCE_CLASSIFIED" in item.source_status for item in items.values())
+
+
+def test_inherited_non_p0_repository_status_is_currentness_gated():
+    wave = load_advancement_wave(
+        ROOT / "portfolio" / "advancement_wave.public.json"
+    )
+    inherited = [
+        item for item in wave.items
+        if item.subject_kind == "repository"
+        and item.priority != "P0"
+        and item.subject_id not in {
+            "build-team-2.0",
+            "semiotics",
+            "thebrazenbeard",
+            "workbridge",
+            "workbridgecommander",
+        }
+    ]
+    assert inherited
+    assert all(item.execution_state == "HELD" for item in inherited)
+    assert all(item.action == "CURRENTNESS_AUDIT" for item in inherited)
+    assert all(item.review_gate == "CURRENTNESS_CHECK" for item in inherited)
