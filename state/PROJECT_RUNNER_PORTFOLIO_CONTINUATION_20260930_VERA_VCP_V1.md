@@ -512,3 +512,271 @@ Also recover the Project Runner EFFECT_CONFIRMED finalization branch portfolio/e
 ```
 
 End state of this continuation artifact: source state only; no merge or protected effect.
+
+---
+
+# H. Resume execution update — 2026-09-30 V2
+
+This section supersedes older "next action" language where live GitHub state has advanced. Earlier sections remain historical evidence for their exact subjects.
+
+## Currentness correction remains binding
+
+WoWSQL remains retired. No replacement currentness backend is inferred by this continuation.
+
+BT2 and Project Lantern now contain source-level fail-closed status artifacts that explicitly represent:
+
+- active currentness backend: none/null;
+- replacement currentness backend: `NOT_ESTABLISHED`;
+- candidate PostgreSQL / SQL Connectome V4 material: source candidate only;
+- Lantern currentness: `UNKNOWN`;
+- no fallback to retired WoWSQL, Supabase, Git prose, chat, memory, or another unqualified provider.
+
+No runtime-provider read was performed by this continuation.
+
+## VCP hostile-review closure and current-main successor
+
+Original repaired VCP PR #147 remains unmerged:
+
+- exact head: `83eda677f6daa95a4ebe494f4cadacb9a8d4a2a9`;
+- base: `5ea58cfc2dd184ef916532d3b4e2bd13b99c2709`;
+- V3 binding / consolidation / integrity: PASS.
+
+Hostile review found and repaired a real competing-authority defect: the legacy Vera V1 runtime-source registry still carried `EXACT_CANONICAL_BINDING` while V3 claimed activation-disposition authority. The repair makes the legacy registry historical-only and V3 the single activation-policy authority.
+
+VCP main later advanced independently to:
+
+`b86143e50ba41d05eab19d5a300662afeda60d6e`
+
+The intervening main delta had zero changed-path collision with PR #147. A fresh current-main successor was therefore created without force-updating #147:
+
+- VCP PR #151
+- branch: `portfolio/rebind-no-auto-bind-v3-current-main-r2-20260930`
+- base: `b86143e50ba41d05eab19d5a300662afeda60d6e`
+- exact head: `92aeff1021eddcff5d2bfbadac139227e855e66a`
+- 11 changed blobs copied byte-for-byte from reviewed PR #147
+- VCP V3 run `36784576459`: PASS
+- consolidation run `36784576560`: PASS
+- integrity run `36784576350`: PASS
+
+NO_AUTO_BIND, private count-only, immutable-cut/freshness separation, exact Vera #206 binding, and exact Rezon #95 binding remain unchanged.
+
+Rezon PR #97 was extended to bind #151:
+
+- review head: `dfdacbf9cbe6686bbb12b22fd8b7a5d1e32bf725`
+- Rezon kernel: PASS
+- Rezon Benchmark V1: PASS
+- dynamic PR review job: PASS
+- an auxiliary dynamic "Code scanning AI findings" job reported failure but produced no PR comments, review threads, or submitted reviews in the inspected GitHub surfaces.
+
+The Rezon artifact is source-recorded hostile-review evidence; it does not claim a separately executed external-model review.
+
+## Requested Vera-family lane results
+
+### VeraMesh
+
+PR #48:
+
+- exact head: `1601ca894363d643bcb821658d68304601598138`
+- base/current main at qualification: `98b74ff77981a5478e20a748bbb94565ad9140c8`
+- advancement: cross-repo integration pin refreshed to exact WorkBridgeMCP main `f091f6be6e85f489e3e7839e10612204b89a4a9e`
+- VeraMesh CI: PASS
+- Desktop Commander duplicate E2E: PASS
+- CodeQL: PASS
+- no merge performed by this continuation.
+
+### Vera model training
+
+PR #46 remains a historically stacked training branch rather than a fabricated clean current-main restack.
+
+Current exact head:
+
+`e0c4929535357af4c0e0ae85464876025f96efc9`
+
+Advancement:
+
+- training receipt now SHA-256 binds general SFT, general preference, and targeted corpus inputs;
+- regression verifies all three exact input hashes;
+- dedicated Qwen3.5 source-qualification workflow added;
+- workflow made PR-aware and given parent history for whitespace qualification;
+- inherited trailing whitespace in the stacked training-plan diff was repaired rather than waived.
+
+Exact PR qualification:
+
+- Qwen3.5 source qualification run `36784458941`: PASS.
+
+This is source/training-lineage qualification only. It is not evidence that HF training ran, completed, was installed, or changed a runtime model.
+
+### Vera Mono
+
+PR #63:
+
+- exact head: `e4ee70d78ae19daedb31fb42dc0e9d12d1186552`
+- base/current main: `413397e51bce35d0a36f00cf0ca2c876ca720b44`
+- advancement: built-wheel verifier now requires the exact two declared external `Requires-Dist` dependencies and rejects undeclared dependency creep;
+- regression added for unexpected dependency;
+- monorepo-tests: PASS;
+- Dependency Review: PASS.
+
+Source/build evidence only; no install/runtime effect.
+
+### WorkBridgeMCP
+
+PR #19:
+
+- exact head: `88db4d9f05466a16f03eb8fcc28fe58a35c192ae`
+- base/current main: `f091f6be6e85f489e3e7839e10612204b89a4a9e`
+- advancement: executable grants deny caller-supplied arguments by default and require exact per-grant `allow_arguments=true`;
+- Go runner regression covers deny-by-default and explicit opt-in;
+- security/README boundaries updated.
+
+CI attempt 1 had one failure in the pre-existing Windows Desktop Commander duplicate E2E marker probe while both Go test jobs, builds, Windows smoke paths, Ubuntu duplicate E2E, and Windows binary build passed.
+
+The failed Windows duplicate job was rerun without source change. Workflow run `36769323043`, attempt 2: PASS.
+
+DS216 ARMv7 qualification: PASS.
+
+The result supports a transient Windows duplicate-E2E failure classification for that attempt; it does not expand machine authority.
+
+## Vera current-main successor
+
+Frozen Vera PR #206 remains unchanged because VCP binds its exact qualified head:
+
+`dff171a8cee0b2dd3c6fd4627499330800499fdd`
+
+A current-main successor was first created as PR #214. Vera main then advanced independently again with zero changed-path collision.
+
+Fresh current-main successor:
+
+- Vera PR #217
+- branch: `portfolio/public-successor-v2-current-main-r2-20260930`
+- base: `788b14bb97ccd5f81506d892fbdd557323680bb0`
+- exact head: `1e71721e1ca654473ed38f85f4aea43c1bbb1345`
+- all 44 successor blobs are byte-identical to PR #214 exact subject `06643ee5e5d060e8a72bbc41b499f8e94906c0b4`
+- public-safe successor run `36784560529`: PASS
+- Dependency Review `36784560380`: PASS
+- R6A0 release package `36784560544`: PASS
+- Temporal enforcement `36784560469`: PASS
+- Temporal pilot `36784560455`: PASS.
+
+Rezon PR #98 records the exact-head current-main review:
+
+- review head: `81eddc298f2479423b50be122901f63fe63e0fbb`
+- Rezon kernel: PASS
+- Rezon Benchmark V1: PASS
+- dynamic PR review job: PASS at latest inspected state
+- source/review evidence only.
+
+## Externally advanced / merged P0s
+
+These merges occurred outside this continuation's merge authority. This continuation did not perform them.
+
+### BT2
+
+PR #52 was externally merged.
+
+Current main observed after merge:
+
+`8d9b07d165350c341538be56cdfc919b729fe96b`
+
+Merged source records currentness backend as explicitly unbound after WoWSQL retirement. Final Database rebuild qualification run `36770280158`: PASS.
+
+### Project Lantern
+
+PR #18 was externally merged.
+
+Current main observed after merge:
+
+`79b730ed4d1d3d7486902a725ced39854e0ffb47`
+
+CI: PASS. Dependency Review: PASS.
+
+### Discovery
+
+PR #44 was externally merged.
+
+Current main after that merge:
+
+`620c09b2a1c96256cc7523877f3e986ad75f8f0a`
+
+The merged census records 74 accessible repositories: 55 public, 19 private.
+
+A later authenticated GitHub inventory in this continuation observed a newer estate again:
+
+- total: 76
+- public: 57
+- private: 19
+- archived: 2
+- public archived: 0
+- private archived: 2
+
+Relative to Discovery's 74/55/19 canonical census, the new public additions are:
+
+- `thebrazenbeard/thebrazenbeard`
+- `thebrazenbeard/workbridge`
+
+Private names remain unpublished.
+
+Discovery PR #45 was opened to record this as a fail-closed drift observation only:
+
+- head: `a0e3fa51dbdeea47d0ef7b9192b23169abcba575`
+- status: canonical census stale / full deterministic refresh required
+- new public subjects remain unclassified pending dedicated review
+- the drift artifact is explicitly not a replacement census.
+
+## Project Runner own P0 advancement
+
+Current Project Runner main remains:
+
+`ee17ce504018aff2eb26c9a71e16e4832ebee6bf`
+
+Its committed public corpus remains an older 71/53/18 cut. Therefore the committed advancement wave is not standing-current against the current 76/57/19 estate.
+
+Public additions relative to the Project Runner corpus now include:
+
+- `thebrazenbeard/semiotics`
+- `thebrazenbeard/workbridgecommander`
+- `thebrazenbeard/thebrazenbeard`
+- `thebrazenbeard/workbridge`
+
+The private count advanced from 18 to 19 without publishing private identity.
+
+Do not use the 71/53/18 wave as live estate currentness until corpus refresh + wave regeneration are completed.
+
+The public project registry also omitted six P0 repositories. Project Runner PR #53 was opened to repair registry coverage fail-closed:
+
+- exact head: `d8d636038e1443fef7cc0c7fb753ed3f8bca3acb`
+- adds BT2, Project Lantern, VeraMesh, Vera model training, Vera Mono, and WorkBridgeMCP
+- each added subject is `EXTERNAL_BOUNDED`
+- review scope: `STANDING`
+- scheduling state: `HELD`
+- capabilities: read / analyze / propose only
+- no execution targets
+- no source-write / branch / PR / merge capability
+
+Qualification:
+
+- push test: PASS
+- PR test: PASS
+- Dependency Review: PASS.
+
+This makes the P0s visible to the registry without pretending Project Runner executed the GitHub source changes through a registered worker route.
+
+## Separate EFFECT_CONFIRMED spine
+
+The EFFECT_CONFIRMED finalization branch remains a separate source subject:
+
+- branch: `portfolio/effect-confirmed-finalization-v1-20260924`
+- exact head recovered in this continuation: `172edc1fa9296fb48571da5a4ab3710a91ebac19`
+
+Do not conflate it with corpus refresh, P0 source qualification, merge state, installation, runtime effect, or the direct GitHub source work above.
+
+## Next frontier after this checkpoint
+
+1. Finish Discovery PR #45 qualification and then perform the full deterministic 76-repository census/graph/intake/blob-evidence refresh rather than promoting the drift marker.
+2. Dedicated-review the four public repositories absent from Project Runner's 71-repository corpus, especially the overlap between `workbridge`, `WorkBridgeMCP`, and `workbridgecommander`, before assigning semantic roles.
+3. Regenerate Project Runner's public corpus and advancement wave from the new complete public cut while preserving private count-only semantics.
+4. Keep PR #53's P0 registry entries HELD unless an exact execution target/worker route is separately designed and authorized.
+5. Preserve all P0 candidate PRs as unmerged unless live merge authority is explicitly granted.
+
+End state remains source/review/test evidence only unless an externally merged state is explicitly identified above.
+
