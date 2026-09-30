@@ -1,19 +1,19 @@
 {
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
-  "observed_at": "2026-09-28T05:32:00-04:00",
+  "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Live GitHub repository/PR/commit audit reconciled with user-authorized ChatGPT and durable project-history evidence.",
-  "freshness_rule": "Descriptive status is an observed cut, not authority; refresh live source/runtime evidence before scheduling, merging, deploying, or claiming current completion.",
+  "status_basis": "Authenticated GitHub membership refreshed to 76 accessible repositories (57 public, 19 private). Semantic status for the prior 53 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed; four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
-    "total": 71,
-    "public": 53,
-    "private": 18,
+    "total": 76,
+    "public": 57,
+    "private": 19,
     "archived": 2,
     "public_archived": 0,
     "private_archived": 2
   },
   "private_inventory": {
-    "count": 18,
+    "count": 19,
     "public_commitment_scheme": "COUNT_ONLY_PUBLIC_V1",
     "exact_membership_publicly_committed": false
   },
@@ -537,6 +537,20 @@
       "current_frontier": "Finish currentness custody while separating evidence from authority."
     },
     {
+      "id": "semiotics",
+      "repository": "thebrazenbeard/semiotics",
+      "name": "Semiotics",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "language-and-semantics",
+      "activity_state": "ACTIVE",
+      "purpose": "Deterministic source-bound registry for signs, contextual interpretations, provenance, revision history, and explicit interpretation relations.",
+      "status": "Exact-source classification at 37117a2097f7f2aa35968fc9db24eacf7240826e: v0.2 corpus discipline is active; the kernel explicitly does not infer meaning, confidence, truth, or relations.",
+      "current_frontier": "Establish evaluation evidence before admitting learned/probabilistic interpretation while preserving source-bound readings versus generated hypotheses."
+    },
+    {
       "id": "spm",
       "repository": "thebrazenbeard/spm",
       "name": "SPM",
@@ -591,6 +605,20 @@
       "purpose": "Literary/research downstream for source-critical Yeshua reconstruction.",
       "status": "Foundation restack, ON_THEO handoff and historical/literary review lanes remain open.",
       "current_frontier": "Consume survived source claims without promoting literary hypotheses upstream."
+    },
+    {
+      "id": "thebrazenbeard",
+      "repository": "thebrazenbeard/thebrazenbeard",
+      "name": "thebrazenbeard Profile",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "portfolio-presentation",
+      "activity_state": "STABLE",
+      "purpose": "Public GitHub profile and descriptive portfolio presentation surface.",
+      "status": "Exact-source classification at 83ea2e083ccbf83ad5215ca53a9d5a00d16bb0d0: profile README and visual assets present portfolio relationships and explicitly disclaim that topology implies one live runtime.",
+      "current_frontier": "Keep presentation claims subordinate to canonical repository/runtime evidence; never use profile prose as project currentness or authority."
     },
     {
       "id": "transcendence",
@@ -649,20 +677,6 @@
       "current_frontier": "Reconcile useful mechanisms into the current implementation without competing runtime roots."
     },
     {
-      "id": "vera-model-training",
-      "repository": "thebrazenbeard/vera_model_training",
-      "name": "Vera Model Training",
-      "visibility": "public",
-      "archived": false,
-      "default_branch": "main",
-      "priority": "P0",
-      "family_id": "vera-runtime",
-      "activity_state": "ACTIVE_HEAVY",
-      "purpose": "Vera/BV corpus construction, model training and qualification.",
-      "status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open.",
-      "current_frontier": "Execute one reproducible training line with exact corpus lineage."
-    },
-    {
       "id": "vera-control-plane",
       "repository": "thebrazenbeard/vera-control-plane",
       "name": "Vera Control Plane",
@@ -703,6 +717,20 @@
       "purpose": "Persistent transport and node connectivity for Vera and authorized machines.",
       "status": "Large WorkBridge/VeraPort/Lappy activation stack remains open.",
       "current_frontier": "Collapse stacked activation work into one qualified transport path."
+    },
+    {
+      "id": "vera-model-training",
+      "repository": "thebrazenbeard/vera_model_training",
+      "name": "Vera Model Training",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P0",
+      "family_id": "vera-runtime",
+      "activity_state": "ACTIVE_HEAVY",
+      "purpose": "Vera/BV corpus construction, model training and qualification.",
+      "status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open.",
+      "current_frontier": "Execute one reproducible training line with exact corpus lineage."
     },
     {
       "id": "vera-mono",
@@ -773,6 +801,34 @@
       "purpose": "Durable crash-recovery workspace and operation-event layer.",
       "status": "Consolidation, model-state adapter and Discovery effect-envelope work remain open.",
       "current_frontier": "Reconcile overlap with Project Runner/BT2 and keep only distinct recovery semantics."
+    },
+    {
+      "id": "workbridge",
+      "repository": "thebrazenbeard/workbridge",
+      "name": "WorkBridge",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P1",
+      "family_id": "workstation-runtime",
+      "activity_state": "ACTIVE_HEAVY",
+      "purpose": "Standalone provider-neutral bounded Go MCP workstation server plus independent Synology WorkBridge packaging.",
+      "status": "Exact-source classification at 7caab29eb5667897a0a03d0ce67d733380b01685: derived from an earlier WorkBridgeMCP Go-server cut and independently evolving; process-argument hardening and relay package 0003 qualification are active.",
+      "current_frontier": "Qualify independent source/build/package hardening and establish explicit donor-patch currentness so security fixes do not silently diverge across the WorkBridgeMCP-derived lineage."
+    },
+    {
+      "id": "workbridgecommander",
+      "repository": "thebrazenbeard/workbridgecommander",
+      "name": "WorkBridge Commander",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P1",
+      "family_id": "coordination",
+      "activity_state": "ACTIVE",
+      "purpose": "Remote MCP ingress, authenticated device attachment, and orchestration surface for the WorkBridge Commander path.",
+      "status": "Exact-source classification at c2b95be79ca011a539c20bfee60fcbc46cfea177: remote service/device-agent source is on main; source preserves Desktop Commander workstation semantics and does not establish deployment or workstation effect.",
+      "current_frontier": "Qualify endpoint/authentication, revocation, session isolation, exact routing, and workstation-payload binding without laundering remote reachability into workstation authority."
     },
     {
       "id": "workbridgemcp",
