@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership refreshed to 76 accessible repositories (57 public, 19 private). Semantic status for the prior 53 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed; four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "status_basis": "Authenticated GitHub membership refreshed to 76 accessible repositories (57 public, 19 private). Ten P0 records were re-read from live GitHub on 2026-09-30; semantic status for the other prior 43 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -111,10 +111,10 @@
       "default_branch": "main",
       "priority": "P0",
       "family_id": "portfolio-spine",
-      "activity_state": "ACTIVE_HEAVY",
+      "activity_state": "ACTIVE",
       "purpose": "Canonical Build Team Two engineering, runtime-state, qualification and recovery source.",
-      "status": "Database qualification, WoWSQL resilience, training preservation and portfolio consolidation remain active.",
-      "current_frontier": "Close currentness/database resilience gaps while preserving exact qualification boundaries."
+      "status": "Live main@8d9b07d165350c341538be56cdfc919b729fe96b records the currentness backend as explicitly unbound after WoWSQL retirement; no open PR was observed in the refresh.",
+      "current_frontier": "Keep project currentness fail-closed until a replacement backend is independently qualified; preserve source, runtime, and effect as separate states."
     },
     {
       "id": "bugops",
@@ -195,10 +195,10 @@
       "default_branch": "main",
       "priority": "P0",
       "family_id": "portfolio-spine",
-      "activity_state": "ACTIVE",
+      "activity_state": "ACTIVE_HEAVY",
       "purpose": "Whole-portfolio census, overlap analysis and governed capability discovery.",
-      "status": "Committed census is stale against the live 66-repository estate.",
-      "current_frontier": "Refresh census and feed descriptive inventory into Project Runner."
+      "status": "Live main@620c09b2a1c96256cc7523877f3e986ad75f8f0a remains the 74/55/19 canonical cut. Draft PR #45 records authenticated drift to 76/57/19 and draft PR #46 exact-head classifies the four public additions; structural validation passes while public-currentness correctly remains stale.",
+      "current_frontier": "Regenerate the full 57-public census, graph, intake, and blob evidence; do not suppress or reinterpret the stale currentness watch."
     },
     {
       "id": "driftguard",
@@ -463,8 +463,8 @@
       "family_id": "memory-and-provenance",
       "activity_state": "ACTIVE",
       "purpose": "Governed provenance-bearing material/currentness package.",
-      "status": "Packaging, dechatification and consolidation PRs remain open.",
-      "current_frontier": "Consolidate package while keeping provider/runtime qualification fail-closed."
+      "status": "Live main@79b730ed4d1d3d7486902a725ced39854e0ffb47 retains fail-closed currentness with no established replacement backend; no open PR was observed in the refresh.",
+      "current_frontier": "Remain UNKNOWN for Lantern-dependent currentness until a replacement runtime backend is explicitly established and qualified."
     },
     {
       "id": "project-runner",
@@ -477,8 +477,8 @@
       "family_id": "portfolio-spine",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Portfolio inventory, dependencies, bounded scheduling/execution and completion evidence.",
-      "status": "M6 is on main; durable scheduler/operator work remains open. Owns this corpus identity.",
-      "current_frontier": "Make the corpus a validated descriptive input without turning priority into authority."
+      "status": "Live main@ee17ce504018aff2eb26c9a71e16e4832ebee6bf. Draft PR #53 fail-closed registers six missing public P0 subjects; the stacked corpus refresh updates authenticated membership to 76 total / 57 public / 19 private without publishing private names.",
+      "current_frontier": "Finish the 76/57/19 corpus and source-only wave refresh, then keep execution admission separate from descriptive portfolio membership."
     },
     {
       "id": "repairtracker",
@@ -673,8 +673,8 @@
       "family_id": "vera-runtime",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Broad Vera architecture, integration and historical canonical surface.",
-      "status": "Multiple integration/currentness/reviewer PRs remain open, including portfolio absorption.",
-      "current_frontier": "Reconcile useful mechanisms into the current implementation without competing runtime roots."
+      "status": "Live main@788b14bb97ccd5f81506d892fbdd557323680bb0. Draft PR #217@1e71721e1ca654473ed38f85f4aea43c1bbb1345 is the current-main byte-conserved successor and passes all five hosted qualification workflows; frozen PR #206 remains the immutable VCP-bound subject.",
+      "current_frontier": "Preserve the immutable PR #206 binding while advancing only fresh current-main successors; do not promote source qualification into installation or runtime effect."
     },
     {
       "id": "vera-control-plane",
@@ -687,8 +687,8 @@
       "family_id": "vera-runtime",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Policy-bound Vera administration, source custody and effect/currentness enforcement.",
-      "status": "Correction, controller identity, NO_AUTO_BIND and hostile qualification work remain open.",
-      "current_frontier": "Close exact currentness/authority gaps and stabilize the control plane."
+      "status": "Live main@b86143e50ba41d05eab19d5a300662afeda60d6e. Draft PR #151@92aeff1021eddcff5d2bfbadac139227e855e66a is the reviewed current-main NO_AUTO_BIND restack and passes V3 binding, consolidation, and integrity gates.",
+      "current_frontier": "Keep V3 as the single activation-disposition authority and preserve NO_AUTO_BIND until separately qualified runtime evidence exists."
     },
     {
       "id": "vera-habitat",
@@ -715,8 +715,8 @@
       "family_id": "vera-runtime",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Persistent transport and node connectivity for Vera and authorized machines.",
-      "status": "Large WorkBridge/VeraPort/Lappy activation stack remains open.",
-      "current_frontier": "Collapse stacked activation work into one qualified transport path."
+      "status": "Live main@98b74ff77981a5478e20a748bbb94565ad9140c8. Draft PR #48@1601ca894363d643bcb821658d68304601598138 source-binds the direct MCP Lappy Desktop Commander path and passes VeraMesh CI, Desktop Commander duplicate E2E, and CodeQL; an auxiliary dynamic code-scanning job reported failure without changing those hosted source gates.",
+      "current_frontier": "Keep transport/source binding exact and independently verify any installation, endpoint, session, or workstation effect before treating the path as active runtime."
     },
     {
       "id": "vera-model-training",
@@ -729,8 +729,8 @@
       "family_id": "vera-runtime",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Vera/BV corpus construction, model training and qualification.",
-      "status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open.",
-      "current_frontier": "Execute one reproducible training line with exact corpus lineage."
+      "status": "Live main@08a69c98312dd5aab437d4996e12bbb34a5900c2. Draft PR #46@e0c4929535357af4c0e0ae85464876025f96efc9 passes Qwen3.5 source qualification, while newer stacked training work including PR #58 exists on a different lineage.",
+      "current_frontier": "Reconcile the qualified Qwen3.5 plan/corpus bindings with the newer V4 training lineage before any training run; source qualification is not trained-model or runtime evidence."
     },
     {
       "id": "vera-mono",
@@ -743,8 +743,8 @@
       "family_id": "vera-runtime",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Self-contained Vera implementation with local lifecycle, recovery, assurance and effect gates.",
-      "status": "Main advances persistent trust, authority rotation and ambiguity recovery; Windows portability remains open.",
-      "current_frontier": "Finish portable recovery and reduce external runtime dependency without erasing provenance."
+      "status": "Live main@413397e51bce35d0a36f00cf0ca2c876ca720b44. Draft PR #63@e4ee70d78ae19daedb31fb42dc0e9d12d1186552 bounds the portable recovery wheel dependency ceiling and passes monorepo tests, Dependency Review, and hosted review checks.",
+      "current_frontier": "Keep recovery packaging reproducible and dependency-bounded; verify install/runtime separately from source/build qualification."
     },
     {
       "id": "vera-r9a0",
@@ -839,10 +839,10 @@
       "default_branch": "main",
       "priority": "P0",
       "family_id": "vera-runtime",
-      "activity_state": "ACTIVE",
+      "activity_state": "ACTIVE_HEAVY",
       "purpose": "Workstation bridge MCP for bounded machine-facing operations.",
-      "status": "Repair/build, listener ownership and VeraMesh integration restack remain open.",
-      "current_frontier": "Qualify one narrow machine-control surface before broader capability exposure."
+      "status": "Live main@f091f6be6e85f489e3e7839e10612204b89a4a9e. Draft PR #19@88db4d9f05466a16f03eb8fcc28fe58a35c192ae passes CI on rerun plus DS216 qualification for deny-by-default process arguments; draft PR #20@37a878868e9182b03e2680e863af1a6b94b75944 separately passes CI for Commander process-capacity alignment.",
+      "current_frontier": "Reconcile argument authority and capacity changes without collapsing the bounded native Go surface into the unrestricted Desktop Commander duplicate path; keep runtime authority separately qualified."
     },
     {
       "id": "world-zero",
