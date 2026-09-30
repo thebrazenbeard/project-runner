@@ -30,6 +30,8 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "vera-model-training",
         "vera-mono",
         "workbridgemcp",
+        "ingest",
+        "project-achilles",
     }
 
     private_projects = {p.id for p in projects if p.visibility == "private"}
