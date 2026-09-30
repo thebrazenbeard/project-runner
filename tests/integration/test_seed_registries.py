@@ -35,6 +35,9 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "pro-run",
         "ccb-core",
         "workbridgecommander",
+        "fuckup",
+        "lgcm",
+        "noema",
     }
 
     private_projects = {p.id for p in projects if p.visibility == "private"}

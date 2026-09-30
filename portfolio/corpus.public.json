@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, and three coordination records were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 36 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, and four cognitive/correction records were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 32 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -253,8 +253,8 @@
       "family_id": "assurance-and-repair",
       "activity_state": "ACTIVE",
       "purpose": "Corrective-learning protocol for volatile systems and live knowledge updates.",
-      "status": "Canonical protocol is on main; vendor-neutral runtime remains open.",
-      "current_frontier": "Make correction/retention executable without unchecked self-modification."
+      "status": "Exact main@a87dea38a58c4cff75bc7d123d87f63a5e110895 observed with no open PRs. Qualification push run 36355338549 passes at that exact head.",
+      "current_frontier": "Keep correction/retention bounded and executable only through an explicitly admitted route; source is exact-main qualified, but Runner currently admits read/analyze/propose only."
     },
     {
       "id": "god-brain",
@@ -281,8 +281,8 @@
       "family_id": "cognitive-architecture",
       "activity_state": "ACTIVE",
       "purpose": "Hyperconnectome synthetic cognitive runtime architecture.",
-      "status": "Recovery, bounded kinesis/motor learning and stabilization corrections remain active.",
-      "current_frontier": "Qualify concrete subsystem behavior and keep claims below architecture."
+      "status": "Exact main@80a55949b0bb7549b7f678fba8ecedce854e3c0e observed. Cognitive Core run 36065590441, Architecture Conformance run 36065590452, and Reference Kernel run 36065590338 all pass at that exact head. Draft PRs #21-#23 remain open on separate older branch lineages.",
+      "current_frontier": "Treat current main as the qualified source baseline; reconcile any still-useful recovery/kinesis/stabilization draft mechanisms against that baseline before new source work. Runner admits read/analyze/propose only."
     },
     {
       "id": "hephaestus",
@@ -337,8 +337,8 @@
       "family_id": "cognitive-architecture",
       "activity_state": "ACTIVE",
       "purpose": "Experimental persistent continual-learning model with prequential evaluation, context recall, and bounded planning.",
-      "status": "LGCM-0 implementation is on main and remains in active qualification without broader intelligence claims.",
-      "current_frontier": "Run stronger continual-learning evaluation and preserve the standalone research boundary before any Vera integration."
+      "status": "Exact main@0043c60419de9ef0b52363b62aed8c0a52ef63f5 observed with no open PRs. No CI workflow exists in the current tree and no qualification run is attached to this head. The only recent green dependency-graph run is at older head 8a32de8f13f844b56af3f50a8fa54b864945915a; current main is 16 commits ahead with substantive LGCM source and tests.",
+      "current_frontier": "Add or otherwise obtain exact-main executable qualification before integration or stronger continual-learning claims; preserve the standalone research boundary and keep Runner execution HELD."
     },
     {
       "id": "masamune",
@@ -393,8 +393,8 @@
       "family_id": "cognitive-architecture",
       "activity_state": "ACTIVE",
       "purpose": "Persistent predictive cognitive architecture for learned agency.",
-      "status": "Preregistration/chronology validation, minimal source subject and recovery remain active.",
-      "current_frontier": "Prefer empirical validation over architectural enlargement."
+      "status": "Exact main@697d1fac6f9fea158994888a861e651ac8fac282 observed. Noema source tests run 36204170237 and Noema I1 run 36204170262 both pass at that exact head. Multiple draft research/recovery branches remain open and are not promoted over current main by this audit.",
+      "current_frontier": "Use exact current main as the empirical source baseline; reconcile remaining draft chronology/recovery work only against current-main evidence and keep architectural claims below measured behavior. Runner admits read/analyze/propose only."
     },
     {
       "id": "on-theo",

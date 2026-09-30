@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-coordination-tranche-v1-20260930",
-    "commit": "a86448fe9cbe8b9e8344dd16f9572b07487309e5",
+    "ref": "portfolio/audit-cognitive-tranche-v1-20260930",
+    "commit": "e00dadcfed1f1a1ee6dd2d057936c0cec87bfb1c",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "c3d5217ac875b92d8055cc36b4e1979161e0d396",
+    "git_blob_sha": "19e968a3901f53465f05ffcbdc8f04ca082862d5",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -291,12 +291,12 @@
         "ACHILLES",
         "MASAMUNE"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Make correction/retention executable without unchecked self-modification.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Canonical protocol is on main; vendor-neutral runtime remains open."
+      "review_gate": "EXECUTION_ROUTE_ADMISSION",
+      "frontier": "Keep correction/retention bounded and executable only through an explicitly admitted route; source is exact-main qualified, but Runner currently admits read/analyze/propose only.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@a87dea38a58c4cff75bc7d123d87f63a5e110895 observed with no open PRs. Qualification push run 36355338549 passes at that exact head."
     },
     {
       "subject_kind": "repository",
@@ -328,12 +328,12 @@
         "VOSS",
         "DRIFTGUARD"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Qualify concrete subsystem behavior and keep claims below architecture.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Recovery, bounded kinesis/motor learning and stabilization corrections remain active."
+      "review_gate": "EXECUTION_ROUTE_ADMISSION",
+      "frontier": "Treat current main as the qualified source baseline; reconcile any still-useful recovery/kinesis/stabilization draft mechanisms against that baseline before new source work. Runner admits read/analyze/propose only.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@80a55949b0bb7549b7f678fba8ecedce854e3c0e observed. Cognitive Core run 36065590441, Architecture Conformance run 36065590452, and Reference Kernel run 36065590338 all pass at that exact head. Draft PRs #21-#23 remain open on separate older branch lineages."
     },
     {
       "subject_kind": "repository",
@@ -402,12 +402,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Run stronger continual-learning evaluation and preserve the standalone research boundary before any Vera integration.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — LGCM-0 implementation is on main and remains in active qualification without broader intelligence claims."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Add or otherwise obtain exact-main executable qualification before integration or stronger continual-learning claims; preserve the standalone research boundary and keep Runner execution HELD.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@0043c60419de9ef0b52363b62aed8c0a52ef63f5 observed with no open PRs. No CI workflow exists in the current tree and no qualification run is attached to this head. The only recent green dependency-graph run is at older head 8a32de8f13f844b56af3f50a8fa54b864945915a; current main is 16 commits ahead with substantive LGCM source and tests."
     },
     {
       "subject_kind": "repository",
@@ -478,12 +478,12 @@
         "VOSS",
         "DRIFTGUARD"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Prefer empirical validation over architectural enlargement.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Preregistration/chronology validation, minimal source subject and recovery remain active."
+      "review_gate": "EXECUTION_ROUTE_ADMISSION",
+      "frontier": "Use exact current main as the empirical source baseline; reconcile remaining draft chronology/recovery work only against current-main evidence and keep architectural claims below measured behavior. Runner admits read/analyze/propose only.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@697d1fac6f9fea158994888a861e651ac8fac282 observed. Noema source tests run 36204170237 and Noema I1 run 36204170262 both pass at that exact head. Multiple draft research/recovery branches remain open and are not promoted over current main by this audit."
     },
     {
       "subject_kind": "repository",

@@ -59,6 +59,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-architecture
+  scheduling_state: HELD
+  scope_note: Cognitive-architecture subject registered for currentness and review only; no source-write or execution target is admitted.
 - id: roots
   name: Roots
   visibility: public
@@ -313,3 +318,45 @@ projects:
   family_id: coordination
   scheduling_state: HELD
   scope_note: Remote orchestration subject registered for currentness and review only; workstation and transport effects remain separately authority-gated.
+- id: fuckup
+  name: Fuckup
+  visibility: public
+  repositories:
+  - thebrazenbeard/fuckup
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: assurance-and-repair
+  scheduling_state: HELD
+  scope_note: Correction/retention subject registered for currentness and review only; no self-modifying or source-write execution target is admitted.
+- id: lgcm
+  name: LGCM
+  visibility: public
+  repositories:
+  - thebrazenbeard/lgcm
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-architecture
+  scheduling_state: HELD
+  scope_note: Continual-learning subject registered for currentness and review only; exact-main qualification is presently missing.
+- id: noema
+  name: Noema
+  visibility: public
+  repositories:
+  - thebrazenbeard/noema
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-architecture
+  scheduling_state: HELD
+  scope_note: Empirical cognition-research subject registered for currentness and review only; no source-write or execution target is admitted.

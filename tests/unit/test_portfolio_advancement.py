@@ -133,7 +133,7 @@ def test_20260928_new_public_repositories_are_source_only():
     wave = load_advancement_wave(
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
-    expected = {"axle", "lgcm"}
+    expected = {"axle"}
     items = {
         item.subject_id: item
         for item in wave.items
@@ -212,6 +212,10 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "project-achilles",
             "ccb-core",
             "pro-run",
+            "fuckup",
+            "hc-brain",
+            "lgcm",
+            "noema",
         }
     ]
     assert inherited
