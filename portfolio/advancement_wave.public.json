@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-industrial-tranche-v1-20260930",
-    "commit": "0007c0475294d543dc488a4b4f5d6811df0cc4d4",
+    "ref": "portfolio/audit-language-tranche-v1-20260930",
+    "commit": "3d0b47f16827394dc98172eb797c6bd11c3e9790",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "1706e623dd1fb3199968c4cd923af9b63906c580",
+    "git_blob_sha": "d0be9a2c8e434694cdb37edb1580f1e6a5333858",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -722,12 +722,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Stabilize semantic/execution boundaries and compose with BT2 database/Lantern work without turning translation or connectivity into effect authority.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — New active repository; PostgreSQL 17 CI is green while semantic/translation qualification continues advancing on main."
+      "review_gate": "EFFECT_AUTHORITY_SEPARATION",
+      "frontier": "Use exact current main as the qualified semantic/database source baseline; keep translation, engine reachability, query generation, and database effect authority as separate evidence classes before any BT2/Lantern composition.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@f81ff43e5358f798f23bab8a718bda743c93e930 observed with no open PRs. CI run 36642233865, Conformance Snapshot run 36642233944, Real Engine Qualification run 36642233876, and CodeQL run 36642233873 all pass at that exact head; scheduled CodeQL run 36733336748 also passes."
     },
     {
       "subject_kind": "repository",
@@ -833,12 +833,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Complete reproducible held-out qualification and keep claims measurement-bound.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large stack has reached real held-out MASSIVE 1.0 qualification work."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Obtain executable exact-main qualification before promoting the integrated stack or stronger held-out claims; reconcile the open research DAG only against that qualified baseline and keep Runner execution HELD.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@33edef682181e1bea6b36c5afc588d261f0c1289 observed. Merged PR #21 integrated the executable research stack, but neither its head nor current main has executable qualification runs. Current main's only attached green run is dependency-graph automation. The sole source workflow is a pull-request-targeted MASSIVE 1.0 packet and does not qualify current main. A large draft translation/held-out research DAG remains open."
     },
     {
       "subject_kind": "repository",
