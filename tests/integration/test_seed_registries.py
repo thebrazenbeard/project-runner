@@ -24,6 +24,12 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "mosaic",
         "driftguard",
         "discovery",
+        "bt2",
+        "project-lantern",
+        "vera-mesh",
+        "vera-model-training",
+        "vera-mono",
+        "workbridgemcp",
     }
 
     private_projects = {p.id for p in projects if p.visibility == "private"}
