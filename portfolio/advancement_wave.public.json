@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/corpus-76-wave-v2-20260930",
-    "commit": "ce2922f7a00facacbbb5b9145af20bd84d3dbfb4",
+    "ref": "portfolio/audit-assurance-tranche-v1-20260930",
+    "commit": "e8cba8df33f55512437078a3c24735f5eef86b5c",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "7e9678fd36524f5a7212e5162769592a1690191e",
+    "git_blob_sha": "54d76c4d6f0cf21d6ef3c4fc908a6dfaf9b64aad",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -236,12 +236,12 @@
         "REZON",
         "MASAMUNE"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Finish effect fencing while retaining exact-subject qualification.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Benchmark-lineage governance is on main; effect reservation/dispatch fencing remains open."
+      "review_gate": "EXECUTION_ROUTE_ADMISSION",
+      "frontier": "Review and reconcile PR #40's effect reservation/dispatch fence as the current candidate while preserving exact-head qualification; Runner admits read/analyze/propose only, so source-write remains HELD.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@52fa829c629fa0f3e729204912db9f9f783f322a observed. Draft PR #40@33b75523a1130c614c270f3de45417e1acf4e32b is based on that main and passes tests, CodeQL Advanced, and action-smoke; it remains unmerged."
     },
     {
       "subject_kind": "repository",
@@ -360,18 +360,18 @@
       "repository": "thebrazenbeard/ingest",
       "priority": "P1",
       "family_id": "memory-and-provenance",
-      "activity_state": "ACTIVE_HEAVY",
+      "activity_state": "ACTIVE",
       "lead_identity": "ROOTS",
       "reviewer_identities": [
         "VOSS",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Finish filesystem durability/integrity hardening and keep intake distinct from truth, currentness, authority, and activation.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — V0.1 source implementation is on main; filesystem integrity and durability hardening remains under review."
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Hold expansion until a concrete intake/provenance consumer or defect justifies new work; preserve the merged HTTP cleanup and ctime-race hardening as the current source baseline.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@27764c9fb97c84d178a3f66e0da2d669df645ed6 observed with no open PRs. Merged PR #23 head c4d8607227f46f8292a87812cb637b56bcf5da5c passed CI, and comparison to the merge commit reports no file-content changes."
     },
     {
       "subject_kind": "repository",
@@ -553,12 +553,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Serve as standing security reviewer for high-risk changes.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Verification repair is merged; no current pull request."
+      "review_gate": "EXACT_MAIN_REQUALIFICATION",
+      "frontier": "Remain a standing security-review subject and require exact-main requalification before expanding its own source; Runner has no write execution target for Achilles.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@99bc4e8cf7bd60d022fb25222d701a8cf42f80c0 observed with no open PRs. PR #3 head 00420de5d6fcce1241ffdc3f06482170181a42d6 passed Verify Achilles; the merge/main comparison includes additional security workflow/review/guard files, so exact-main qualification is not inferred from the PR-head run."
     },
     {
       "subject_kind": "repository",
@@ -630,12 +630,12 @@
         "VOSS",
         "DRIFTGUARD"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Collapse open assurance work into one current qualified kernel.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large assurance stack remains open through canonical-baseline reconciliation."
+      "review_gate": "EXECUTION_ROUTE_ADMISSION",
+      "frontier": "Reconcile the open assurance PR graph against current main into one exact-head qualified kernel; Runner currently admits read/analyze/propose only, so source-write remains HELD.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@ec401810990337bf07a5d6473782ba13eba1bb3f observed. Merged PR #96 head c60ea9c42e02cc9d8803040cc13ddd904d9e1245 passed Rezon Benchmark V1 and kernel tests; current main additionally carries the CodeQL workflow repair and has a large open assurance PR graph, so no single open branch is promoted as the canonical successor."
     },
     {
       "subject_kind": "repository",
