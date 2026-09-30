@@ -124,8 +124,11 @@ def test_sql_connectome_is_admitted_without_effect_authority():
     assert item.repositories == ("thebrazenbeard/sql-connectome",)
     assert item.effect_ceiling == "SOURCE_ONLY"
     assert item.execution_state == "HELD"
-    assert item.action == "CURRENTNESS_AUDIT"
-    assert item.review_gate == "CURRENTNESS_CHECK"
+    assert item.action == "EXECUTE_FRONTIER"
+    assert item.review_gate == "EFFECT_AUTHORITY_SEPARATION"
+    assert item.source_status.startswith(
+        "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD"
+    )
     assert item.priority == "P1"
 
 
