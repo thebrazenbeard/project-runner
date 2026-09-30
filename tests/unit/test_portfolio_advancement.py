@@ -225,6 +225,7 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "axle",
             "sql-connectome",
             "unvtrslr",
+            "unbound-sol",
         }
     ]
     assert inherited

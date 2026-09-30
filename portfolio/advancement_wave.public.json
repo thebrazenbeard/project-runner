@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-language-tranche-v1-20260930",
-    "commit": "3d0b47f16827394dc98172eb797c6bd11c3e9790",
+    "ref": "portfolio/audit-unbound-sol-v1-20260930",
+    "commit": "4128e25b00b51af9d79cb7dbd0ddac1357347efa",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "d0be9a2c8e434694cdb37edb1580f1e6a5333858",
+    "git_blob_sha": "2e1939b351d15c2d502b3dde80682a6834c01df3",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -815,12 +815,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Compose the active DAG and admit only mechanisms that survive exact-source review.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Active PR DAG spans behavior, effect authority, external model bus and vera-mono review."
+      "review_gate": "CANDIDATE_DAG_RECONCILIATION_AND_ROUTE_ADMISSION",
+      "frontier": "Hostile-review PR #40 mechanism-by-mechanism against current main and preserve evidence/claim ceilings; admit only bounded mechanisms through separately authorized source/runtime routes. Do not convert repository accumulation or continuity-green status into AGI, identity, or runtime-effect proof.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@d4284dd1f044e506bb85554856c00497d6790d44 observed; continuity push run 36068448425 passes at that exact head. Draft PR #40@cdcf573589849110e0bf872067db24e424620760 is based on current main, is 145 commits ahead / 0 behind, and passes continuity run 36622548129. Its large global-ingestion/generalist-evaluation state is a separate candidate subject, not automatically admitted into main/runtime."
     },
     {
       "subject_kind": "repository",

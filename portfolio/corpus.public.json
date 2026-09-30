@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, two industrial-intelligence records, and two language/semantics records were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 28 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, two industrial-intelligence records, two language/semantics records, and Unbound Sol were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 27 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution, identity, intelligence, or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -645,8 +645,8 @@
       "family_id": "identity-runtime",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Sol developmental state, behavior, correction trust and model-bus work.",
-      "status": "Active PR DAG spans behavior, effect authority, external model bus and vera-mono review.",
-      "current_frontier": "Compose the active DAG and admit only mechanisms that survive exact-source review."
+      "status": "Exact main@d4284dd1f044e506bb85554856c00497d6790d44 observed; continuity push run 36068448425 passes at that exact head. Draft PR #40@cdcf573589849110e0bf872067db24e424620760 is based on current main, is 145 commits ahead / 0 behind, and passes continuity run 36622548129. Its large global-ingestion/generalist-evaluation state is a separate candidate subject, not automatically admitted into main/runtime.",
+      "current_frontier": "Hostile-review PR #40 mechanism-by-mechanism against current main and preserve evidence/claim ceilings; admit only bounded mechanisms through separately authorized source/runtime routes. Do not convert repository accumulation or continuity-green status into AGI, identity, or runtime-effect proof."
     },
     {
       "id": "unvtrslr",
