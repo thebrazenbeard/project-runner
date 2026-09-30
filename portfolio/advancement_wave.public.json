@@ -33,10 +33,7 @@
     "destructive_cleanup_forbidden": true,
     "default_effect_ceiling": "SOURCE_ONLY",
     "priority_is_authority": false,
-    "execution_rule": "Freshly re-read P0 subjects may remain QUEUED for source-only work. Prior non-P0 semantic status inherited from the 2026-09-28 cut is HELD behind CURRENTNESS_AUDIT. Newly added public subjects are exact-source classified but remain HELD until an execution route is separately admitted. Archived/superseded subjects remain preserve-only.",
-    "membership_is_execution_authority": false,
-    "inherited_semantic_status_requires_refresh": true,
-    "new_subject_classification_grants_execution": false
+    "execution_rule": "Freshly re-read P0 subjects may remain QUEUED for source-only work. Prior non-P0 semantic status inherited from the 2026-09-28 cut is HELD behind CURRENTNESS_AUDIT. Newly added public subjects are exact-source classified but remain HELD until an execution route is separately admitted. Archived/superseded subjects remain preserve-only."
   },
   "items": [
     {
