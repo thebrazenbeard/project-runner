@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership refreshed to 76 accessible repositories (57 public, 19 private). Ten P0 records were re-read from live GitHub on 2026-09-30, including Discovery PR #47 exact qualified 76/57/19 source currentness; semantic status for the other prior 43 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records plus the four-subject assurance/provenance tranche (Rezon, DriftGuard, Ingest, Project Achilles) were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 39 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -211,8 +211,8 @@
       "family_id": "assurance-and-repair",
       "activity_state": "ACTIVE",
       "purpose": "Behavioral/model drift detection with reproducible baselines and adversarial qualification.",
-      "status": "Benchmark-lineage governance is on main; effect reservation/dispatch fencing remains open.",
-      "current_frontier": "Finish effect fencing while retaining exact-subject qualification."
+      "status": "Exact main@52fa829c629fa0f3e729204912db9f9f783f322a observed. Draft PR #40@33b75523a1130c614c270f3de45417e1acf4e32b is based on that main and passes tests, CodeQL Advanced, and action-smoke; it remains unmerged.",
+      "current_frontier": "Review and reconcile PR #40's effect reservation/dispatch fence as the current candidate while preserving exact-head qualification; Runner admits read/analyze/propose only, so source-write remains HELD."
     },
     {
       "id": "empathy",
@@ -307,10 +307,10 @@
       "default_branch": "main",
       "priority": "P1",
       "family_id": "memory-and-provenance",
-      "activity_state": "ACTIVE_HEAVY",
+      "activity_state": "ACTIVE",
       "purpose": "Provider-neutral universal intake boundary with exact raw preservation, deterministic derivation, provenance, and receipts.",
-      "status": "V0.1 source implementation is on main; filesystem integrity and durability hardening remains under review.",
-      "current_frontier": "Finish filesystem durability/integrity hardening and keep intake distinct from truth, currentness, authority, and activation."
+      "status": "Exact main@27764c9fb97c84d178a3f66e0da2d669df645ed6 observed with no open PRs. Merged PR #23 head c4d8607227f46f8292a87812cb637b56bcf5da5c passed CI, and comparison to the merge commit reports no file-content changes.",
+      "current_frontier": "Hold expansion until a concrete intake/provenance consumer or defect justifies new work; preserve the merged HTTP cleanup and ctime-race hardening as the current source baseline."
     },
     {
       "id": "intranel",
@@ -449,8 +449,8 @@
       "family_id": "assurance-and-repair",
       "activity_state": "STABLE",
       "purpose": "Security, adversarial review and attack-path analysis.",
-      "status": "Verification repair is merged; no current pull request.",
-      "current_frontier": "Serve as standing security reviewer for high-risk changes."
+      "status": "Exact main@99bc4e8cf7bd60d022fb25222d701a8cf42f80c0 observed with no open PRs. PR #3 head 00420de5d6fcce1241ffdc3f06482170181a42d6 passed Verify Achilles; the merge/main comparison includes additional security workflow/review/guard files, so exact-main qualification is not inferred from the PR-head run.",
+      "current_frontier": "Remain a standing security-review subject and require exact-main requalification before expanding its own source; Runner has no write execution target for Achilles."
     },
     {
       "id": "project-lantern",
@@ -505,8 +505,8 @@
       "family_id": "reasoning-and-assurance",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Multi-view reasoning with typed evidence, replay and portable assurance.",
-      "status": "Large assurance stack remains open through canonical-baseline reconciliation.",
-      "current_frontier": "Collapse open assurance work into one current qualified kernel."
+      "status": "Exact main@ec401810990337bf07a5d6473782ba13eba1bb3f observed. Merged PR #96 head c60ea9c42e02cc9d8803040cc13ddd904d9e1245 passed Rezon Benchmark V1 and kernel tests; current main additionally carries the CodeQL workflow repair and has a large open assurance PR graph, so no single open branch is promoted as the canonical successor.",
+      "current_frontier": "Reconcile the open assurance PR graph against current main into one exact-head qualified kernel; Runner currently admits read/analyze/propose only, so source-write remains HELD."
     },
     {
       "id": "roots",
