@@ -1,15 +1,15 @@
 {
-  "wave_id": "PROJECT_RUNNER_PORTFOLIO_ADVANCEMENT_WAVE_V1",
-  "generated_at": "2026-09-28T05:32:00-04:00",
+  "wave_id": "PROJECT_RUNNER_PORTFOLIO_ADVANCEMENT_WAVE_V2_20260930",
+  "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/project-runner-corpus-v1-20260924",
-    "commit": "634abe6a7caf944b0d7b9a64ba071f725ae97771",
+    "ref": "portfolio/corpus-76-wave-v2-20260930",
+    "commit": "d7f8821a73a5c34ad0d80c542ba1296e4e717e77",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "4112da68dcf9e008f042c3284653b006d081f1e3",
-    "public_repository_count": 53,
-    "total_repository_count": 71,
-    "private_repository_count": 18,
+    "git_blob_sha": "496596484719cc25188628d03979fecca2f2c67a",
+    "public_repository_count": 57,
+    "total_repository_count": 76,
+    "private_repository_count": 19,
     "public_workstream_count": 2,
     "total_workstream_count": 15,
     "private_workstream_count": 13
@@ -33,7 +33,10 @@
     "destructive_cleanup_forbidden": true,
     "default_effect_ceiling": "SOURCE_ONLY",
     "priority_is_authority": false,
-    "execution_rule": "Every corpus subject receives a bounded frontier disposition; active work advances by source/branch/PR/review, stable/incubator work must earn continued expansion, archived/superseded work is preserved rather than revived."
+    "execution_rule": "Freshly re-read P0 subjects may remain QUEUED for source-only work. Prior non-P0 semantic status inherited from the 2026-09-28 cut is HELD behind CURRENTNESS_AUDIT. Newly added public subjects are exact-source classified but remain HELD until an execution route is separately admitted. Archived/superseded subjects remain preserve-only.",
+    "membership_is_execution_authority": false,
+    "inherited_semantic_status_requires_refresh": true,
+    "new_subject_classification_grants_execution": false
   },
   "items": [
     {
@@ -48,12 +51,12 @@
         "REZON",
         "ACHILLES"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Reconcile the research stack into an executable bounded industrial-intelligence path.",
-      "source_status": "Large active research/assurance stack spans currentness, execution evidence, anti-replay and governance."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large active research/assurance stack spans currentness, execution evidence, anti-replay and governance."
     },
     {
       "subject_kind": "repository",
@@ -66,12 +69,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Use only when a concrete runtime needs attunement.",
-      "source_status": "Foundation contracts are merged; no current pull request."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation contracts are merged; no current pull request."
     },
     {
       "subject_kind": "repository",
@@ -85,12 +88,12 @@
         "ACHILLES",
         "REZON"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Complete bounded wake-word and bench hardware qualification while preserving the read-only vehicle boundary.",
-      "source_status": "Executable core and hardware contract are on main; production hardware remains unqualified."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Executable core and hardware contract are on main; vehicle-bus effects remain explicitly read-only and production hardware remains unqualified."
     },
     {
       "subject_kind": "repository",
@@ -98,7 +101,7 @@
       "repository": "thebrazenbeard/bt2",
       "priority": "P0",
       "family_id": "portfolio-spine",
-      "activity_state": "ACTIVE_HEAVY",
+      "activity_state": "ACTIVE",
       "lead_identity": "ONE",
       "reviewer_identities": [
         "REZON",
@@ -108,8 +111,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Close currentness/database resilience gaps while preserving exact qualification boundaries.",
-      "source_status": "Database qualification, WoWSQL resilience, training preservation and portfolio consolidation remain active."
+      "frontier": "Keep project currentness fail-closed until a replacement backend is independently qualified; preserve source, runtime, and effect as separate states.",
+      "source_status": "Live main@8d9b07d165350c341538be56cdfc919b729fe96b records the currentness backend as explicitly unbound after WoWSQL retirement; no open PR was observed in the refresh."
     },
     {
       "subject_kind": "repository",
@@ -123,12 +126,12 @@
         "ACHILLES",
         "MASAMUNE"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Remain an incident source rather than a competing orchestrator.",
-      "source_status": "Recent incident repair is merged; no current pull request."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Recent incident repair is merged; no current pull request."
     },
     {
       "subject_kind": "repository",
@@ -161,12 +164,12 @@
         "ACHILLES",
         "REZON"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Keep the public core narrow while operational transport evolves separately.",
-      "source_status": "Initial sanitized extraction is complete."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Initial sanitized extraction is complete."
     },
     {
       "subject_kind": "repository",
@@ -179,12 +182,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Treat wants/goals as provenance-bearing state, not standing instruction.",
-      "source_status": "Continuity-gap work is merged."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Continuity-gap work is merged."
     },
     {
       "subject_kind": "repository",
@@ -198,12 +201,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Donate proven memory mechanisms to current runtime instead of creating another authority.",
-      "source_status": "Integration architecture is merged; repo is quiet."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Integration architecture is merged; repo is quiet."
     },
     {
       "subject_kind": "repository",
@@ -211,7 +214,7 @@
       "repository": "thebrazenbeard/discovery",
       "priority": "P0",
       "family_id": "portfolio-spine",
-      "activity_state": "ACTIVE",
+      "activity_state": "ACTIVE_HEAVY",
       "lead_identity": "DISCOVERY",
       "reviewer_identities": [
         "ONE",
@@ -221,8 +224,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Refresh census and feed descriptive inventory into Project Runner.",
-      "source_status": "Discovery has 66-cut refresh candidates, but live membership advanced again to 67 repositories with SQL Connectome."
+      "frontier": "Regenerate the full 57-public census, graph, intake, and blob evidence; do not suppress or reinterpret the stale currentness watch.",
+      "source_status": "Live main@620c09b2a1c96256cc7523877f3e986ad75f8f0a remains the 74/55/19 canonical cut. Draft PR #45 records authenticated drift to 76/57/19 and draft PR #46 exact-head classifies the four public additions; structural validation passes while public-currentness correctly remains stale."
     },
     {
       "subject_kind": "repository",
@@ -236,12 +239,12 @@
         "REZON",
         "MASAMUNE"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Finish effect fencing while retaining exact-subject qualification.",
-      "source_status": "Benchmark-lineage governance is on main; effect reservation/dispatch fencing remains open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Benchmark-lineage governance is on main; effect reservation/dispatch fencing remains open."
     },
     {
       "subject_kind": "repository",
@@ -254,12 +257,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Consolidate lanes while preserving falsification independence.",
-      "source_status": "Active-source consolidation and reviewer-lane work remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Active-source consolidation and reviewer-lane work remain open."
     },
     {
       "subject_kind": "repository",
@@ -272,12 +275,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "RUN_MINIMUM_PROOF",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "FALSIFIABLE_PROOF",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Prove bounded value on concrete cases before broad integration.",
-      "source_status": "Foundation/restack work remains open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation/restack work remains open."
     },
     {
       "subject_kind": "repository",
@@ -291,12 +294,12 @@
         "ACHILLES",
         "MASAMUNE"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Make correction/retention executable without unchecked self-modification.",
-      "source_status": "Canonical protocol is on main; vendor-neutral runtime remains open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Canonical protocol is on main; vendor-neutral runtime remains open."
     },
     {
       "subject_kind": "repository",
@@ -309,12 +312,12 @@
       "reviewer_identities": [
         "REZON"
       ],
-      "action": "RUN_MINIMUM_PROOF",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "FALSIFIABLE_PROOF",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Compress hypotheses into controlled experiments with explicit nulls.",
-      "source_status": "Broad experimental surface exists; strong claims remain unqualified."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Broad experimental surface exists; strong claims remain unqualified."
     },
     {
       "subject_kind": "repository",
@@ -328,12 +331,12 @@
         "VOSS",
         "DRIFTGUARD"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Qualify concrete subsystem behavior and keep claims below architecture.",
-      "source_status": "Recovery, bounded kinesis/motor learning and stabilization corrections remain active."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Recovery, bounded kinesis/motor learning and stabilization corrections remain active."
     },
     {
       "subject_kind": "repository",
@@ -347,12 +350,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Finish a reconstructible currentness-aware specialist package.",
-      "source_status": "Dechatification and Role Four training/consolidation remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Dechatification and Role Four training/consolidation remain open."
     },
     {
       "subject_kind": "repository",
@@ -366,12 +369,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Finish filesystem durability/integrity hardening and keep intake distinct from truth, currentness, authority, and activation.",
-      "source_status": "V0.1 source implementation is on main; filesystem hardening PR #7 is green and open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — V0.1 source implementation is on main; filesystem integrity and durability hardening remains under review."
     },
     {
       "subject_kind": "repository",
@@ -384,12 +387,12 @@
       "reviewer_identities": [
         "REZON"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Close governance bypass paths and freeze a narrow reusable contract.",
-      "source_status": "Hostile hardening and constructor-boundary work remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Hostile hardening and constructor-boundary work remain open."
     },
     {
       "subject_kind": "repository",
@@ -402,12 +405,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Run stronger continual-learning evaluation and preserve the standalone research boundary before any Vera integration.",
-      "source_status": "LGCM-0 implementation is on main and remains in active qualification."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — LGCM-0 implementation is on main and remains in active qualification without broader intelligence claims."
     },
     {
       "subject_kind": "repository",
@@ -421,12 +424,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "REFRESH_AND_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Activate only against concrete defects.",
-      "source_status": "No current pull request; recent work is continuation/review checkpointing."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — No current pull request; recent work is continuation/review checkpointing."
     },
     {
       "subject_kind": "repository",
@@ -440,12 +443,12 @@
         "ACHILLES",
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Qualify the executable transition and welfare constraints.",
-      "source_status": "V2 architecture is active; executable salience-to-recruitment transition is under review."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — V2 architecture is active; executable salience-to-recruitment transition is under review."
     },
     {
       "subject_kind": "repository",
@@ -459,12 +462,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Prove a minimal working multi-model continuity path.",
-      "source_status": "Foundation, continuity harness and current-main restack remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation, continuity harness and current-main restack remain open."
     },
     {
       "subject_kind": "repository",
@@ -478,12 +481,12 @@
         "VOSS",
         "DRIFTGUARD"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Prefer empirical validation over architectural enlargement.",
-      "source_status": "Preregistration/chronology validation, minimal source subject and recovery remain active."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Preregistration/chronology validation, minimal source subject and recovery remain active."
     },
     {
       "subject_kind": "repository",
@@ -497,12 +500,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Continue claim-centered hostile review and separate speculation from baseline evidence.",
-      "source_status": "Large active Yeshua/Nature-of-Existence/divination research frontier."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large active Yeshua/Nature-of-Existence/divination research frontier."
     },
     {
       "subject_kind": "repository",
@@ -515,12 +518,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Establish measurable behavior without laundering self-description into phenomenology.",
-      "source_status": "Current work separates self-appraisal from phenomenology."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Current work separates self-appraisal from phenomenology."
     },
     {
       "subject_kind": "repository",
@@ -534,12 +537,12 @@
         "ACHILLES",
         "REZON"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Integrate verified Windows/Qwen runtime and recovery fixes while preserving exact effect and reconciliation boundaries.",
-      "source_status": "Core runtime is on main; PR #7 and PR #8 are green current-main successors."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Core durable runtime is on main; Windows/local-Qwen runtime and stale-error recovery successors are green and open."
     },
     {
       "subject_kind": "repository",
@@ -553,12 +556,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Serve as standing security reviewer for high-risk changes.",
-      "source_status": "Verification repair is merged; no current pull request."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Verification repair is merged; no current pull request."
     },
     {
       "subject_kind": "repository",
@@ -576,8 +579,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Consolidate package while keeping provider/runtime qualification fail-closed.",
-      "source_status": "Packaging, dechatification and consolidation PRs remain open."
+      "frontier": "Remain UNKNOWN for Lantern-dependent currentness until a replacement runtime backend is explicitly established and qualified.",
+      "source_status": "Live main@79b730ed4d1d3d7486902a725ced39854e0ffb47 retains fail-closed currentness with no established replacement backend; no open PR was observed in the refresh."
     },
     {
       "subject_kind": "repository",
@@ -596,8 +599,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Make the corpus a validated descriptive input without turning priority into authority.",
-      "source_status": "M6 is on main; durable scheduler/operator work remains open. Owns this corpus identity."
+      "frontier": "Finish the 76/57/19 corpus and source-only wave refresh, then keep execution admission separate from descriptive portfolio membership.",
+      "source_status": "Live main@ee17ce504018aff2eb26c9a71e16e4832ebee6bf. Draft PR #53 fail-closed registers six missing public P0 subjects; the stacked corpus refresh updates authenticated membership to 76 total / 57 public / 19 private without publishing private names."
     },
     {
       "subject_kind": "repository",
@@ -611,12 +614,12 @@
         "ACHILLES",
         "MASAMUNE"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Prove a distinct role alongside BT2, Project Runner and BugOps.",
-      "source_status": "Repair spine, artifact attestation and GitHub signal-promotion work remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Repair spine, artifact attestation and GitHub signal-promotion work remain open."
     },
     {
       "subject_kind": "repository",
@@ -630,12 +633,12 @@
         "VOSS",
         "DRIFTGUARD"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Collapse open assurance work into one current qualified kernel.",
-      "source_status": "Large assurance stack remains open through canonical-baseline reconciliation."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large assurance stack remains open through canonical-baseline reconciliation."
     },
     {
       "subject_kind": "repository",
@@ -649,12 +652,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Reuse broadly without making Roots a global truth authority.",
-      "source_status": "Qualified engine is canonical on main; no current pull request."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Qualified engine is canonical on main; no current pull request."
     },
     {
       "subject_kind": "repository",
@@ -667,12 +670,31 @@
       "reviewer_identities": [
         "VOSS"
       ],
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "CURRENTNESS_CHECK",
+      "frontier": "Finish currentness custody while separating evidence from authority.",
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Retrieval-authority and provider-ledger custody work remain open."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "semiotics",
+      "repository": "thebrazenbeard/semiotics",
+      "priority": "P2",
+      "family_id": "language-and-semantics",
+      "activity_state": "ACTIVE",
+      "lead_identity": "REZON",
+      "reviewer_identities": [
+        "VOSS",
+        "ROOTS"
+      ],
       "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Finish currentness custody while separating evidence from authority.",
-      "source_status": "Retrieval-authority and provider-ledger custody work remain open."
+      "frontier": "Establish evaluation evidence before admitting learned/probabilistic interpretation while preserving source-bound readings versus generated hypotheses.",
+      "source_status": "EXACT_SOURCE_CLASSIFIED_NO_REGISTERED_EXECUTION_TARGET — Exact-source classification at 37117a2097f7f2aa35968fc9db24eacf7240826e: v0.2 corpus discipline is active; the kernel explicitly does not infer meaning, confidence, truth, or relations."
     },
     {
       "subject_kind": "repository",
@@ -685,12 +707,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Establish a reproducible causal experiment before stronger claims.",
-      "source_status": "Construction provenance and causal semantic/pragmatic experiments remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Construction provenance and causal semantic/pragmatic experiments remain open."
     },
     {
       "subject_kind": "repository",
@@ -703,12 +725,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Stabilize semantic/execution boundaries and compose with BT2 database/Lantern work without turning translation or connectivity into effect authority.",
-      "source_status": "New active repository; PostgreSQL 17 CI is green while semantic/translation qualification continues advancing on main."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — New active repository; PostgreSQL 17 CI is green while semantic/translation qualification continues advancing on main."
     },
     {
       "subject_kind": "repository",
@@ -722,12 +744,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "VERIFY_REUSE_OR_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CONSUMER_EVIDENCE",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Reuse wherever event, observation and record time must remain distinct.",
-      "source_status": "Temporal Watch and cross-chat timing probes are on main."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Temporal Watch and cross-chat timing probes are on main."
     },
     {
       "subject_kind": "repository",
@@ -741,12 +763,30 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Consume survived source claims without promoting literary hypotheses upstream.",
-      "source_status": "Foundation restack, ON_THEO handoff and historical/literary review lanes remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation restack, ON_THEO handoff and historical/literary review lanes remain open."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "thebrazenbeard",
+      "repository": "thebrazenbeard/thebrazenbeard",
+      "priority": "P2",
+      "family_id": "portfolio-presentation",
+      "activity_state": "STABLE",
+      "lead_identity": "DISCOVERY",
+      "reviewer_identities": [
+        "VOSS"
+      ],
+      "action": "VERIFY_REUSE_OR_HOLD",
+      "execution_state": "HELD",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Keep presentation claims subordinate to canonical repository/runtime evidence; never use profile prose as project currentness or authority.",
+      "source_status": "EXACT_SOURCE_CLASSIFIED_PRESENTATION_ONLY — Exact-source classification at 83ea2e083ccbf83ad5215ca53a9d5a00d16bb0d0: profile README and visual assets present portfolio relationships and explicitly disclaim that topology implies one live runtime."
     },
     {
       "subject_kind": "repository",
@@ -759,12 +799,12 @@
       "reviewer_identities": [
         "REZON"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Validate continuity mechanics while keeping consciousness claims unproven.",
-      "source_status": "Continuity-lineage and integrity-verifier alignment remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Continuity-lineage and integrity-verifier alignment remain open."
     },
     {
       "subject_kind": "repository",
@@ -778,12 +818,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Compose the active DAG and admit only mechanisms that survive exact-source review.",
-      "source_status": "Active PR DAG spans behavior, effect authority, external model bus and vera-mono review."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Active PR DAG spans behavior, effect authority, external model bus and vera-mono review."
     },
     {
       "subject_kind": "repository",
@@ -796,12 +836,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Complete reproducible held-out qualification and keep claims measurement-bound.",
-      "source_status": "Large stack has reached real held-out MASSIVE 1.0 qualification work."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large stack has reached real held-out MASSIVE 1.0 qualification work."
     },
     {
       "subject_kind": "repository",
@@ -820,8 +860,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Reconcile useful mechanisms into the current implementation without competing runtime roots.",
-      "source_status": "Multiple integration/currentness/reviewer PRs remain open, including portfolio absorption."
+      "frontier": "Preserve the immutable PR #206 binding while advancing only fresh current-main successors; do not promote source qualification into installation or runtime effect.",
+      "source_status": "Live main@788b14bb97ccd5f81506d892fbdd557323680bb0. Draft PR #217@1e71721e1ca654473ed38f85f4aea43c1bbb1345 is the current-main byte-conserved successor and passes all five hosted qualification workflows; frozen PR #206 remains the immutable VCP-bound subject."
     },
     {
       "subject_kind": "repository",
@@ -840,8 +880,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Close exact currentness/authority gaps and stabilize the control plane.",
-      "source_status": "Correction, controller identity, NO_AUTO_BIND and hostile qualification work remain open."
+      "frontier": "Keep V3 as the single activation-disposition authority and preserve NO_AUTO_BIND until separately qualified runtime evidence exists.",
+      "source_status": "Live main@b86143e50ba41d05eab19d5a300662afeda60d6e. Draft PR #151@92aeff1021eddcff5d2bfbadac139227e855e66a is the reviewed current-main NO_AUTO_BIND restack and passes V3 binding, consolidation, and integrity gates."
     },
     {
       "subject_kind": "repository",
@@ -856,12 +896,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "RUN_MINIMUM_PROOF",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "FALSIFIABLE_PROOF",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Define a concrete consumer before expanding the abstraction.",
-      "source_status": "Foundation V1 remains open and repository is minimal."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation V1 remains open and repository is minimal."
     },
     {
       "subject_kind": "repository",
@@ -880,8 +920,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Collapse stacked activation work into one qualified transport path.",
-      "source_status": "Large WorkBridge/VeraPort/Lappy activation stack remains open."
+      "frontier": "Keep transport/source binding exact and independently verify any installation, endpoint, session, or workstation effect before treating the path as active runtime.",
+      "source_status": "Live main@98b74ff77981a5478e20a748bbb94565ad9140c8. Draft PR #48@1601ca894363d643bcb821658d68304601598138 source-binds the direct MCP Lappy Desktop Commander path and passes VeraMesh CI, Desktop Commander duplicate E2E, and CodeQL; an auxiliary dynamic code-scanning job reported failure without changing those hosted source gates."
     },
     {
       "subject_kind": "repository",
@@ -900,8 +940,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Execute one reproducible training line with exact corpus lineage.",
-      "source_status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open."
+      "frontier": "Reconcile the qualified Qwen3.5 plan/corpus bindings with the newer V4 training lineage before any training run; source qualification is not trained-model or runtime evidence.",
+      "source_status": "Live main@08a69c98312dd5aab437d4996e12bbb34a5900c2. Draft PR #46@e0c4929535357af4c0e0ae85464876025f96efc9 passes Qwen3.5 source qualification, while newer stacked training work including PR #58 exists on a different lineage."
     },
     {
       "subject_kind": "repository",
@@ -920,8 +960,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Finish portable recovery and reduce external runtime dependency without erasing provenance.",
-      "source_status": "Main advances persistent trust, authority rotation and ambiguity recovery; Windows portability remains open."
+      "frontier": "Keep recovery packaging reproducible and dependency-bounded; verify install/runtime separately from source/build qualification.",
+      "source_status": "Live main@413397e51bce35d0a36f00cf0ca2c876ca720b44. Draft PR #63@e4ee70d78ae19daedb31fb42dc0e9d12d1186552 bounds the portable recovery wheel dependency ceiling and passes monorepo tests, Dependency Review, and hosted review checks."
     },
     {
       "subject_kind": "repository",
@@ -935,12 +975,12 @@
         "HEPHAESTUS",
         "ROOTS"
       ],
-      "action": "REFRESH_AND_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Migrate useful mechanisms forward rather than revive a competing runtime.",
-      "source_status": "Voice currentness-guard work remains open; otherwise mostly lineage."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Voice currentness-guard work remains open; otherwise mostly lineage."
     },
     {
       "subject_kind": "repository",
@@ -955,12 +995,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Build one reproducible source/build/install/runtime path.",
-      "source_status": "Runtime Host SPK and VeraMesh packaging/open-route work remain open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Runtime Host SPK and VeraMesh packaging/open-route work remain open."
     },
     {
       "subject_kind": "repository",
@@ -974,12 +1014,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "REFRESH_AND_HOLD",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Use for bounded independent forensic review.",
-      "source_status": "No current pull request; current main is checkpointed specialist state."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — No current pull request; current main is checkpointed specialist state."
     },
     {
       "subject_kind": "repository",
@@ -993,12 +1033,51 @@
         "REZON",
         "VOSS"
       ],
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "CURRENTNESS_CHECK",
+      "frontier": "Reconcile overlap with Project Runner/BT2 and keep only distinct recovery semantics.",
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Consolidation, model-state adapter and Discovery effect-envelope work remain open."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "workbridge",
+      "repository": "thebrazenbeard/workbridge",
+      "priority": "P1",
+      "family_id": "workstation-runtime",
+      "activity_state": "ACTIVE_HEAVY",
+      "lead_identity": "HEPHAESTUS",
+      "reviewer_identities": [
+        "ACHILLES",
+        "REZON",
+        "VOSS"
+      ],
       "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Reconcile overlap with Project Runner/BT2 and keep only distinct recovery semantics.",
-      "source_status": "Consolidation, model-state adapter and Discovery effect-envelope work remain open."
+      "frontier": "Qualify independent source/build/package hardening and establish explicit donor-patch currentness so security fixes do not silently diverge across the WorkBridgeMCP-derived lineage.",
+      "source_status": "EXACT_SOURCE_CLASSIFIED_NO_REGISTERED_EXECUTION_TARGET — Exact-source classification at 7caab29eb5667897a0a03d0ce67d733380b01685: derived from an earlier WorkBridgeMCP Go-server cut and independently evolving; process-argument hardening and relay package 0003 qualification are active."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "workbridgecommander",
+      "repository": "thebrazenbeard/workbridgecommander",
+      "priority": "P1",
+      "family_id": "coordination",
+      "activity_state": "ACTIVE",
+      "lead_identity": "ONE",
+      "reviewer_identities": [
+        "ACHILLES",
+        "REZON"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "HELD",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "EXACT_HEAD_REVIEW",
+      "frontier": "Qualify endpoint/authentication, revocation, session isolation, exact routing, and workstation-payload binding without laundering remote reachability into workstation authority.",
+      "source_status": "EXACT_SOURCE_CLASSIFIED_NO_REGISTERED_EXECUTION_TARGET — Exact-source classification at c2b95be79ca011a539c20bfee60fcbc46cfea177: remote service/device-agent source is on main; source preserves Desktop Commander workstation semantics and does not establish deployment or workstation effect."
     },
     {
       "subject_kind": "repository",
@@ -1006,7 +1085,7 @@
       "repository": "thebrazenbeard/WorkBridgeMCP",
       "priority": "P0",
       "family_id": "vera-runtime",
-      "activity_state": "ACTIVE",
+      "activity_state": "ACTIVE_HEAVY",
       "lead_identity": "HEPHAESTUS",
       "reviewer_identities": [
         "ACHILLES",
@@ -1017,8 +1096,8 @@
       "execution_state": "QUEUED",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Qualify one narrow machine-control surface before broader capability exposure.",
-      "source_status": "Repair/build, listener ownership and VeraMesh integration restack remain open."
+      "frontier": "Reconcile argument authority and capacity changes without collapsing the bounded native Go surface into the unrestricted Desktop Commander duplicate path; keep runtime authority separately qualified.",
+      "source_status": "Live main@f091f6be6e85f489e3e7839e10612204b89a4a9e. Draft PR #19@88db4d9f05466a16f03eb8fcc28fe58a35c192ae passes CI on rerun plus DS216 qualification for deny-by-default process arguments; draft PR #20@37a878868e9182b03e2680e863af1a6b94b75944 separately passes CI for Commander process-capacity alignment."
     },
     {
       "subject_kind": "repository",
@@ -1031,12 +1110,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Complete frozen temporal qualification before interpreting later performance.",
-      "source_status": "Frozen 2018-to-2019 mass-normalization execution remains open."
+      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Frozen 2018-to-2019 mass-normalization execution remains open."
     },
     {
       "subject_kind": "workstream",
@@ -1053,12 +1132,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Keep hypothesis, symbolism, experiential interpretation and sourced fact distinct.",
-      "source_status": "Continuation is preserved in ON_THEO with downstream literary handoff and remains distinct from the Yeshua evidence spine."
+      "source_status": "INHERITED_WORKSTREAM_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Continuation is preserved in ON_THEO with downstream literary handoff and remains distinct from the Yeshua evidence spine."
     },
     {
       "subject_kind": "workstream",
@@ -1075,12 +1154,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "EXECUTE_FRONTIER",
-      "execution_state": "QUEUED",
+      "action": "CURRENTNESS_AUDIT",
+      "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
+      "review_gate": "CURRENTNESS_CHECK",
       "frontier": "Continue hostile source review upstream and consume survived or explicitly unresolved claims downstream.",
-      "source_status": "Active upstream research and downstream manuscript work remain intentionally separate in authority."
+      "source_status": "INHERITED_WORKSTREAM_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Active upstream research and downstream manuscript work remain intentionally separate in authority."
     }
   ]
 }
