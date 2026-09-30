@@ -780,3 +780,133 @@ Do not conflate it with corpus refresh, P0 source qualification, merge state, in
 
 End state remains source/review/test evidence only unless an externally merged state is explicitly identified above.
 
+---
+
+# I. 76-repository corpus/currentness advancement — 2026-09-30 V3
+
+This section extends the V2 checkpoint with the exact live estate/corpus work completed after resume.
+
+## Authenticated estate cut
+
+Authenticated GitHub installation inventory observed:
+
+- total repositories: 76
+- public: 57
+- private: 19
+- archived: 2
+- public archived: 0
+- private archived: 2
+
+Canonical repository-name digest rule remains lexicographic name order, UTF-8, one name per line with trailing newline.
+
+Bound digests:
+
+- public names SHA-256: `112028b82ae5eaca484908612721cea05df4bbb6b4861262dcbc587c98292d64`
+- private names SHA-256: `0995153e285d2ce12a1569ebcab76f420d95823da8f791332ac07c99f110a2ea`
+- all names SHA-256: `b7542192d5182ffd52a0bdfa8845eeba3dc9b1c85231b3a6612fdfd16da665a3`
+
+Private names remain absent from public source.
+
+## Project Runner 76/57/19 corpus and fail-closed wave
+
+Stacked draft PR #54:
+
+- branch: `portfolio/corpus-76-wave-v2-20260930`
+- base: PR #53 branch `portfolio/register-missing-public-p0-held-v1-20260930`
+- exact head: `83ee3a1f393e82f59457306e751a7776a6c71912`
+- corpus semantic refresh commit: `d7f8821a73a5c34ad0d80c542ba1296e4e717e77`
+- corpus blob bound by wave: `496596484719cc25188628d03979fecca2f2c67a`
+
+Public corpus now enumerates all 57 public repositories while publishing only private aggregate count 19.
+
+Ten P0 records were freshly re-read from live GitHub. The prior 43 public records are explicitly inherited from the 2026-09-28 semantic cut unless separately refreshed. Four new public corpus records were exact-source classified:
+
+- `semiotics`
+- `thebrazenbeard` profile
+- `workbridge`
+- `workbridgecommander`
+
+Advancement wave:
+
+- stable schema identity remains `PROJECT_RUNNER_PORTFOLIO_ADVANCEMENT_WAVE_V1`; the contract was not gratuitously version-bumped;
+- repository items: 57;
+- public workstream items: 2;
+- total public wave subjects: 59;
+- exactly 10 freshly re-read P0 repositories are `QUEUED`;
+- 49 subjects are `HELD`;
+- inherited non-P0 semantic state is gated by `CURRENTNESS_AUDIT`;
+- the four newly classified subjects remain HELD pending a separately admitted execution route;
+- priority/family/membership do not grant protected-effect authority.
+
+Qualification on exact PR #54 head:
+
+- push test run `36788592953`: PASS
+- PR test run `36788596510`: PASS
+
+An intermediate attempt changed the wave ID to a V2 identifier and failed 81 consumers because the published schema intentionally fixes the V1 schema identity. The repair preserved the stable schema ID while retaining the new cut semantics.
+
+## Discovery complete 57-public refresh
+
+Discovery canonical main remains the older 74/55/19 cut at:
+
+`620c09b2a1c96256cc7523877f3e986ad75f8f0a`
+
+Stacked refresh chain:
+
+- PR #45 @ `a0e3fa51dbdeea47d0ef7b9192b23169abcba575`: explicit 76/57/19 drift marker; not a replacement census.
+- PR #46 @ `e2d1820923368b27cbd6dbb8559a24998201e002`: exact-head descriptive classification of the four public additions relative to the older Runner corpus.
+- PR #47 @ `bd8ec768112efced943b6a69d29089f66d0f726a`: complete deterministic Discovery refresh stacked on #46.
+
+PR #47 generation procedure:
+
+1. A temporary branch-only workflow ran Discovery's existing
+   `tools/refresh_public_blob_evidence.py --accept-set-change --write --observed-date 2026-09-30`.
+2. The generator acquired live GitHub public branch/tree/blob evidence itself.
+3. Generated public set was checked against authenticated inventory and matched exactly at 57 subjects.
+4. Generated evidence updated the two canonical blob shards and overlap scan.
+5. Census was rebound to 76 total / 57 public / 19 private.
+6. All 45 subjects newly public relative to Discovery's fixed 12-repository historical cut were rebound to exact generated heads.
+7. Public graph now contains exactly 57 public repository nodes plus one opaque private cohort.
+8. Tree-repair evidence now binds all 57 generated heads/trees.
+9. A regression test was added for the 76/57/19 cut, exact intake refs, graph coverage and private opacity.
+10. The temporary write workflow was deleted before opening PR #47.
+
+Generated exact public additions include:
+
+- `thebrazenbeard@83ea2e083ccbf83ad5215ca53a9d5a00d16bb0d0`
+- `workbridge@7caab29eb5667897a0a03d0ce67d733380b01685`
+
+The public-currentness watch on PR #47 is the decisive gate that must prove the newly generated subject set still matches live GitHub. Structural CI was pending at the moment this checkpoint was written.
+
+## Standalone WorkBridge derived-lineage hardening
+
+Standalone `thebrazenbeard/workbridge` current main:
+
+`7caab29eb5667897a0a03d0ce67d733380b01685`
+
+Draft PR #4:
+
+- exact head: `d6cd8c67efb0c2fb45d8970ba000009804cde1c5`
+- adds deny-by-default caller process arguments with per-grant `allow_arguments=true`
+- advances the separately versioned relay package candidate from `0.1.0-0002` to `0.1.0-0003`
+- new ARMv7 WorkBridge binary SHA-256: `ba4af8e0f91cf6cbaa56956cda0e525209a40a8dc825577640720c7fb07326e8`
+
+Qualification:
+
+- WorkBridge source checks: PASS
+- WorkBridgeRelay ARMv7 SPK: PASS
+
+This is source/build/package evidence only. The already-merged `0002` source identity remains distinct; no installation or runtime activation follows from the `0003` candidate.
+
+## Workstation execution limitation during refresh
+
+A newer Lappy V2 machine-info probe showed an authenticated direct path and granted process/fs capability claims, but the exposed V2 tool surface in this session did not include process execution. The older Desktop Commander / WorkBridge Commander execution surfaces failed at transport/tool routing (including a 405 SSE probe). Therefore no workstation refresh command was claimed executed.
+
+Discovery's full public evidence generation was executed by GitHub Actions and verified from its workflow/job result instead.
+
+## Immediate next frontier
+
+1. Close PR #47 structural and public-currentness gates. If live public heads moved during construction, rerun the full deterministic generator once and rebind the coupled artifacts; do not suppress the stale signal.
+2. If #47 is current, bind Runner's refreshed Discovery record to its exact qualified subject in a successor checkpoint without claiming merge.
+3. Begin exact-source currentness audits for held non-P0 Runner subjects in dependency order rather than reactivating all 49 held subjects at once.
+4. Keep the four newly classified Runner subjects HELD unless a bounded execution target is separately registered.
