@@ -51,7 +51,7 @@ def test_real_public_wave_binds_only_exact_operator_projects():
     assert decisions[("repository", "project-achilles")].state == "HELD"
     assert (
         decisions[("repository", "project-achilles")].reason
-        == "OPERATOR_PROJECT_NOT_REGISTERED"
+        == "OPERATOR_PROJECT_NOT_SCHEDULABLE"
     )
 
     assert decisions[("workstream", "yeshua-real-testament")].state == "HELD"
