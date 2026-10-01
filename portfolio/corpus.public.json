@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, two industrial-intelligence records, two language/semantics records, and Unbound Sol were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 27 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution, identity, intelligence, or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, two industrial-intelligence records, two language/semantics records, Unbound Sol, and three P1 mechanism records (Roots, World Zero, MESO-CRCT) were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 24 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution, identity, scientific conclusion, welfare, or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -365,8 +365,8 @@
       "family_id": "synthetic-affect",
       "activity_state": "ACTIVE",
       "purpose": "Synthetic mesocorticolimbic salience/recruitment architecture.",
-      "status": "V2 architecture is active; executable salience-to-recruitment transition is under review.",
-      "current_frontier": "Qualify the executable transition and welfare constraints."
+      "status": "Exact main@060d0feeb9dc9eb23801082bd8f1c4a7cb06184d observed. test push run 36188280937 passes at that exact head. Older draft PRs #1-#3 remain open on pre-integration lineages and are not promoted over current main.",
+      "current_frontier": "Use current main as the qualified executable baseline; reconcile only still-valid salience/recruitment/welfare ideas from older drafts and require separate welfare/runtime-effect qualification before activation."
     },
     {
       "id": "mosaic",
@@ -519,8 +519,8 @@
       "family_id": "memory-and-provenance",
       "activity_state": "STABLE",
       "purpose": "Provenance/origin/derivation engine for claims, events and terms.",
-      "status": "Qualified engine is canonical on main; no current pull request.",
-      "current_frontier": "Reuse broadly without making Roots a global truth authority."
+      "status": "Exact main@1bc3af6aec0bebe383f60f56ad3070e83f0f40b5 observed with no open PRs. receipt-claim-boundary push run 36701316349 passes at that exact head; same-head dependency automation also passes.",
+      "current_frontier": "Reuse the qualified provenance/roots engine only as bounded evidence machinery; do not promote it into global truth authority or an implicit execution route."
     },
     {
       "id": "semanticatlas",
@@ -855,8 +855,8 @@
       "family_id": "scientific-modeling",
       "activity_state": "ACTIVE",
       "purpose": "Modernized World3-style systems model with walk-forward testing.",
-      "status": "Frozen 2018-to-2019 mass-normalization execution remains open.",
-      "current_frontier": "Complete frozen temporal qualification before interpreting later performance."
+      "status": "Exact main@07c5b998d081cbe61091ac3ae5592f8ac33b4bbf observed with no open PRs. test run 36785566910 and offline-bootstrap verification run 36785566852 both pass at that exact head.",
+      "current_frontier": "Treat the frozen 2018→2019 walk-forward implementation as exact-main qualified source; keep model interpretation and downstream scientific conclusions separate from source-test success."
     }
   ]
 }
