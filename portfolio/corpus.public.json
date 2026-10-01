@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0/P1 repositories plus P2 assurance/governance, cognitive-subsystem, memory/time, and semantic/composition/portfolio-spine tranches were re-read from live GitHub on 2026-09-30. Nine P2 repositories remain on inherited semantic status pending exact-source refresh. Four new public records are exact-source classified. This is descriptive source state, not memory truth, temporal causality, currentness, instruction, or effect authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0/P1 repositories plus P2 assurance/governance, cognitive-subsystem, memory/time, semantic/composition/portfolio-spine, and specialist tranches were re-read from live GitHub on 2026-09-30. Five P2 repositories remain on inherited semantic status pending exact-source refresh. Four new public records are exact-source classified. This is descriptive source state, not specialist identity, independent-review status, training activation, runtime effect, or authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -237,10 +237,10 @@
       "default_branch": "main",
       "priority": "P2",
       "family_id": "specialist-reasoning",
-      "activity_state": "INCUBATOR",
+      "activity_state": "ACTIVE",
       "purpose": "Adversarial loophole and legal-style reasoning engine.",
-      "status": "Foundation/restack work remains open.",
-      "current_frontier": "Prove bounded value on concrete cases before broad integration."
+      "status": "Exact main@9ea4eaefe5229ca90d7ae6099dbf30d9e13b64b2 observed and CI push run 36184885826 passes at that exact head. Draft PR #3@25e49d5be801eb9d9a388d7f36a7216f617f5fb5 is based directly on current main, mergeable, and CI run 36189160706 passes; older PR #1 remains a divergent historical branch.",
+      "current_frontier": "Review the green Stage-2 composition/hostile-hardening candidate #3 against bounded concrete cases; do not broaden specialist authority or integrate until its incremental value is demonstrated."
     },
     {
       "id": "fuckup",
@@ -295,8 +295,8 @@
       "family_id": "specialist-workers",
       "activity_state": "ACTIVE",
       "purpose": "ChatGPT project/code-building specialist.",
-      "status": "Dechatification and Role Four training/consolidation remain open.",
-      "current_frontier": "Finish a reconstructible currentness-aware specialist package."
+      "status": "Exact main@030494fa2cc4c875013a9a4842abe60588c9c709 observed. Merged licensing-currentness PR #12 produced this main, but no Actions qualification is attached to its head and current main contains no CI workflow or test suite. Draft runtime/training PRs #9-#11 remain based on older lineages and are not promoted by this audit.",
+      "current_frontier": "Obtain an executable exact-main qualification baseline before consolidating runtime or Role Four training work; reconcile older drafts only after that baseline exists and keep training/runtime activation separate."
     },
     {
       "id": "ingest",
@@ -349,10 +349,10 @@
       "default_branch": "collab",
       "priority": "P2",
       "family_id": "specialist-workers",
-      "activity_state": "QUIET",
+      "activity_state": "ACTIVE",
       "purpose": "Masa/Mune debugger and hostile defect-isolation team.",
-      "status": "No current pull request; recent work is continuation/review checkpointing.",
-      "current_frontier": "Activate only against concrete defects."
+      "status": "Exact main@25653790d59080cda0b6d6e57b8a4cd64d1ee2b5 observed. Current main has no attached qualification run. Draft PR #1@1a65c418f2a582f239ef271e992985b6f425c403 builds the Masamune GitHub App V0 directly on current main and passes test run 36793097295.",
+      "current_frontier": "Treat PR #1 as the current green candidate for concrete defect-isolation/GitHub review work, while keeping main currentness and app deployment/effect separate; do not infer installation or repository-write authority."
     },
     {
       "id": "meso-crct",
@@ -783,10 +783,10 @@
       "default_branch": "main",
       "priority": "P2",
       "family_id": "specialist-workers",
-      "activity_state": "QUIET",
+      "activity_state": "ACTIVE",
       "purpose": "Forensic auditor/reviewer specialist.",
-      "status": "No current pull request; current main is checkpointed specialist state.",
-      "current_frontier": "Use for bounded independent forensic review."
+      "status": "Exact main@36a623d3a158e5aef521d42e378bafacd67d3de5 observed with no open PRs. Merged PR #2 integrated Voss forensic analyst V2, and current main contains a qualification/regression test suite, but no Actions workflow or executable qualification run is recorded for the exact main.",
+      "current_frontier": "Run the existing Voss qualification/regression suite against exact current main before treating V2 as independently qualified; preserve forensic-review use as evidence review rather than automatic truth or authority."
     },
     {
       "id": "wip",
