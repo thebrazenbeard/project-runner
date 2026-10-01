@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-p2-memory-time-v1-20260930",
-    "commit": "278513b922385bae3d56053e15b033d615b52f16",
+    "ref": "portfolio/audit-p2-semantic-composition-v1-20260930",
+    "commit": "8d7c66473bd1efe5afc4c85dc5a0207272aa25ae",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "b96148d7f7331f769561abb585819f910fc6d2de",
+    "git_blob_sha": "6af1e4197b6563fbb5a46c3f7a02f8a907ee1551",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -459,12 +459,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Prove a minimal working multi-model continuity path.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation, continuity harness and current-main restack remain open."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Run the existing residency/protocol harness against exact current main before treating the multi-model continuity path as qualified; keep composition claims source-only and Runner execution HELD.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@3a442e94b4f5b8fa365e2206c40405df6961e18d observed with no open PRs. The repository contains analytical-residency and protocol-harness workflows plus tests, but no Actions runs are recorded for current main or recent main history. Current main therefore remains source-current but unqualified."
     },
     {
       "subject_kind": "repository",
@@ -704,12 +704,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Establish a reproducible causal experiment before stronger claims.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Construction provenance and causal semantic/pragmatic experiments remain open."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Obtain executable exact-main qualification for the integrated SPM runtime before stronger causal semantic/pragmatic claims; preserve the current source baseline and keep Runner execution HELD.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@d9ea72798ac892ac75f858177b6ed0c5a6b4c37c observed. Merged PR #7 integrated the verified SPM research runtime, but the repository has no GitHub Actions workflow and no executable qualification run attached to current main. The only same-head green event is dependency-graph automation, which is not source qualification. Older draft PRs #2 and #4 remain divergent historical research branches."
     },
     {
       "subject_kind": "repository",
@@ -1030,12 +1030,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Reconcile overlap with Project Runner/BT2 and keep only distinct recovery semantics.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Consolidation, model-state adapter and Discovery effect-envelope work remain open."
+      "review_gate": "DISTINCT_CONSUMER_OR_GAP",
+      "frontier": "Treat current main as the qualified source baseline and justify any further WIP expansion by a distinct recovery consumer or gap not already owned by Project Runner/BT2; keep orchestration/effect authority separate.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@3b93b64c09f5ed704b21a9db28cb918df181947e observed with no open PRs. validate-wip push run 36709186924 passes at that exact head. Current main already composes the prior model-state and Discovery effect-envelope lanes."
     },
     {
       "subject_kind": "repository",
