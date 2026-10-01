@@ -745,3 +745,17 @@ projects:
   family_id: vera-runtime
   scheduling_state: HELD
   scope_note: Synology packaging/runtime-host subject registered for currentness and review only; source/build/install/runtime/effect remain separate.
+- id: workbridge
+  name: WorkBridge
+  visibility: public
+  repositories:
+  - thebrazenbeard/workbridge
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: workstation-runtime
+  scheduling_state: HELD
+  scope_note: Standalone derived WorkBridge implementation registered for source/currentness review only; no workstation, NAS installation, listener, transport, or runtime-effect target is admitted.
