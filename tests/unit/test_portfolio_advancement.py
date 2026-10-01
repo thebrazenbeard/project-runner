@@ -193,6 +193,7 @@ def test_20260930_new_public_subjects_are_classified_but_held():
     assert all(
         "EXACT_SOURCE_CLASSIFIED" in item.source_status
         or "CURRENTNESS_REFRESHED_EXACT_SOURCE" in item.source_status
+        or "CURRENTNESS_REFRESHED_EXACT_MAIN" in item.source_status
         for item in items.values()
     )
 
