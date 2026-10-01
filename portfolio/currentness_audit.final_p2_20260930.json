@@ -1,0 +1,144 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "FINAL_P2_SPECULATIVE_AND_VERA_LINEAGE",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_DEPLOYMENT_NO_RUNTIME_EFFECT_NO_IDENTITY_OR_CONSCIOUSNESS_CLAIM",
+  "subjects": [
+    {
+      "id": "god-brain",
+      "repository": "thebrazenbeard/god-brain",
+      "exact_main": "495c2b42932153cba0926744d04a69bc34557f81",
+      "exact_main_qualification": [
+        {
+          "run": 36746633579,
+          "name": "Repository Hygiene",
+          "conclusion": "success"
+        },
+        {
+          "run": 36746633699,
+          "name": "DriftGuard source-admission research",
+          "conclusion": "success"
+        },
+        {
+          "run": 36746633704,
+          "name": "Architecture Conformance",
+          "conclusion": "success"
+        }
+      ],
+      "current_candidate": {
+        "pr": 33,
+        "head": "5d9fcba957cdf06f12515dd97b191aac98a6aaba",
+        "base": "495c2b42932153cba0926744d04a69bc34557f81",
+        "runs": [
+          {
+            "run": 36747479531,
+            "name": "Architecture Conformance",
+            "conclusion": "success"
+          },
+          {
+            "run": 36747479712,
+            "name": "Causal-rival falsification research",
+            "conclusion": "success"
+          },
+          {
+            "run": 36747479808,
+            "name": "Repository Hygiene",
+            "conclusion": "success"
+          }
+        ]
+      },
+      "caveat": "Qualified source and falsification tooling do not establish consciousness, simulation, identity, or runtime-effect claims.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "transcendence",
+      "repository": "thebrazenbeard/transcendence",
+      "exact_main": "69dacb467e94fb73ce106cd5176c39800c64e195",
+      "exact_main_qualification": null,
+      "older_green_candidate": {
+        "pr": 7,
+        "head": "be3785c83dbe89b0d4236b43eda97a277eb6baad",
+        "base": "02d46c064b3d2ffc1ab3e0d03e9af31142818671",
+        "runs": [
+          {
+            "run": 35475961256,
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "run": 35475961320,
+            "name": "Reference Kernel + Transcendence Core",
+            "conclusion": "success"
+          }
+        ]
+      },
+      "caveat": "Green older-lineage continuity code is not qualification of current main and is not evidence of consciousness or identity continuity.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "vera-r9a0",
+      "repository": "thebrazenbeard/vera-R9A0",
+      "exact_main": "287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01",
+      "exact_main_qualification": null,
+      "unresolved_candidate": {
+        "pr": 21,
+        "head": "a079217d5a50e2ec9c494022b8c03bdc52056d81",
+        "base": "84cbaedd67df79b759daac6e62de93336b52ef60",
+        "run": 35543804880,
+        "name": "R9A0 Native Project",
+        "conclusion": "failure"
+      },
+      "caveat": "Failed older-lineage Voice-currentness work is not a donor ready for migration and does not justify reviving R9A0 as a runtime.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "vera-habitat",
+      "repository": "thebrazenbeard/vera-habitat",
+      "exact_main": "82cf6a625e417ced00205f66be1e76dc396ab617",
+      "exact_main_qualification": {
+        "run": 36700971895,
+        "name": "Habitat foundation",
+        "conclusion": "success"
+      },
+      "open_pr_count": 0,
+      "caveat": "Qualified foundation source does not establish a current Vera consumer or deployed Habitat runtime.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "vera-synology",
+      "repository": "thebrazenbeard/vera-synology",
+      "exact_main": "d13cdefbf817aeba60c673fa4a517575c311da2c",
+      "exact_main_qualification": null,
+      "current_candidate": {
+        "pr": 12,
+        "head": "8501a32e237aaca613e77c7836370261e549c1c2",
+        "base": "d13cdefbf817aeba60c673fa4a517575c311da2c",
+        "runs": [
+          {
+            "run": 36698341486,
+            "name": "Scaffold validation",
+            "conclusion": "success"
+          },
+          {
+            "run": 36698341474,
+            "name": "Unified Vera Runtime SPK",
+            "conclusion": "success"
+          }
+        ]
+      },
+      "caveat": "Source/build/package qualification does not establish installation, listener ownership, route activation, runtime consumption, or effect.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "closure": {
+    "public_repository_records_refreshed_or_exact_source_classified": 57,
+    "inherited_public_repository_currentness_remaining": 0,
+    "private_repository_membership_publicly_expanded": false
+  },
+  "hostile_challenges": [
+    "No consciousness or identity conclusion follows from continuity architecture source.",
+    "A green package candidate is not installation or runtime effect.",
+    "Historical Vera lineage remains donor material unless a mechanism is requalified on the current canonical runtime lineage.",
+    "Closing descriptive currentness does not admit execution authority."
+  ]
+}
