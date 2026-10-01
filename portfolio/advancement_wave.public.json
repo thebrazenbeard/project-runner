@@ -4,9 +4,9 @@
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/refresh-77-58-v1-20261001",
-    "commit": "2d7a5dc9d157dc4fe892657f89395eee83dc5c65",
+    "commit": "5a58f2091ef8381d31596e835f17f47986d81723",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "4355c74c17754be251b1c50475dcbb74ecba20f2",
+    "git_blob_sha": "34c45d391801426546687328eccfac4761a58c8d",
     "public_repository_count": 58,
     "total_repository_count": 77,
     "private_repository_count": 19,
