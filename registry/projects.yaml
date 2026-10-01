@@ -576,3 +576,31 @@ projects:
   family_id: cognitive-subsystems
   scheduling_state: HELD
   scope_note: Semantic retrieval/provenance subsystem registered for currentness and review only; retrieval and provider custody do not grant answer or effect authority.
+- id: deepmemorystorage
+  name: Deep Memory Storage
+  visibility: public
+  repositories:
+  - thebrazenbeard/deepmemorystorage
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: memory-and-provenance
+  scheduling_state: HELD
+  scope_note: Memory-storage subject registered for currentness and review only; persistence does not grant truth, instruction, or currentness authority.
+- id: temporal
+  name: Temporal
+  visibility: public
+  repositories:
+  - thebrazenbeard/temporal
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: memory-and-provenance
+  scheduling_state: HELD
+  scope_note: Temporal-observation subject registered for currentness and review only; timestamps do not establish source authority or causal order without qualification.
