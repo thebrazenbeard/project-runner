@@ -29,7 +29,7 @@ def test_public_wave_covers_public_corpus_exactly():
     workstream_items = [
         item for item in wave.items if item.subject_kind == "workstream"
     ]
-    assert len(repo_items) == 57
+    assert len(repo_items) == 58
     assert len(workstream_items) == 2
 
 
@@ -105,7 +105,7 @@ def test_summary_and_identity_projection_are_deterministic():
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
     summary = wave.summary()
-    assert summary["subjects"] == 59
+    assert summary["subjects"] == 60
     assert summary["held"] >= 1
     one_items = wave.for_identity("ONE")
     assert all(item.lead_identity == "ONE" for item in one_items)
@@ -148,6 +148,9 @@ def test_20260928_new_public_repositories_are_now_currentness_refreshed():
     assert all(item.execution_state == "HELD" for item in items.values())
     assert all(
         item.source_status.startswith("CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD")
+        or item.source_status.startswith(
+            "CURRENTNESS_REFRESHED_RENAME_CONTINUITY_EXACT_MAIN_QUALIFIED__EXECUTION_HELD"
+        )
         for item in items.values()
     )
 
