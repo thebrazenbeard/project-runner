@@ -231,6 +231,9 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "on-theo",
             "testament",
             "meso-crct",
+            "bugops",
+            "repairtracker",
+            "intranel",
         }
     ]
     assert inherited
