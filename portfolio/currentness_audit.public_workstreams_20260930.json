@@ -1,0 +1,54 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "PUBLIC_WORKSTREAM_CLOSURE",
+  "authority_ceiling": "SOURCE_RESEARCH_DESCRIPTION_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_HISTORICAL_OR_METAPHYSICAL_TRUTH_ELEVATION_NO_RUNTIME_EFFECT",
+  "durable_surfaces": {
+    "on_theo": {
+      "repository": "thebrazenbeard/on-theo",
+      "exact_main": "2fdc9614fa4f45eb038772d736b146809e10a7f1",
+      "exact_main_validation": {
+        "run": 36353652038,
+        "conclusion": "failure",
+        "summary": "55 passed / 1 failed"
+      },
+      "direct_repair_candidate": {
+        "pr": 168,
+        "head": "98cea0dcb9bdf83ac352f02ce94808ac4670105c",
+        "base": "2fdc9614fa4f45eb038772d736b146809e10a7f1",
+        "changed_paths": [
+          "tests/test_registry_rebase_preconditions.py"
+        ],
+        "validation": {
+          "run": 36797514717,
+          "conclusion": "success"
+        }
+      }
+    },
+    "testament": {
+      "repository": "thebrazenbeard/testament",
+      "exact_main": "20517788763e76863a35e02ba3cc9051d0a227bb",
+      "github_actions_workflow_count": 0,
+      "exact_main_qualification": null
+    }
+  },
+  "workstreams": [
+    {
+      "id": "yeshua-real-testament",
+      "state": "CURRENTNESS_REFRESHED_EXECUTION_HELD",
+      "review_gate": "UPSTREAM_SOURCE_AND_DOWNSTREAM_QUALIFICATION",
+      "rule": "Historical reconstruction and literary synthesis remain separate authority layers."
+    },
+    {
+      "id": "nature-of-existence",
+      "state": "CURRENTNESS_REFRESHED_EXECUTION_HELD",
+      "review_gate": "SOURCE_HYPOTHESIS_BOUNDARY",
+      "rule": "Sourced fact, hypothesis, symbolism, experiential report, and literary synthesis remain distinct evidence classes."
+    }
+  ],
+  "hostile_challenges": [
+    "A repository repair candidate can qualify repository mechanics without proving a historical claim.",
+    "No downstream literary artifact can bootstrap itself into upstream historical evidence.",
+    "A persistent metaphysical research line is not proof of consciousness, source, reincarnation, or other ontological claims."
+  ]
+}
