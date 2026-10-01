@@ -628,3 +628,59 @@ projects:
   family_id: language-and-semantics
   scheduling_state: HELD
   scope_note: Semantic/pragmatic research subject registered for currentness and review only; no source-write or experimental runtime effect is admitted.
+- id: freerowcochkar
+  name: FreeRowCochkar
+  visibility: public
+  repositories:
+  - thebrazenbeard/freerowcochkar
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: specialist-reasoning
+  scheduling_state: HELD
+  scope_note: Specialist-reasoning subject registered for currentness and review only; no source-write or runtime execution target is admitted.
+- id: hephaestus
+  name: Hephaestus
+  visibility: public
+  repositories:
+  - thebrazenbeard/hephaestus
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: specialist-workers
+  scheduling_state: HELD
+  scope_note: Specialist-worker/training subject registered for currentness and review only; no source-write or training/runtime activation target is admitted.
+- id: masamune
+  name: Masamune
+  visibility: public
+  repositories:
+  - thebrazenbeard/masamune
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: specialist-workers
+  scheduling_state: HELD
+  scope_note: Specialist/GitHub-App subject registered for currentness and review only; active candidate execution remains separately qualified.
+- id: voss
+  name: Voss
+  visibility: public
+  repositories:
+  - thebrazenbeard/voss
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: specialist-workers
+  scheduling_state: HELD
+  scope_note: Forensic-review subject registered for currentness and review only; no source-write or independent-review authority is inferred.
