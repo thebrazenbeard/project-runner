@@ -39,8 +39,8 @@ def test_final_p2_review_gates_preserve_lineage_and_effect_boundaries():
         if item.subject_kind == "repository" and item.subject_id in TRANCHE
     }
     assert items["god-brain"].review_gate == "GREEN_CANDIDATE_FALSIFICATION_REVIEW"
-    assert items["transcendence"].review_gate == "CURRENT_MAIN_RESTACK_AND_QUALIFICATION"
-    assert items["vera-r9a0"].review_gate == "FAILED_CANDIDATE_REMEDIATION"
+    assert items["transcendence"].review_gate == "GREEN_CURRENT_MAIN_CANDIDATE_CONTINUITY_REVIEW"
+    assert items["vera-r9a0"].review_gate == "GREEN_CURRENT_MAIN_CANDIDATE_DONOR_REVIEW"
     assert items["vera-habitat"].review_gate == "CONCRETE_CONSUMER_EVIDENCE"
     assert items["vera-synology"].review_gate == "CANDIDATE_RUNTIME_EFFECT_SEPARATION"
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
