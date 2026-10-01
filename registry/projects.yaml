@@ -152,6 +152,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: portfolio-spine
+  scheduling_state: HELD
+  scope_note: Portfolio/recovery subject registered for currentness and review only; no source-write or orchestration authority is admitted.
 - id: mosaic
   name: Mosaic
   visibility: public
@@ -161,6 +166,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: model-composition
+  scheduling_state: HELD
+  scope_note: Model-composition subject registered for currentness and review only; no model/runtime execution target is admitted.
 - id: driftguard
   name: DriftGuard
   visibility: public
@@ -604,3 +614,17 @@ projects:
   family_id: memory-and-provenance
   scheduling_state: HELD
   scope_note: Temporal-observation subject registered for currentness and review only; timestamps do not establish source authority or causal order without qualification.
+- id: spm
+  name: SPM
+  visibility: public
+  repositories:
+  - thebrazenbeard/spm
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: language-and-semantics
+  scheduling_state: HELD
+  scope_note: Semantic/pragmatic research subject registered for currentness and review only; no source-write or experimental runtime effect is admitted.
