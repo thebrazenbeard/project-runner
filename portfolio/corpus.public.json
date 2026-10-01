@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. No public repository or public workstream remains on inherited 2026-09-28 currentness. Standalone WorkBridge current main is now exact-main source/build/package qualified while installation/runtime/effect authority remains separate.",
+  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. No public repository or public workstream remains on inherited 2026-09-28 currentness. Standalone WorkBridge current main is exact-main source/build/package qualified; DriftGuard PR #40 is exact-head hostile-reviewed and green, while merge/runtime/effect authority remains separate.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -211,8 +211,8 @@
       "family_id": "assurance-and-repair",
       "activity_state": "ACTIVE",
       "purpose": "Behavioral/model drift detection with reproducible baselines and adversarial qualification.",
-      "status": "Exact main@52fa829c629fa0f3e729204912db9f9f783f322a observed. Draft PR #40@33b75523a1130c614c270f3de45417e1acf4e32b is based on that main and passes tests, CodeQL Advanced, and action-smoke; it remains unmerged.",
-      "current_frontier": "Review and reconcile PR #40's effect reservation/dispatch fence as the current candidate while preserving exact-head qualification; Runner admits read/analyze/propose only, so source-write remains HELD."
+      "status": "Exact main@52fa829c629fa0f3e729204912db9f9f783f322a observed. Draft PR #40@33b75523a1130c614c270f3de45417e1acf4e32b remains the green current-main-native effect reservation/dispatch-fence candidate: tests 35940813596, action-smoke 35940813553, and CodeQL Advanced 35940813564 pass. Rezon PR #100@41978d83a00ac4f5be49246e23bbf6669d0fed2 hostile-reviews the exact candidate as local durable reservation/fence mechanics only and passes Rezon kernel + Benchmark V1.",
+      "current_frontier": "Candidate review is complete. Keep PR #40 unmerged and source-write HELD until an execution route is separately admitted; any future provider adapter must add current protected-effect authority, provider readback/reconciliation, and effect-aware fence release without promoting the local permit into a trust root."
     },
     {
       "id": "empathy",
