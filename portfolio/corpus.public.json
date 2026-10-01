@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Every public repository record in the current corpus has now been re-read from live GitHub or exact-source classified on the 2026-09-30 refresh chain. No public repository remains on inherited 2026-09-28 semantic currentness. This is descriptive source state only: qualification, merge, installation, runtime, effect, identity, phenomenology, and authority remain separate evidence classes.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Every public repository record has been re-read from live GitHub or exact-source classified on the 2026-09-30 refresh chain. Both public source-critical workstreams are now also refreshed against their exact durable surfaces. No public repository or public workstream remains on inherited 2026-09-28 currentness. This is descriptive source/research state only: qualification, merge, installation, runtime, effect, identity, phenomenology, historical truth, metaphysical truth, and authority remain separate evidence classes.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -40,8 +40,8 @@
         "thebrazenbeard/testament"
       ],
       "purpose": "Claim-centered historical reconstruction of Yeshua with literary downstream synthesis.",
-      "status": "Active upstream research and downstream manuscript work remain intentionally separate in authority.",
-      "current_frontier": "Continue hostile source review upstream and consume survived or explicitly unresolved claims downstream."
+      "status": "Durable surfaces refreshed on 2026-09-30: ON_THEO main@2fdc9614fa4f45eb038772d736b146809e10a7f1 is current but validation-red, with direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c passing validation; Testament main@20517788763e76863a35e02ba3cc9051d0a227bb has no executable CI qualification. Historical research and downstream literary synthesis remain separate authority layers.",
+      "current_frontier": "Repair and exact-main qualify ON_THEO first; continue claim-centered hostile source review upstream, and allow Testament to consume only survived or explicitly unresolved claims without back-propagating literary hypotheses into historical evidence."
     },
     {
       "id": "nature-of-existence",
@@ -55,8 +55,8 @@
         "thebrazenbeard/testament"
       ],
       "purpose": "Research line on reality, source, consciousness and self-aware beings.",
-      "status": "Continuation is preserved in ON_THEO with downstream literary handoff and remains distinct from the Yeshua evidence spine.",
-      "current_frontier": "Keep hypothesis, symbolism, experiential interpretation and sourced fact distinct."
+      "status": "Durable surfaces refreshed on 2026-09-30: ON_THEO main is current but validation-red with a green direct repair candidate; Testament current main has no executable CI qualification. Nature-of-Existence material remains hypothesis/symbolism/experiential research and is not factual proof of consciousness, source, or metaphysics.",
+      "current_frontier": "Preserve sourced fact, hypothesis, symbolism, experiential report, and literary synthesis as distinct evidence classes while the shared repository qualification baseline remains incomplete."
     }
   ],
   "records": [
@@ -407,8 +407,8 @@
       "family_id": "source-critical-research",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Ontological, theological, historical and source-critical research.",
-      "status": "Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 observed with a large open research DAG. Validate registries run 36353652038 FAILS at that exact head: 1 failed / 55 passed, specifically tests/test_registry_rebase_preconditions.py::test_divergent_extension_referential_preconditions_are_equivalent. The failure is a registry-rebase referential-precondition mismatch; current main is not source-qualified.",
-      "current_frontier": "Repair and rerun exact-main registry validation before promoting any current research packet or consuming the open Yeshua/mythos/divination DAG downstream; preserve claim-by-claim evidence ceilings."
+      "status": "Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 remains current but unqualified: Validate registries run 36353652038 fails 1 test / passes 55. Direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c is based on that exact main, changes only tests/test_registry_rebase_preconditions.py, and passes Validate registries run 36797514717.",
+      "current_frontier": "Preserve current main as unqualified until the rebase-precondition repair is integrated and exact-main validation reruns; research claims remain separately evidence-bounded regardless of repository validation status."
     },
     {
       "id": "personification",
