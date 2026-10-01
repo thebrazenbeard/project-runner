@@ -4,9 +4,9 @@
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/close-workbridge-main-gate-v1-20261001",
-    "commit": "817a3ecd48fa02f36263adca3146112ad9d59162",
+    "commit": "c45d5840cfdcdf832d8293b338bd52a5603995c6",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "70fbc37811632d8d95ab10886ac04b2ae3086547",
+    "git_blob_sha": "7d5542046835f593f415f8055e2dcd5c4bad0f18",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
