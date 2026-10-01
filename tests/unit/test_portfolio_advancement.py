@@ -226,6 +226,9 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "sql-connectome",
             "unvtrslr",
             "unbound-sol",
+            "roots",
+            "world-zero",
+            "meso-crct",
         }
     ]
     assert inherited

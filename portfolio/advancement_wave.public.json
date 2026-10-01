@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-unbound-sol-v1-20260930",
-    "commit": "4128e25b00b51af9d79cb7dbd0ddac1357347efa",
+    "ref": "portfolio/audit-p1-mechanisms-v1-20260930",
+    "commit": "e1ad4326a035568877244ebff650d23c56de9a75",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "2e1939b351d15c2d502b3dde80682a6834c01df3",
+    "git_blob_sha": "c0414e110d601b6611795a0157a0f1f7b8ef95d7",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -440,12 +440,12 @@
         "ACHILLES",
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Qualify the executable transition and welfare constraints.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — V2 architecture is active; executable salience-to-recruitment transition is under review."
+      "review_gate": "WELFARE_RUNTIME_EFFECT_QUALIFICATION",
+      "frontier": "Use current main as the qualified executable baseline; reconcile only still-valid salience/recruitment/welfare ideas from older drafts and require separate welfare/runtime-effect qualification before activation.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@060d0feeb9dc9eb23801082bd8f1c4a7cb06184d observed. test push run 36188280937 passes at that exact head. Older draft PRs #1-#3 remain open on pre-integration lineages and are not promoted over current main."
     },
     {
       "subject_kind": "repository",
@@ -649,12 +649,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Reuse broadly without making Roots a global truth authority.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Qualified engine is canonical on main; no current pull request."
+      "review_gate": "TRUTH_AUTHORITY_SEPARATION",
+      "frontier": "Reuse the qualified provenance/roots engine only as bounded evidence machinery; do not promote it into global truth authority or an implicit execution route.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@1bc3af6aec0bebe383f60f56ad3070e83f0f40b5 observed with no open PRs. receipt-claim-boundary push run 36701316349 passes at that exact head; same-head dependency automation also passes."
     },
     {
       "subject_kind": "repository",
@@ -1107,12 +1107,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Complete frozen temporal qualification before interpreting later performance.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Frozen 2018-to-2019 mass-normalization execution remains open."
+      "review_gate": "SCIENTIFIC_INTERPRETATION_SEPARATION",
+      "frontier": "Treat the frozen 2018→2019 walk-forward implementation as exact-main qualified source; keep model interpretation and downstream scientific conclusions separate from source-test success.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@07c5b998d081cbe61091ac3ae5592f8ac33b4bbf observed with no open PRs. test run 36785566910 and offline-bootstrap verification run 36785566852 both pass at that exact head."
     },
     {
       "subject_kind": "workstream",

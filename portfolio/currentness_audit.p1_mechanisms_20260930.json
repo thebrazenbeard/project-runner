@@ -1,0 +1,63 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "P1_MECHANISMS",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_TRUTH_AUTHORITY_NO_SCIENTIFIC_CONCLUSION_NO_WELFARE_OR_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "roots",
+      "repository": "thebrazenbeard/roots",
+      "exact_main": "1bc3af6aec0bebe383f60f56ad3070e83f0f40b5",
+      "exact_main_qualification": {
+        "run": 36701316349,
+        "name": "receipt-claim-boundary",
+        "conclusion": "success"
+      },
+      "open_pr_count": 0,
+      "caveat": "Receipt/claim-boundary qualification does not make Roots a global truth authority.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "world-zero",
+      "repository": "thebrazenbeard/world-zero",
+      "exact_main": "07c5b998d081cbe61091ac3ae5592f8ac33b4bbf",
+      "exact_main_qualification": [
+        {
+          "run": 36785566910,
+          "name": "test",
+          "conclusion": "success"
+        },
+        {
+          "run": 36785566852,
+          "name": "Verify offline bootstrap bundles",
+          "conclusion": "success"
+        }
+      ],
+      "open_pr_count": 0,
+      "caveat": "Source/model qualification does not establish the scientific interpretation of later-period results.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "meso-crct",
+      "repository": "thebrazenbeard/meso-crct",
+      "exact_main": "060d0feeb9dc9eb23801082bd8f1c4a7cb06184d",
+      "exact_main_qualification": {
+        "run": 36188280937,
+        "name": "test",
+        "conclusion": "success"
+      },
+      "open_drafts": [
+        1,
+        2,
+        3
+      ],
+      "caveat": "Older draft architecture/welfare lineages are not promoted over exact current main; source qualification does not establish welfare or runtime effect.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "Provenance machinery can bound evidence without becoming a truth oracle.",
+    "Green scientific-model CI is not evidence that the model's substantive conclusions are correct.",
+    "Executable synthetic-affect source is not welfare qualification or authorization to activate an affective runtime."
+  ]
+}
