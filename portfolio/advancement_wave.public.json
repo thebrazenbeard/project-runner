@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/close-on-theo-repair-review-v1-20261001",
-    "commit": "4f8f596dbf872224beee4264c9f9d7cfc1a9cb0f",
+    "ref": "portfolio/close-achilles-main-gate-v1-20261001",
+    "commit": "d480a8bab445faf1a20b7e1e80462d810b6ec710",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "6416c8d41ca286c4316a408f860ff61bfb7c940d",
+    "git_blob_sha": "3c6dcd8dae79ee878121c65f7854c98a61fdbed1",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -556,9 +556,9 @@
       "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_MAIN_REQUALIFICATION",
-      "frontier": "Remain a standing security-review subject and require exact-main requalification before expanding its own source; Runner has no write execution target for Achilles.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@99bc4e8cf7bd60d022fb25222d701a8cf42f80c0 observed with no open PRs. PR #3 head 00420de5d6fcce1241ffdc3f06482170181a42d6 passed Verify Achilles; the merge/main comparison includes additional security workflow/review/guard files, so exact-main qualification is not inferred from the PR-head run."
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Treat current main as the qualified standing security-review baseline; reuse it through concrete review consumers or a demonstrated defect, and keep source-write / protected-effect authority separately admitted.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_MAIN_QUALIFIED__EXECUTION_HELD — Exact main@99bc4e8cf7bd60d022fb25222d701a8cf42f80c0 observed with no open PRs. Verify Achilles push run 36709531272 passes at that exact main, covering the merged security workflow/review/portfolio-publication guard surface."
     },
     {
       "subject_kind": "repository",

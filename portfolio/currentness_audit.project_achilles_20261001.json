@@ -1,0 +1,24 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-10-01",
+  "tranche": "PROJECT_ACHILLES_EXACT_MAIN",
+  "authority_ceiling": "SOURCE_QUALIFIED_STANDING_SECURITY_REVIEW_ONLY_NO_WRITE_NO_PROTECTED_EFFECT",
+  "subject": {
+    "id": "project-achilles",
+    "repository": "thebrazenbeard/project-achilles",
+    "exact_main": "99bc4e8cf7bd60d022fb25222d701a8cf42f80c0",
+    "exact_main_qualification": {
+      "run": 36709531272,
+      "name": "Verify Achilles",
+      "conclusion": "success"
+    },
+    "open_pr_count": 0,
+    "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE",
+    "remaining_gate": "CONSUMER_EVIDENCE",
+    "caveats": [
+      "Exact-main verification qualifies repository source and security guard behavior only.",
+      "No source-write, credential, merge, deployment, or protected-effect authority is created.",
+      "Further Achilles source expansion should require a concrete consumer, defect, or new attack surface."
+    ]
+  }
+}

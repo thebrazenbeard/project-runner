@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. No public repository or public workstream remains on inherited 2026-09-28 currentness. Standalone WorkBridge current main is exact-main source/build/package qualified; DriftGuard PR #40 and On-Theo PR #168 are exact-head hostile-reviewed candidates, while merge/runtime/effect/research-claim authority remains separate.",
+  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. No public repository or public workstream remains on inherited 2026-09-28 currentness. WorkBridge is exact-main source/build/package qualified; DriftGuard PR #40 and On-Theo PR #168 are hostile-reviewed candidates; Project Achilles current main is exact-main source-qualified. Merge/runtime/effect/research-claim authority remains separate.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -449,8 +449,8 @@
       "family_id": "assurance-and-repair",
       "activity_state": "STABLE",
       "purpose": "Security, adversarial review and attack-path analysis.",
-      "status": "Exact main@99bc4e8cf7bd60d022fb25222d701a8cf42f80c0 observed with no open PRs. PR #3 head 00420de5d6fcce1241ffdc3f06482170181a42d6 passed Verify Achilles; the merge/main comparison includes additional security workflow/review/guard files, so exact-main qualification is not inferred from the PR-head run.",
-      "current_frontier": "Remain a standing security-review subject and require exact-main requalification before expanding its own source; Runner has no write execution target for Achilles."
+      "status": "Exact main@99bc4e8cf7bd60d022fb25222d701a8cf42f80c0 observed with no open PRs. Verify Achilles push run 36709531272 passes at that exact main, covering the merged security workflow/review/portfolio-publication guard surface.",
+      "current_frontier": "Treat current main as the qualified standing security-review baseline; reuse it through concrete review consumers or a demonstrated defect, and keep source-write / protected-effect authority separately admitted."
     },
     {
       "id": "project-lantern",
