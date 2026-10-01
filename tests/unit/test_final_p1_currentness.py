@@ -27,6 +27,9 @@ def test_final_p1_is_refreshed_but_held():
     assert all(item.execution_state == "HELD" for item in items.values())
     assert all(
         item.source_status.startswith("CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD")
+        or item.source_status.startswith(
+            "CURRENTNESS_REFRESHED_REPAIR_CANDIDATE_HOSTILE_REVIEWED__MAIN_UNQUALIFIED__EXECUTION_HELD"
+        )
         for item in items.values()
     )
 
@@ -40,7 +43,7 @@ def test_final_p1_preserves_mixed_evidence_gates():
     }
     assert items["roots"].review_gate == "CONSUMER_EVIDENCE"
     assert items["world-zero"].review_gate == "RESULT_INTERPRETATION_REVIEW"
-    assert items["on-theo"].review_gate == "REPAIR_CANDIDATE_AND_EXACT_MAIN_REQUALIFICATION"
+    assert items["on-theo"].review_gate == "INTEGRATE_REPAIR_AND_EXACT_MAIN_REQUALIFICATION"
     assert items["testament"].review_gate == "EXACT_MAIN_QUALIFICATION"
     assert items["meso-crct"].review_gate == "WELFARE_AND_EFFECT_QUALIFICATION"
 
