@@ -3,12 +3,12 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/advance-commander-qualification-candidate-v1-20261001",
-    "commit": "660e8987a50ee8d82a5e6aae693a5c6d6986a7ff",
+    "ref": "portfolio/refresh-77-58-v1-20261001",
+    "commit": "5a58f2091ef8381d31596e835f17f47986d81723",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "cb7f4907ba72553f6e2446f9ebed665677cbfb19",
-    "public_repository_count": 57,
-    "total_repository_count": 76,
+    "git_blob_sha": "34c45d391801426546687328eccfac4761a58c8d",
+    "public_repository_count": 58,
+    "total_repository_count": 77,
     "private_repository_count": 19,
     "public_workstream_count": 2,
     "total_workstream_count": 15,
@@ -260,6 +260,26 @@
       "review_gate": "EXACT_MAIN_QUALIFICATION_AND_DRAFT_RECONCILIATION",
       "frontier": "Establish an executable exact-main qualification path, then reconcile active Yin/Yang/falsification lanes against current main while preserving reviewer independence.",
       "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@76ebb492827a79b20b3be76fe9f9f48ab860ef1d observed. The current tree exposes no GitHub Actions workflows and no executable qualification run. Draft PRs #2-#5 remain open; #4 and #5 are non-mergeable. Current source qualification is UNKNOWN."
+    },
+    {
+      "subject_kind": "repository",
+      "subject_id": "executor",
+      "repository": "thebrazenbeard/executor",
+      "priority": "P1",
+      "family_id": "workstation-runtime",
+      "activity_state": "INCUBATOR",
+      "lead_identity": "ACHILLES",
+      "reviewer_identities": [
+        "REZON",
+        "HEPHAESTUS",
+        "VOSS"
+      ],
+      "action": "EXECUTE_FRONTIER",
+      "execution_state": "HELD",
+      "effect_ceiling": "SOURCE_ONLY",
+      "review_gate": "DRAFT_CANDIDATE_SECURITY_AND_AUTHORITY_REVIEW",
+      "frontier": "Hostile-review Executor PR #1 for trust boundaries, full-authority semantics, connection-generation fencing, ambiguous-outcome handling, donor lineage, endpoint/device authentication, and effect authority before any integration or execution-route admission.",
+      "source_status": "CURRENTNESS_REFRESHED_BOOTSTRAP_MAIN__GREEN_DRAFT_CANDIDATE__EXECUTION_HELD — Exact current main@2b9b4e9456c6481b1d5fe9be0a142d01ce804d8f contains only bootstrap initialization. Draft PR #1@f099c1af21f350d1f05a22fc13ed3658b31c6f4d is separate from main, proposes full Desktop Commander command/process/filesystem semantics with 8 execution lanes and 64 logic contexts, and passes CI run 36849360739. Candidate semantics are not promoted into current-main fact."
     },
     {
       "subject_kind": "repository",
@@ -525,7 +545,7 @@
     {
       "subject_kind": "repository",
       "subject_id": "pro-run",
-      "repository": "thebrazenbeard/pro-run",
+      "repository": "thebrazenbeard/pre-active",
       "priority": "P1",
       "family_id": "coordination",
       "activity_state": "ACTIVE_HEAVY",
@@ -534,12 +554,12 @@
         "ACHILLES",
         "REZON"
       ],
-      "action": "EXECUTE_FRONTIER",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_MAIN_REQUALIFICATION",
-      "frontier": "Requalify exact current main before new source work, then identify the next concrete durable-execution consumer or defect; Runner has no source-write execution target for Pro-Run.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@0ffc95351db34afed091c3239614f57f371c04ad observed with no open PRs. Merged PR #10 head 2632de241604b27eb6e85544ecf29774d73aa2ec passed test run 36641890383, but comparison to current main includes tests/test_http_tool_loop_integration.py, so exact-main qualification is not inferred."
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Treat renamed pre-active current main as the exact-main-qualified Pro-Run baseline. Require a concrete durable-execution consumer or defect before expansion, and keep Runner source-write/effect authority separately admitted.",
+      "source_status": "CURRENTNESS_REFRESHED_RENAME_CONTINUITY_EXACT_MAIN_QUALIFIED__EXECUTION_HELD — GitHub repository id 1387754784 was renamed from thebrazenbeard/pro-run to thebrazenbeard/pre-active without changing exact main: 0ffc95351db34afed091c3239614f57f371c04ad. Exact-main push test run 36700849791 passes. Logical Pro-Run identity and source history are preserved across the path rename."
     },
     {
       "subject_kind": "repository",
