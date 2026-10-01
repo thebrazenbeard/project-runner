@@ -1,0 +1,76 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "SOURCE_CRITICAL_RESEARCH",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_HISTORICAL_OR_METAPHYSICAL_TRUTH_ELEVATION_NO_LITERARY_BACKPROPAGATION",
+  "subjects": [
+    {
+      "id": "on-theo",
+      "repository": "thebrazenbeard/on-theo",
+      "exact_main": "2fdc9614fa4f45eb038772d736b146809e10a7f1",
+      "exact_main_qualification": {
+        "run": 36353652038,
+        "name": "Validate registries",
+        "conclusion": "failure",
+        "detail": "55 passed / 1 failed in test_divergent_extension_referential_preconditions_are_equivalent"
+      },
+      "current_repair_candidate": {
+        "pr": 168,
+        "head": "98cea0dcb9bdf83ac352f02ce94808ac4670105c",
+        "base": "2fdc9614fa4f45eb038772d736b146809e10a7f1",
+        "changed_paths": [
+          "tests/test_registry_rebase_preconditions.py"
+        ],
+        "qualification": {
+          "run": 36797514717,
+          "name": "Validate registries",
+          "conclusion": "success"
+        }
+      },
+      "caveat": "A green repair candidate fixes repository qualification evidence; it does not prove any historical, divinatory, metaphysical, or theological proposition.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "testament",
+      "repository": "thebrazenbeard/testament",
+      "exact_main": "20517788763e76863a35e02ba3cc9051d0a227bb",
+      "exact_main_qualification": null,
+      "github_actions_workflows": [],
+      "open_draft_count": 11,
+      "newest_foundation_candidate": {
+        "pr": 20,
+        "head": "0e48a349412193c15d1527c69835821fc55f548b",
+        "mergeable": false
+      },
+      "caveat": "No executable CI qualification exists for current main; downstream literary/manuscript content cannot upgrade upstream evidence.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "workstreams": [
+    {
+      "id": "yeshua-real-testament",
+      "durable_surfaces": [
+        "thebrazenbeard/on-theo",
+        "thebrazenbeard/testament"
+      ],
+      "state": "CURRENTNESS_REFRESHED_EXECUTION_HELD",
+      "gate": "UPSTREAM_SOURCE_AND_DOWNSTREAM_QUALIFICATION",
+      "caveat": "Historical reconstruction and literary synthesis remain separate authority layers."
+    },
+    {
+      "id": "nature-of-existence",
+      "durable_surfaces": [
+        "thebrazenbeard/on-theo",
+        "thebrazenbeard/testament"
+      ],
+      "state": "CURRENTNESS_REFRESHED_EXECUTION_HELD",
+      "gate": "SOURCE_HYPOTHESIS_BOUNDARY",
+      "caveat": "Sourced fact, hypothesis, symbolism, experiential report, and literary synthesis remain distinct."
+    }
+  ],
+  "hostile_challenges": [
+    "Repository validation success or failure says nothing by itself about whether a historical proposition is true.",
+    "A downstream manuscript cannot bootstrap an upstream research claim into stronger evidence.",
+    "Metaphysical or consciousness hypotheses remain hypotheses unless independently supported; project persistence is not proof."
+  ]
+}
