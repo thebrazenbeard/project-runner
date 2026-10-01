@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/close-workbridge-main-gate-v1-20261001",
-    "commit": "c45d5840cfdcdf832d8293b338bd52a5603995c6",
+    "ref": "portfolio/close-driftguard-review-gate-v1-20261001",
+    "commit": "50d5cae60cbefa49b65dee28f463bc30bb505665",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "7d5542046835f593f415f8055e2dcd5c4bad0f18",
+    "git_blob_sha": "bde8710d46bab9eaa73dc3d48cc2ab6e38f6b4c8",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -240,8 +240,8 @@
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "EXECUTION_ROUTE_ADMISSION",
-      "frontier": "Review and reconcile PR #40's effect reservation/dispatch fence as the current candidate while preserving exact-head qualification; Runner admits read/analyze/propose only, so source-write remains HELD.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@52fa829c629fa0f3e729204912db9f9f783f322a observed. Draft PR #40@33b75523a1130c614c270f3de45417e1acf4e32b is based on that main and passes tests, CodeQL Advanced, and action-smoke; it remains unmerged."
+      "frontier": "Candidate review is complete. Keep PR #40 unmerged and source-write HELD until an execution route is separately admitted; any future provider adapter must add current protected-effect authority, provider readback/reconciliation, and effect-aware fence release without promoting the local permit into a trust root.",
+      "source_status": "CURRENTNESS_REFRESHED_GREEN_CANDIDATE_HOSTILE_REVIEWED__EXECUTION_HELD — Exact main@52fa829c629fa0f3e729204912db9f9f783f322a observed. Draft PR #40@33b75523a1130c614c270f3de45417e1acf4e32b remains the green current-main-native effect reservation/dispatch-fence candidate: tests 35940813596, action-smoke 35940813553, and CodeQL Advanced 35940813564 pass. Rezon PR #100@41978d83a00ac4f5be49246e23bbf6669d0fed2 hostile-reviews the exact candidate as local durable reservation/fence mechanics only and passes Rezon kernel + Benchmark V1."
     },
     {
       "subject_kind": "repository",
