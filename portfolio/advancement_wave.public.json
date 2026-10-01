@@ -4,9 +4,9 @@
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
     "ref": "portfolio/gate-qualification-candidates-v1-20260930",
-    "commit": "b9a23f91a9be5a69f23fd294513f15e701d79641",
+    "commit": "c0dc508883ee974f5b109facf3d81c17ed5bbd59",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "f47cfd729e6aa47b905d317817a3fbc89f2510f4",
+    "git_blob_sha": "3358d637ae4f52353e91b9d7b3997cbe1753b8e2",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
