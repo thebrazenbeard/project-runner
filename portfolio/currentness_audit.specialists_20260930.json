@@ -1,0 +1,77 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "P2_SPECIALIST_WORKERS_AND_REASONING",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_DEPLOYMENT_NO_TRAINING_OR_SPECIALIST_EFFECT",
+  "subjects": [
+    {
+      "id": "freerowcochkar",
+      "repository": "thebrazenbeard/freerowcochkar",
+      "exact_main": "9ea4eaefe5229ca90d7ae6099dbf30d9e13b64b2",
+      "exact_main_qualification": {
+        "run": 36184885826,
+        "name": "CI",
+        "conclusion": "success"
+      },
+      "current_candidate": {
+        "pr": 3,
+        "head": "25e49d5be801eb9d9a388d7f36a7216f617f5fb5",
+        "base": "9ea4eaefe5229ca90d7ae6099dbf30d9e13b64b2",
+        "run": 36189160706,
+        "conclusion": "success"
+      },
+      "caveat": "A green Stage-2 candidate still needs bounded-value review before integration.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "hephaestus",
+      "repository": "thebrazenbeard/hephaestus",
+      "exact_main": "030494fa2cc4c875013a9a4842abe60588c9c709",
+      "exact_main_qualification": null,
+      "current_tree_has_ci_workflow": false,
+      "current_tree_has_tests": false,
+      "open_drafts": [
+        9,
+        10,
+        11
+      ],
+      "caveat": "Integrated/licensed current main is source-current but not executable-qualified; older training/runtime drafts remain separate lineages.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "masamune",
+      "repository": "thebrazenbeard/masamune",
+      "exact_main": "25653790d59080cda0b6d6e57b8a4cd64d1ee2b5",
+      "exact_main_qualification": null,
+      "current_candidate": {
+        "pr": 1,
+        "head": "1a65c418f2a582f239ef271e992985b6f425c403",
+        "base": "25653790d59080cda0b6d6e57b8a4cd64d1ee2b5",
+        "run": 36793097295,
+        "conclusion": "success"
+      },
+      "caveat": "The GitHub App candidate is green, but current main and deployed app/effect are separate subjects.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "voss",
+      "repository": "thebrazenbeard/voss",
+      "exact_main": "36a623d3a158e5aef521d42e378bafacd67d3de5",
+      "exact_main_qualification": null,
+      "current_tree_has_tests": true,
+      "current_tree_has_ci_workflow": false,
+      "merged_v2_pr": {
+        "pr": 2,
+        "head": "2586c878c2785db54cecce36203db736b265b59a",
+        "merge_commit": "36a623d3a158e5aef521d42e378bafacd67d3de5"
+      },
+      "caveat": "Forensic test source is not executed exact-main evidence; independent-review status cannot be inferred from repository identity.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "A specialist identity or repository name does not grant independent-review status.",
+    "A green candidate is not current main and is not deployment/effect evidence.",
+    "Training/reconstruction source is not proof that a specialist package is installed, activated, or effective."
+  ]
+}
