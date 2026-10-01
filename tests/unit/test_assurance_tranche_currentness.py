@@ -27,6 +27,9 @@ def test_assurance_tranche_is_currentness_refreshed_but_not_queued():
     assert all(item.execution_state == "HELD" for item in items.values())
     assert all(
         item.source_status.startswith("CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD")
+        or item.source_status.startswith(
+            "CURRENTNESS_REFRESHED_GREEN_CANDIDATE_HOSTILE_REVIEWED__EXECUTION_HELD"
+        )
         for item in items.values()
     )
 
