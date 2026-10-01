@@ -44,6 +44,9 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "unvtrslr",
         "unbound-sol",
         "meso-crct",
+        "bugops",
+        "repairtracker",
+        "intranel",
     }
 
     private_projects = {p.id for p in projects if p.visibility == "private"}
