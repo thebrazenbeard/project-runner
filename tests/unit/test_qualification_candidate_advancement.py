@@ -25,7 +25,7 @@ def test_green_qualification_candidates_remain_held():
     assert all(item.execution_state == "HELD" for item in items.values())
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
     assert all(
-        item.source_status.startswith("CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD")
+        item.source_status.startswith("CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD")
         for item in items.values()
     )
 
