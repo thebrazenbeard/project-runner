@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. No public repository or public workstream remains on inherited 2026-09-28 currentness. This successor records newly qualified direct candidates for seven previously open source-qualification gates while keeping current-main qualification, integration, runtime, effect, identity, phenomenology, scientific/research claims, and authority separate.",
+  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. Standalone WorkBridge current main is now exact-main source/build/package qualified while installation/runtime/effect authority remains separate.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -813,8 +813,8 @@
       "family_id": "workstation-runtime",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Standalone provider-neutral bounded Go MCP workstation server plus independent Synology WorkBridge packaging.",
-      "status": "Exact-source classification at 7caab29eb5667897a0a03d0ce67d733380b01685: derived from an earlier WorkBridgeMCP Go-server cut and independently evolving; process-argument hardening and relay package 0003 qualification are active.",
-      "current_frontier": "Qualify independent source/build/package hardening and establish explicit donor-patch currentness so security fixes do not silently diverge across the WorkBridgeMCP-derived lineage."
+      "status": "Exact main@e88e14ea25f25abd723bb50909b3e25e67f889fd observed after merged PR #4. WorkBridge source checks run 36792749209 and WorkBridgeRelay ARMv7 SPK run 36792749216 both pass at that exact main. Rezon PR #99 review head 54e41462dfc9171fb79ec4494056203cccf8114c refreshes the WorkBridge-family topology and preserves standalone lineage separation.",
+      "current_frontier": "Treat standalone current main as source/build/package qualified; keep NAS installation, live listener, workstation attachment, Commander transport, and downstream runtime effect behind separate qualification. Track donor-patch drift independently from WorkBridgeMCP."
     },
     {
       "id": "workbridgecommander",
