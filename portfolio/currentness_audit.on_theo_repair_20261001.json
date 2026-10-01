@@ -1,0 +1,39 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-10-01",
+  "tranche": "ON_THEO_REBASE_PRECONDITION_REPAIR",
+  "authority_ceiling": "SOURCE_TEST_REPAIR_REVIEW_ONLY_NO_MERGE_NO_RESEARCH_CLAIM_ELEVATION",
+  "subject": {
+    "id": "on-theo",
+    "repository": "thebrazenbeard/on-theo",
+    "exact_main": "2fdc9614fa4f45eb038772d736b146809e10a7f1",
+    "main_qualification": {
+      "run": 36353652038,
+      "conclusion": "failure",
+      "summary": "55 passed / 1 failed"
+    },
+    "repair_candidate": {
+      "pr": 168,
+      "head": "98cea0dcb9bdf83ac352f02ce94808ac4670105c",
+      "changed_paths": [
+        "tests/test_registry_rebase_preconditions.py"
+      ],
+      "run": 36797514717,
+      "conclusion": "success"
+    },
+    "hostile_review": {
+      "repository": "thebrazenbeard/rezon",
+      "pr": 101,
+      "head": "0c3930ff90ef07158fbac2cef54a1fca8192134f",
+      "kernel": "success",
+      "benchmark": "success"
+    },
+    "surviving_claim": "SQUASH_TOPOLOGY_TEST_REPAIR_ONLY_REFERENTIAL_PRECONDITIONS_PRESERVED",
+    "remaining_gate": "INTEGRATE_REPAIR_AND_EXACT_MAIN_REQUALIFICATION",
+    "caveats": [
+      "Current main remains unqualified until the repair is integrated and exact-main validation reruns.",
+      "Repository validation does not elevate historical, theological, textual, witness, or source-authenticity claims.",
+      "The repair removes stale ancestry cardinalities but preserves full extension partition and zero referential mismatches."
+    ]
+  }
+}
