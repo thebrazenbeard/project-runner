@@ -464,3 +464,45 @@ projects:
   family_id: synthetic-affect
   scheduling_state: HELD
   scope_note: Synthetic-affect research subject registered for currentness and review only; welfare, activation, and runtime effects remain separately qualified.
+- id: bugops
+  name: BugOps
+  visibility: public
+  repositories:
+  - thebrazenbeard/bugops
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: assurance-and-repair
+  scheduling_state: HELD
+  scope_note: Incident-lifecycle subject registered for currentness and review only; it is not a competing orchestrator or automatic repair authority.
+- id: repairtracker
+  name: RepairTracker
+  visibility: public
+  repositories:
+  - thebrazenbeard/RepairTracker
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: assurance-and-repair
+  scheduling_state: HELD
+  scope_note: Repair/evidence subject registered for currentness and review only; deployment and signal-promotion effects remain separately authorized.
+- id: intranel
+  name: Intranel
+  visibility: public
+  repositories:
+  - thebrazenbeard/intranel
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: governance
+  scheduling_state: HELD
+  scope_note: Governance subject registered for currentness and review only; no constructor, policy, or protected-effect authority is admitted.
