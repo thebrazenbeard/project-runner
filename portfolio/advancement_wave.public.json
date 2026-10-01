@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/close-driftguard-review-gate-v1-20261001",
-    "commit": "50d5cae60cbefa49b65dee28f463bc30bb505665",
+    "ref": "portfolio/close-on-theo-repair-review-v1-20261001",
+    "commit": "4f8f596dbf872224beee4264c9f9d7cfc1a9cb0f",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "bde8710d46bab9eaa73dc3d48cc2ab6e38f6b4c8",
+    "git_blob_sha": "6416c8d41ca286c4316a408f860ff61bfb7c940d",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -500,9 +500,9 @@
       "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "REPAIR_CANDIDATE_AND_EXACT_MAIN_REQUALIFICATION",
-      "frontier": "Preserve current main as unqualified until the rebase-precondition repair is integrated and exact-main validation reruns; research claims remain separately evidence-bounded regardless of repository validation status.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 remains current but unqualified: Validate registries run 36353652038 fails 1 test / passes 55. Direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c is based on that exact main, changes only tests/test_registry_rebase_preconditions.py, and passes Validate registries run 36797514717."
+      "review_gate": "INTEGRATE_REPAIR_AND_EXACT_MAIN_REQUALIFICATION",
+      "frontier": "Repair review is complete. Integrate PR #168 only if authorized, then rerun exact-main registry validation before treating main as qualified. Keep all historical/religious claims, witness judgments, and research confidence separately evidence-bounded regardless of repository validation status.",
+      "source_status": "CURRENTNESS_REFRESHED_REPAIR_CANDIDATE_HOSTILE_REVIEWED__MAIN_UNQUALIFIED__EXECUTION_HELD — Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 remains current but unqualified: Validate registries run 36353652038 fails 1 test / passes 55. Direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c changes only tests/test_registry_rebase_preconditions.py and passes Validate registries run 36797514717. Rezon PR #101@0c3930ff90ef07158fbac2cef54a1fca8192134f hostile-reviews the exact repair as a squash-topology test-contract correction only and passes Rezon kernel + Benchmark V1."
     },
     {
       "subject_kind": "repository",
