@@ -30,7 +30,7 @@ def test_green_qualification_candidates_remain_held():
     )
 
 
-def test_only_testament_and_hephaestus_remain_bare_exact_main_qualification_gaps():
+def test_green_candidates_leave_the_bare_exact_main_qualification_bucket():
     wave = load_advancement_wave(ROOT / "portfolio" / "advancement_wave.public.json")
     exact_main_gaps = {
         item.subject_id
@@ -38,7 +38,16 @@ def test_only_testament_and_hephaestus_remain_bare_exact_main_qualification_gaps
         if item.subject_kind == "repository"
         and item.review_gate == "EXACT_MAIN_QUALIFICATION"
     }
-    assert exact_main_gaps == {"testament", "hephaestus"}
+    assert GREEN.isdisjoint(exact_main_gaps)
+    assert {"testament", "hephaestus"} <= exact_main_gaps
+    assert exact_main_gaps == {
+        "conations",
+        "hephaestus",
+        "intranel",
+        "personification",
+        "temporal",
+        "testament",
+    }
 
 
 def test_green_candidate_gates_do_not_claim_main_qualification():
