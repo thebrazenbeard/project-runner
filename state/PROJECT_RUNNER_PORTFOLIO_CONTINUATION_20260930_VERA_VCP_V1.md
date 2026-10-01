@@ -1039,3 +1039,258 @@ The remaining inherited public repository set is P2+ only. Continue by dependenc
 8. Vera lineage/runtime: vera-R9A0, vera-habitat, vera-synology.
 
 Keep all newly refreshed P2 subjects HELD unless an exact operator execution target and separate authority are deliberately admitted.
+
+---
+
+# K. P2 currentness closure and full public-corpus refresh — 2026-09-30 V5
+
+This section extends V4 and records completion of the public repository currentness sweep. All PRs below remain draft/unmerged unless separately stated.
+
+## Stacked P2 continuation
+
+The P2 currentness stack continues from PR #61:
+
+- PR #62 — `portfolio/audit-p2-assurance-v1-20260930`
+  - exact head: `adda542c87ed5825abb3c61cf949f7d146bc80a9`
+  - own push + PR suites PASS.
+- PR #63 — `portfolio/audit-p2-cognitive-v1-20260930`
+  - exact head: `cf37ffc0346a0b313dfef6f6470459ef6e183187`
+  - own push + PR suites PASS.
+- PR #64 — `portfolio/audit-p2-memory-time-v1-20260930`
+  - exact head: `a77082180b982211fa171dab5cfd22f096a83c64`
+  - push + PR suites PASS.
+- PR #65 — `portfolio/audit-p2-semantic-composition-v1-20260930`
+  - exact head: `5ebbeff358284dcbc3d0069ee31e0ed46cd0b2ec`
+  - push + PR suites PASS.
+- PR #66 — `portfolio/audit-p2-specialist-tranche-v1-20260930`
+  - exact head: `ef02655e1bd012579cc478e06730a03f81fddbc8`
+  - push + PR suites PASS.
+- PR #67 — `portfolio/audit-final-p2-vera-speculative-v1-20260930`
+  - exact head: `df49cecdbaf7f110e928b284eef2a0fb49973064`
+  - push run `36797236810`: PASS.
+  - PR run `36797252492`: PASS.
+  - exact-head push suite includes tests, registry validation, live read-only GitHub smoke, M6 reference-worker proof, recursive restart proof, and HC→Transcendence proof.
+
+## Public currentness closure
+
+At PR #67:
+
+- authenticated estate binding remains 76 accessible repositories:
+  - 57 public
+  - 19 private
+  - private identities remain unpublished;
+- every one of the 57 public repository corpus records is now either live re-read on the 2026-09-30 chain or exact-source classified;
+- zero public repository wave items remain marked
+  `INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH`;
+- the wave remains descriptive/source-only;
+- membership, priority, family, currentness, and review status do not grant execution or protected-effect authority.
+
+Final corpus source commit in the #67 branch:
+
+`5ca906dc9f99c7e0bc6bbd41ce22ae1e9d85d7ca`
+
+Final public corpus blob:
+
+`0a80247391859cc41b82d13d036f34543c0734bc`
+
+The corpus status explicitly separates source currentness from qualification, merge, installation, runtime, effect, identity, phenomenology, and authority.
+
+## Registry closure
+
+Project Runner operator-visible project registry count at PR #67 is 54.
+
+Newly admitted P2 subjects are fail-closed:
+
+- `EXTERNAL_BOUNDED`
+- `HELD`
+- capabilities exactly `read`, `analyze`, `propose`
+- no execution targets
+- no inferred source-write, merge, deployment, installation, model-training, research-promotion, hardware, database, NAS, runtime, consciousness, identity, or physical-effect authority.
+
+## P2 assurance/governance and cognitive/memory tranches
+
+Exact-source audit artifacts in the stack record currentness for:
+
+- BugOps
+- RepairTracker
+- Intranel
+- Attune
+- Conations
+- Empathy
+- Personification
+- SemanticAtlas
+- DeepMemoryStorage
+- Temporal
+
+Those subjects remain held according to their exact review gates and do not receive authority merely from currentness refresh.
+
+## Semantic/composition tranche
+
+### SPM
+
+- exact main: `d9ea72798ac892ac75f858177b6ed0c5a6b4c37c`
+- current main contains substantial tests but no GitHub Actions workflow;
+- same-head green dependency-graph automation is not source qualification;
+- gate: `EXACT_MAIN_QUALIFICATION`.
+
+### Mosaic
+
+- exact main: `3a442e94b4f5b8fa365e2206c40405df6961e18d`
+- analytical-residency/protocol-harness workflows and tests exist;
+- no recorded Actions qualification exists for current main;
+- gate: `EXACT_MAIN_QUALIFICATION`.
+
+### WIP
+
+- exact main: `3b93b64c09f5ed704b21a9db28cb918df181947e`
+- `validate-wip` run `36709186924`: PASS;
+- source qualified but still held pending a distinct consumer/gap relative to Project Runner/BT2;
+- gate: `DISTINCT_CONSUMER_OR_GAP`.
+
+## Specialist tranche
+
+### FreeRowCochkar
+
+- exact main: `9ea4eaefe5229ca90d7ae6099dbf30d9e13b64b2`
+- exact-main CI run `36184885826`: PASS;
+- PR #3 @ `25e49d5be801eb9d9a388d7f36a7216f617f5fb5`
+  - based directly on current main;
+  - CI run `36189160706`: PASS;
+- gate: `GREEN_CANDIDATE_VALUE_REVIEW`.
+
+### Hephaestus
+
+- exact main: `030494fa2cc4c875013a9a4842abe60588c9c709`
+- no exact-main Actions qualification;
+- current tree has no CI workflow/test suite;
+- draft runtime/training PRs #9-#11 remain older branch subjects;
+- gate: `EXACT_MAIN_QUALIFICATION`.
+
+### Masamune
+
+- exact main: `25653790d59080cda0b6d6e57b8a4cd64d1ee2b5`
+- main has no exact qualification run;
+- PR #1 @ `1a65c418f2a582f239ef271e992985b6f425c403`
+  - based directly on current main;
+  - test run `36793097295`: PASS;
+- main, candidate, deployment, and GitHub write effect remain separate;
+- gate: `CANDIDATE_MAIN_AND_EFFECT_SEPARATION`.
+
+### Voss
+
+- exact main: `36a623d3a158e5aef521d42e378bafacd67d3de5`
+- qualification/regression tests exist in source;
+- no exact-main Actions qualification is recorded;
+- repository identity does not establish independent-review status;
+- gate: `EXACT_MAIN_QUALIFICATION`.
+
+## Final speculative/Vera-lineage tranche
+
+### God Brain
+
+- exact main: `495c2b42932153cba0926744d04a69bc34557f81`
+- exact-main Repository Hygiene, DriftGuard source-admission research, and Architecture Conformance: PASS;
+- PR #33 @ `5d9fcba957cdf06f12515dd97b191aac98a6aaba`
+  - based directly on current main;
+  - architecture, causal-rival falsification research, and hygiene gates PASS;
+- no consciousness, simulation, identity, or runtime-effect conclusion follows;
+- gate: `GREEN_CANDIDATE_FALSIFICATION_REVIEW`.
+
+### Transcendence
+
+- exact main: `69dacb467e94fb73ce106cd5176c39800c64e195`
+- no exact-main qualification;
+- PR #7 @ `be3785c83dbe89b0d4236b43eda97a277eb6baad`
+  - green test + Reference Kernel/Transcendence Core;
+  - stacked on older lineage, not current main;
+- continuity architecture is not consciousness/identity evidence;
+- gate: `CURRENT_MAIN_RESTACK_AND_QUALIFICATION`.
+
+### Vera R9A0
+
+- exact main: `287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01`
+- no exact-main qualification;
+- PR #21 @ `a079217d5a50e2ec9c494022b8c03bdc52056d81`
+  - older-lineage candidate;
+  - R9A0 Native Project run `35543804880`: FAIL;
+- do not revive R9A0 as a competing runtime;
+- gate: `FAILED_CANDIDATE_REMEDIATION`.
+
+### Vera Habitat
+
+- exact main: `82cf6a625e417ced00205f66be1e76dc396ab617`
+- Habitat foundation run `36700971895`: PASS;
+- no open PR;
+- source foundation is qualified but no current consumer/runtime is inferred;
+- gate: `CONCRETE_CONSUMER_EVIDENCE`.
+
+### Vera Synology
+
+- exact main: `d13cdefbf817aeba60c673fa4a517575c311da2c`
+- no exact-main qualification;
+- PR #12 @ `8501a32e237aaca613e77c7836370261e549c1c2`
+  - based directly on current main;
+  - Scaffold validation `36698341486`: PASS;
+  - Unified Vera Runtime SPK `36698341474`: PASS;
+- package/source qualification does not establish installation, listener ownership, route activation, runtime consumption, or effect;
+- gate: `CANDIDATE_RUNTIME_EFFECT_SEPARATION`.
+
+## Preserved hostile boundaries
+
+> Closing currentness is not equivalent to qualifying every repository.
+
+> A green candidate is not current main unless the exact-main relationship is established.
+
+> Source tests existing in a tree are not executable qualification until they run against the exact subject.
+
+> Specialist identity does not create independent-review authority.
+
+> Continuity architecture does not establish consciousness or identity continuity.
+
+> SPK/package qualification does not establish installation or runtime effect.
+
+> Historical Vera lineages are donor evidence, not competing canonical runtimes.
+
+## Separate EFFECT_CONFIRMED spine
+
+The source spine remains separate:
+
+- branch: `portfolio/effect-confirmed-finalization-v1-20260924`
+- recovered checkpoint head: `172edc1fa9296fb48571da5a4ab3710a91ebac19`
+
+Nothing in PRs #53-#67 is promoted into merge/install/runtime/effect status merely because the descriptive portfolio currentness sweep is complete.
+
+## Next bounded frontier
+
+The public currentness sweep is closed. Remaining work is no longer "find stale repositories"; it is explicit gate work on already-current subjects:
+
+1. exact-main qualification gaps:
+   - LGCM
+   - UNVTRSLR
+   - Testament
+   - SPM
+   - Mosaic
+   - Hephaestus
+   - Voss
+   - Transcendence
+   - Vera R9A0
+   - Vera Synology current main
+2. exact-main validation repair:
+   - On-Theo
+3. candidate reconciliation/value review:
+   - DriftGuard
+   - ABIL
+   - Unbound Sol
+   - FreeRowCochkar
+   - Masamune
+   - God Brain
+   - Vera Synology
+4. consumer/effect qualification:
+   - WIP
+   - Vera Habitat
+   - SQL/database effect boundaries
+   - AXLE hardware/vehicle boundaries
+   - runtime/install boundaries across Vera/WorkBridge/Synology.
+
+Do not merge any stacked PR without explicit live authority.
+
