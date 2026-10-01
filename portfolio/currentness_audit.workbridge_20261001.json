@@ -1,0 +1,38 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-10-01",
+  "tranche": "STANDALONE_WORKBRIDGE_CURRENT_MAIN",
+  "authority_ceiling": "SOURCE_BUILD_PACKAGE_ONLY_NO_INSTALL_NO_LISTENER_NO_TRANSPORT_NO_RUNTIME_EFFECT",
+  "subject": {
+    "id": "workbridge",
+    "repository": "thebrazenbeard/workbridge",
+    "exact_main": "e88e14ea25f25abd723bb50909b3e25e67f889fd",
+    "merged_pr": {
+      "pr": 4,
+      "head": "d6cd8c67efb0c2fb45d8970ba000009804cde1c5",
+      "merge_commit": "e88e14ea25f25abd723bb50909b3e25e67f889fd"
+    },
+    "exact_main_qualification": [
+      {
+        "run": 36792749209,
+        "name": "WorkBridge source checks",
+        "conclusion": "success"
+      },
+      {
+        "run": 36792749216,
+        "name": "WorkBridgeRelay ARMv7 SPK",
+        "conclusion": "success"
+      }
+    ],
+    "rez_on_review": {
+      "pr": 99,
+      "head": "54e41462dfc9171fb79ec4494056203cccf8114c"
+    },
+    "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE",
+    "caveats": [
+      "Source/build/package qualification does not establish NAS installation.",
+      "No live listener, workstation attachment, Commander transport, or downstream runtime effect is inferred.",
+      "Standalone workbridge remains a distinct derived lineage from WorkBridgeMCP and must track donor-patch drift explicitly."
+    ]
+  }
+}
