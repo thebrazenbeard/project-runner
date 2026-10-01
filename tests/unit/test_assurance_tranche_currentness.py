@@ -30,6 +30,9 @@ def test_assurance_tranche_is_currentness_refreshed_but_not_queued():
         or item.source_status.startswith(
             "CURRENTNESS_REFRESHED_GREEN_CANDIDATE_HOSTILE_REVIEWED__EXECUTION_HELD"
         )
+        or item.source_status.startswith(
+            "CURRENTNESS_REFRESHED_EXACT_MAIN_QUALIFIED__EXECUTION_HELD"
+        )
         for item in items.values()
     )
 
