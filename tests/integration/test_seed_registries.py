@@ -59,6 +59,10 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "hephaestus",
         "masamune",
         "voss",
+        "god-brain",
+        "vera-r9a0",
+        "vera-habitat",
+        "vera-synology",
     }
 
     private_projects = {p.id for p in projects if p.visibility == "private"}

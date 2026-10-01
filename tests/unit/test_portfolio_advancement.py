@@ -197,60 +197,15 @@ def test_20260930_new_public_subjects_are_classified_but_held():
     )
 
 
-def test_inherited_non_p0_repository_status_is_currentness_gated():
+def test_no_public_repository_remains_on_inherited_semantic_currentness():
     wave = load_advancement_wave(
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
     inherited = [
         item for item in wave.items
         if item.subject_kind == "repository"
-        and item.priority != "P0"
-        and item.subject_id not in {
-            "build-team-2.0",
-            "semiotics",
-            "thebrazenbeard",
-            "workbridge",
-            "workbridgecommander",
-            "rezon",
-            "driftguard",
-            "ingest",
-            "project-achilles",
-            "ccb-core",
-            "pro-run",
-            "fuckup",
-            "hc-brain",
-            "lgcm",
-            "noema",
-            "abil",
-            "axle",
-            "sql-connectome",
-            "unvtrslr",
-            "unbound-sol",
-            "roots",
-            "world-zero",
-            "on-theo",
-            "testament",
-            "meso-crct",
-            "bugops",
-            "repairtracker",
-            "intranel",
-            "attune",
-            "conations",
-            "empathy",
-            "personification",
-            "semanticatlas",
-            "deepmemorystorage",
-            "temporal",
-            "spm",
-            "mosaic",
-            "wip",
-            "freerowcochkar",
-            "hephaestus",
-            "masamune",
-            "voss",
-        }
+        and item.source_status.startswith(
+            "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH"
+        )
     ]
-    assert inherited
-    assert all(item.execution_state == "HELD" for item in inherited)
-    assert all(item.action == "CURRENTNESS_AUDIT" for item in inherited)
-    assert all(item.review_gate == "CURRENTNESS_CHECK" for item in inherited)
+    assert inherited == []

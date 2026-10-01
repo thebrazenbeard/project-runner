@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-p2-specialist-tranche-v1-20260930",
-    "commit": "d63a2e2ca74ede42c95d99414832752edc600aa1",
+    "ref": "portfolio/audit-final-p2-vera-speculative-v1-20260930",
+    "commit": "5ca906dc9f99c7e0bc6bbd41ce22ae1e9d85d7ca",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "92ac92d274dbf94131fc4ef286fc6111d33ff0a9",
+    "git_blob_sha": "0a80247391859cc41b82d13d036f34543c0734bc",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -304,17 +304,17 @@
       "repository": "thebrazenbeard/god-brain",
       "priority": "P2",
       "family_id": "speculative-cognition",
-      "activity_state": "INCUBATOR",
+      "activity_state": "ACTIVE_HEAVY",
       "lead_identity": "VOSS",
       "reviewer_identities": [
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Compress hypotheses into controlled experiments with explicit nulls.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Broad experimental surface exists; strong claims remain unqualified."
+      "review_gate": "GREEN_CANDIDATE_FALSIFICATION_REVIEW",
+      "frontier": "Use current main plus the green PR #33 falsification candidate to compress speculative cognition claims into controlled rival-hypothesis tests; do not promote source behavior into consciousness, simulation, identity, or runtime-effect claims.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@495c2b42932153cba0926744d04a69bc34557f81 observed. Repository Hygiene run 36746633579, DriftGuard source-admission research run 36746633699, and Architecture Conformance run 36746633704 all pass at that exact head. Draft PR #33@5d9fcba957cdf06f12515dd97b191aac98a6aaba is based directly on current main and also passes architecture, causal-rival research, and hygiene gates; many older draft research branches remain separate."
     },
     {
       "subject_kind": "repository",
@@ -796,12 +796,12 @@
       "reviewer_identities": [
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Validate continuity mechanics while keeping consciousness claims unproven.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Continuity-lineage and integrity-verifier alignment remain open."
+      "review_gate": "CURRENT_MAIN_RESTACK_AND_QUALIFICATION",
+      "frontier": "Reconcile the green continuity/integrity candidate onto exact current main and requalify there before stronger continuity claims; keep consciousness/identity continuity explicitly unproven.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@69dacb467e94fb73ce106cd5176c39800c64e195 observed. No exact-main Actions qualification is recorded. Draft PR #7@be3785c83dbe89b0d4236b43eda97a277eb6baad passes test and Reference Kernel + Transcendence Core runs, but it is stacked on older PR #6 lineage rather than current main."
     },
     {
       "subject_kind": "repository",
@@ -893,12 +893,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Define a concrete consumer before expanding the abstraction.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation V1 remains open and repository is minimal."
+      "review_gate": "CONCRETE_CONSUMER_EVIDENCE",
+      "frontier": "Hold the qualified foundation until a concrete current Vera consumer exists; avoid expanding Habitat as an abstraction without a source-bound integration need.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@82cf6a625e417ced00205f66be1e76dc396ab617 observed with no open PRs. Habitat foundation push run 36700971895 passes at that exact head."
     },
     {
       "subject_kind": "repository",
@@ -972,12 +972,12 @@
         "HEPHAESTUS",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Migrate useful mechanisms forward rather than revive a competing runtime.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Voice currentness-guard work remains open; otherwise mostly lineage."
+      "review_gate": "FAILED_CANDIDATE_REMEDIATION",
+      "frontier": "Do not revive R9A0 as a competing runtime. Extract only mechanisms that are requalified on current lineage; treat the failed Voice-currentness candidate as unresolved evidence, not a donor ready for migration.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01 observed. No exact-main qualification run is attached. Draft Voice-currentness PR #21@a079217d5a50e2ec9c494022b8c03bdc52056d81 is based on older head 84cbaedd67df79b759daac6e62de93336b52ef60, and its R9A0 Native Project run 35543804880 failed."
     },
     {
       "subject_kind": "repository",
@@ -992,12 +992,12 @@
         "REZON",
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Build one reproducible source/build/install/runtime path.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Runtime Host SPK and VeraMesh packaging/open-route work remain open."
+      "review_gate": "CANDIDATE_RUNTIME_EFFECT_SEPARATION",
+      "frontier": "Use PR #12 as the current green diagnosis/package candidate while preserving source/build/install/runtime/effect separation; do not infer NAS listener ownership, deployment, or route activation from SPK qualification.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@d13cdefbf817aeba60c673fa4a517575c311da2c observed. No exact-main qualification run is attached. Draft PR #12@8501a32e237aaca613e77c7836370261e549c1c2 is based directly on current main and passes Scaffold validation run 36698341486 and Unified Vera Runtime SPK run 36698341474. PRs #9-#11 form additional packaging/tunnel/media lineages."
     },
     {
       "subject_kind": "repository",
