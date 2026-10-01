@@ -1294,3 +1294,174 @@ The public currentness sweep is closed. Remaining work is no longer "find stale 
 
 Do not merge any stacked PR without explicit live authority.
 
+---
+
+# L. Public workstream currentness closure — 2026-09-30 V6
+
+This section extends the authoritative V5 stack. It records the only public currentness gap that remained after PR #67: the two public source-critical workstreams.
+
+## Authoritative branch lineage
+
+The authoritative currentness chain is:
+
+- PR #60 — Unbound Sol currentness
+- PR #61 — final P1 repository currentness
+- PR #62 — P2 assurance/governance
+- PR #63 — P2 cognitive
+- PR #64 — P2 memory/time
+- PR #65 — P2 semantic/composition
+- PR #66 — P2 specialists
+- PR #67 — final P2/Vera/speculative repository currentness closure
+- PR #70 — public workstream currentness closure
+
+PR #70:
+
+- branch: `portfolio/audit-public-workstreams-v1-20260930`
+- base: PR #67 head `df49cecdbaf7f110e928b284eef2a0fb49973064`
+- exact head: `b94b631d93b02c98688ad67df638d592adeaab18`
+- push run `36800461361`: PASS
+- pull-request run `36800463116`: PASS
+- exact suite includes tests, registry validation, live read-only GitHub smoke, M6 reference-worker proof, and recursive restart proof.
+
+An intermediate PR #70 head failed only because
+`tests/unit/test_final_p1_currentness.py` still expected the pre-repair ON_THEO gate
+`EXACT_MAIN_VALIDATION_REPAIR`.
+The successor updated that stale assertion to
+`REPAIR_CANDIDATE_AND_EXACT_MAIN_REQUALIFICATION`; no authority behavior changed.
+
+## Public currentness closure
+
+At PR #70:
+
+- public repository records: 57
+- public workstreams: 2
+- public wave subjects: 59
+- inherited/currentness-audit subjects: 0
+- queued subjects: still only the bounded P0 source routes from the fail-closed wave
+- all other subjects remain HELD under their exact review/effect gates.
+
+The corpus now states that no public repository or public workstream remains on inherited 2026-09-28 currentness.
+
+This is descriptive source/research currentness only. It does not upgrade merge, install, runtime, effect, identity, phenomenology, historical truth, metaphysical truth, or execution authority.
+
+## ON_THEO live repair candidate
+
+PR #67 correctly records ON_THEO exact main:
+
+`2fdc9614fa4f45eb038772d736b146809e10a7f1`
+
+as current but not source-qualified because Validate registries run `36353652038` fails:
+
+- 55 passed
+- 1 failed
+- failing test:
+  `tests/test_registry_rebase_preconditions.py::test_divergent_extension_referential_preconditions_are_equivalent`
+
+A later direct repair candidate now exists:
+
+- ON_THEO PR #168
+- exact head: `98cea0dcb9bdf83ac352f02ce94808ac4670105c`
+- exact base: `2fdc9614fa4f45eb038772d736b146809e10a7f1`
+- changed path: `tests/test_registry_rebase_preconditions.py` only
+- Validate registries run `36797514717`: PASS
+
+This establishes a green repair candidate for repository validation. It does not make ON_THEO current main green until integration/requalification, and it proves no historical, theological, divinatory, metaphysical, or consciousness proposition.
+
+## Public workstreams
+
+### The Real Testament of Yeshua
+
+Durable surfaces:
+
+- `thebrazenbeard/on-theo`
+- `thebrazenbeard/testament`
+
+Current workstream state:
+
+- ON_THEO exact main remains validation-red with a direct green repair candidate.
+- Testament exact main `20517788763e76863a35e02ba3cc9051d0a227bb` has no GitHub Actions workflow and no executable exact-main qualification.
+- historical/source research and downstream literary synthesis remain separate authority layers.
+- gate: `UPSTREAM_SOURCE_AND_DOWNSTREAM_QUALIFICATION`
+- execution: HELD
+- effect ceiling: SOURCE_ONLY.
+
+### The Nature of Existence
+
+The same durable surfaces are currentness-bound, but the evidence classes remain narrower:
+
+- sourced fact
+- hypothesis
+- symbolism
+- experiential report
+- literary synthesis
+
+must remain distinct.
+
+Persistent project state or model agreement is not evidence of consciousness, source, reincarnation, identity continuity, or metaphysical truth.
+
+Gate:
+
+`SOURCE_HYPOTHESIS_BOUNDARY`
+
+Execution remains HELD / SOURCE_ONLY.
+
+## Duplicate side stack created during resume
+
+PRs #68 and #69 were created on a parallel continuation from PR #60 before live recovery exposed the already-existing authoritative #61–#67 chain.
+
+They are not the continuation spine:
+
+- PR #68 — `portfolio/audit-p1-mechanisms-v1-20260930`
+- PR #69 — `portfolio/audit-source-critical-research-v1-20260930`
+
+They remain draft/unmerged and were not force-updated, closed, or deleted by this continuation.
+
+Their useful evidence is already represented by the authoritative #61/#67 repository audits and #70 workstream closure. Future continuation should use #70 rather than stacking new work on #68/#69.
+
+## Separate EFFECT_CONFIRMED spine
+
+Still separate and unchanged:
+
+- branch: `portfolio/effect-confirmed-finalization-v1-20260924`
+- exact checkpoint head: `172edc1fa9296fb48571da5a4ab3710a91ebac19`
+
+Nothing in the currentness chain #53-#70 implies merge/install/runtime/effect merely because source currentness has been closed.
+
+## Next bounded frontier
+
+The public currentness sweep is complete.
+
+Do not restart broad currentness auditing.
+
+Continue only explicit gate work already identified by V5/V6 evidence:
+
+1. exact-main qualification gaps:
+   - LGCM
+   - UNVTRSLR
+   - Testament
+   - SPM
+   - Mosaic
+   - Hephaestus
+   - Voss
+   - Transcendence
+   - Vera R9A0
+   - Vera Synology current main
+2. exact-main validation repair:
+   - ON_THEO via PR #168 or equivalent
+3. candidate reconciliation/value review:
+   - DriftGuard
+   - ABIL
+   - Unbound Sol
+   - FreeRowCochkar
+   - Masamune
+   - God Brain
+   - Vera Synology
+4. consumer/effect qualification:
+   - WIP
+   - Vera Habitat
+   - SQL/database boundaries
+   - AXLE hardware/vehicle boundaries
+   - Vera/WorkBridge/Synology install/runtime boundaries.
+
+Do not merge stacked PRs without explicit live authority.
+
