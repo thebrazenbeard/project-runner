@@ -40,6 +40,6 @@ def test_corpus_status_declares_repository_and_workstream_currentness_complete()
         ROOT / "portfolio" / "corpus.public.json",
         public_safe=True,
     )
-    assert len(corpus.records) == 57
+    assert len(corpus.records) == 58
     assert len(corpus.workstreams) == 2
     assert "No public repository or public workstream remains on inherited 2026-09-28 currentness" in corpus.status_basis
