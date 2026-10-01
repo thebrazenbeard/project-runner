@@ -40,7 +40,7 @@ def test_final_p1_preserves_mixed_evidence_gates():
     }
     assert items["roots"].review_gate == "CONSUMER_EVIDENCE"
     assert items["world-zero"].review_gate == "RESULT_INTERPRETATION_REVIEW"
-    assert items["on-theo"].review_gate == "EXACT_MAIN_VALIDATION_REPAIR"
+    assert items["on-theo"].review_gate == "REPAIR_CANDIDATE_AND_EXACT_MAIN_REQUALIFICATION"
     assert items["testament"].review_gate == "EXACT_MAIN_QUALIFICATION"
     assert items["meso-crct"].review_gate == "WELFARE_AND_EFFECT_QUALIFICATION"
 
