@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-p2-semantic-composition-v1-20260930",
-    "commit": "8d7c66473bd1efe5afc4c85dc5a0207272aa25ae",
+    "ref": "portfolio/audit-p2-specialist-tranche-v1-20260930",
+    "commit": "d63a2e2ca74ede42c95d99414832752edc600aa1",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "6af1e4197b6563fbb5a46c3f7a02f8a907ee1551",
+    "git_blob_sha": "92ac92d274dbf94131fc4ef286fc6111d33ff0a9",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -267,17 +267,17 @@
       "repository": "thebrazenbeard/freerowcochkar",
       "priority": "P2",
       "family_id": "specialist-reasoning",
-      "activity_state": "INCUBATOR",
+      "activity_state": "ACTIVE",
       "lead_identity": "REZON",
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Prove bounded value on concrete cases before broad integration.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation/restack work remains open."
+      "review_gate": "GREEN_CANDIDATE_VALUE_REVIEW",
+      "frontier": "Review the green Stage-2 composition/hostile-hardening candidate #3 against bounded concrete cases; do not broaden specialist authority or integrate until its incremental value is demonstrated.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@9ea4eaefe5229ca90d7ae6099dbf30d9e13b64b2 observed and CI push run 36184885826 passes at that exact head. Draft PR #3@25e49d5be801eb9d9a388d7f36a7216f617f5fb5 is based directly on current main, mergeable, and CI run 36189160706 passes; older PR #1 remains a divergent historical branch."
     },
     {
       "subject_kind": "repository",
@@ -347,12 +347,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Finish a reconstructible currentness-aware specialist package.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Dechatification and Role Four training/consolidation remain open."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Obtain an executable exact-main qualification baseline before consolidating runtime or Role Four training work; reconcile older drafts only after that baseline exists and keep training/runtime activation separate.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@030494fa2cc4c875013a9a4842abe60588c9c709 observed. Merged licensing-currentness PR #12 produced this main, but no Actions qualification is attached to its head and current main contains no CI workflow or test suite. Draft runtime/training PRs #9-#11 remain based on older lineages and are not promoted by this audit."
     },
     {
       "subject_kind": "repository",
@@ -415,18 +415,18 @@
       "repository": "thebrazenbeard/masamune",
       "priority": "P2",
       "family_id": "specialist-workers",
-      "activity_state": "QUIET",
+      "activity_state": "ACTIVE",
       "lead_identity": "MASAMUNE",
       "reviewer_identities": [
         "VOSS",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Activate only against concrete defects.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — No current pull request; recent work is continuation/review checkpointing."
+      "review_gate": "CANDIDATE_MAIN_AND_EFFECT_SEPARATION",
+      "frontier": "Treat PR #1 as the current green candidate for concrete defect-isolation/GitHub review work, while keeping main currentness and app deployment/effect separate; do not infer installation or repository-write authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@25653790d59080cda0b6d6e57b8a4cd64d1ee2b5 observed. Current main has no attached qualification run. Draft PR #1@1a65c418f2a582f239ef271e992985b6f425c403 builds the Masamune GitHub App V0 directly on current main and passes test run 36793097295."
     },
     {
       "subject_kind": "repository",
@@ -1005,18 +1005,18 @@
       "repository": "thebrazenbeard/voss",
       "priority": "P2",
       "family_id": "specialist-workers",
-      "activity_state": "QUIET",
+      "activity_state": "ACTIVE",
       "lead_identity": "VOSS",
       "reviewer_identities": [
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Use for bounded independent forensic review.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — No current pull request; current main is checkpointed specialist state."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Run the existing Voss qualification/regression suite against exact current main before treating V2 as independently qualified; preserve forensic-review use as evidence review rather than automatic truth or authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@36a623d3a158e5aef521d42e378bafacd67d3de5 observed with no open PRs. Merged PR #2 integrated Voss forensic analyst V2, and current main contains a qualification/regression test suite, but no Actions workflow or executable qualification run is recorded for the exact main."
     },
     {
       "subject_kind": "repository",
