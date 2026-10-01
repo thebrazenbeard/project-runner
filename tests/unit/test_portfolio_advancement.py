@@ -234,6 +234,11 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "bugops",
             "repairtracker",
             "intranel",
+            "attune",
+            "conations",
+            "empathy",
+            "personification",
+            "semanticatlas",
         }
     ]
     assert inherited
