@@ -244,6 +244,10 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "spm",
             "mosaic",
             "wip",
+            "freerowcochkar",
+            "hephaestus",
+            "masamune",
+            "voss",
         }
     ]
     assert inherited
