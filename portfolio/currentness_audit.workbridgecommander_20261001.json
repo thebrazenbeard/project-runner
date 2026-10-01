@@ -1,0 +1,36 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-10-01",
+  "tranche": "WORKBRIDGE_COMMANDER_QUALIFICATION_CANDIDATE",
+  "authority_ceiling": "SOURCE_QUALIFICATION_CANDIDATE_ONLY_NO_MERGE_NO_ENDPOINT_NO_WORKSTATION_EFFECT",
+  "subject": {
+    "id": "workbridgecommander",
+    "repository": "thebrazenbeard/workbridgecommander",
+    "exact_main": "c2b95be79ca011a539c20bfee60fcbc46cfea177",
+    "qualification_candidate": {
+      "pr": 5,
+      "head": "221c8db74b2d2a6dfe03c71b2f4fd06bed272c24",
+      "changed_paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "push_run": 36848740308,
+      "pr_run": 36848747458,
+      "conclusions": [
+        "success",
+        "success"
+      ]
+    },
+    "candidate_scope": [
+      "Linux build/test/audit",
+      "Windows build/test/audit",
+      "exact DesktopCommander payload qualification",
+      "PowerShell launcher parsing"
+    ],
+    "remaining_gate": "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION",
+    "caveats": [
+      "Current main remains a distinct exact subject until candidate integration and a main-head rerun.",
+      "Source qualification does not establish a deployed public endpoint, current bearer/device token validity, device attachment, workstation installation, or remote effect.",
+      "Commander preserves the DesktopCommander workstation semantics; this candidate does not narrow or broaden that authority surface."
+    ]
+  }
+}
