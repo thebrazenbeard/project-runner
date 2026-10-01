@@ -1,0 +1,51 @@
+{
+  "schema": "PROJECT_RUNNER_ESTATE_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-10-01",
+  "discovery_binding": {
+    "repository": "thebrazenbeard/discovery",
+    "pr": 48,
+    "head": "d3b0a3829045e56da375a5342d17062e79e8506c",
+    "counts": {
+      "total": 77,
+      "public": 58,
+      "private": 19
+    },
+    "digests": {
+      "public_names_sha256": "443fc84900700b79f435d88810dec8e1b250dd73fa184d509bd16375411d9fcd",
+      "private_names_sha256": "0995153e285d2ce12a1569ebcab76f420d95823da8f791332ac07c99f110a2ea",
+      "all_names_sha256": "9c21a6fbf6c31ee413dfe05e07e41cde6e4f86603ba93f2bf3ff4f8c02065754"
+    },
+    "validation": "PASS",
+    "composed_lifecycle": "PASS",
+    "public_currentness_watch": "PASS"
+  },
+  "rename_continuity": {
+    "logical_subject_id": "pro-run",
+    "github_repository_id": 1387754784,
+    "previous_repository": "thebrazenbeard/pro-run",
+    "current_repository": "thebrazenbeard/pre-active",
+    "exact_main": "0ffc95351db34afed091c3239614f57f371c04ad",
+    "exact_main_test_run": 36700849791,
+    "exact_main_test_conclusion": "success"
+  },
+  "new_subject": {
+    "id": "executor",
+    "repository": "thebrazenbeard/executor",
+    "github_repository_id": 1399690088,
+    "exact_main": "2b9b4e9456c6481b1d5fe9be0a142d01ce804d8f",
+    "current_main_state": "BOOTSTRAP_ONLY",
+    "draft_candidate": {
+      "pr": 1,
+      "head": "f099c1af21f350d1f05a22fc13ed3658b31c6f4d",
+      "ci_run": 36849360739,
+      "ci_conclusion": "success"
+    },
+    "runner_state": "HELD_READ_ANALYZE_PROPOSE",
+    "review_gate": "DRAFT_CANDIDATE_SECURITY_AND_AUTHORITY_REVIEW"
+  },
+  "private_inventory": {
+    "count": 19,
+    "exact_membership_publicly_committed": false
+  },
+  "authority_ceiling": "DESCRIPTIVE_MEMBERSHIP_AND_SOURCE_CURRENTNESS_ONLY_NO_EXECUTION_NO_RUNTIME_EFFECT"
+}
