@@ -38,7 +38,7 @@ def test_semantic_composition_gates_preserve_qualification_boundaries():
         for item in wave.items
         if item.subject_kind == "repository" and item.subject_id in TRANCHE
     }
-    assert items["spm"].review_gate == "EXACT_MAIN_QUALIFICATION"
-    assert items["mosaic"].review_gate == "EXACT_MAIN_QUALIFICATION"
+    assert items["spm"].review_gate == "GREEN_TEST_CANDIDATE_INTEGRATION_AND_CLAIM_REVIEW"
+    assert items["mosaic"].review_gate == "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION"
     assert items["wip"].review_gate == "DISTINCT_CONSUMER_OR_GAP"
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
