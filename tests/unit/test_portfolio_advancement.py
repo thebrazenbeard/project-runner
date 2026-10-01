@@ -229,6 +229,8 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "roots",
             "world-zero",
             "meso-crct",
+            "on-theo",
+            "testament",
         }
     ]
     assert inherited

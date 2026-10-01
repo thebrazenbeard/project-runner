@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-p1-mechanisms-v1-20260930",
-    "commit": "e1ad4326a035568877244ebff650d23c56de9a75",
+    "ref": "portfolio/audit-source-critical-research-v1-20260930",
+    "commit": "a9b7e48d251602c0e8d10475d9725ef483c90710",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "c0414e110d601b6611795a0157a0f1f7b8ef95d7",
+    "git_blob_sha": "855451170602e52cd254dfe44ffe6c1240c83e46",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -497,12 +497,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Continue claim-centered hostile review and separate speculation from baseline evidence.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Large active Yeshua/Nature-of-Existence/divination research frontier."
+      "review_gate": "REPAIR_CANDIDATE_AND_CLAIM_BOUNDARY",
+      "frontier": "Treat current main as current-but-unqualified until PR #168 or an equivalent repair is integrated/qualified; continue historical research only with claim-centered source controls and keep repair status separate from the truth of any Yeshua, divination, or metaphysical proposition.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 observed. Validate registries push run 36353652038 fails at that exact head: 55 tests pass and test_divergent_extension_referential_preconditions_are_equivalent fails because the historical registry-shape expectation no longer matches squash-canonicalized main. Draft PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c is based directly on current main, changes only tests/test_registry_rebase_preconditions.py, and passes Validate registries run 36797514717."
     },
     {
       "subject_kind": "repository",
@@ -760,12 +760,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Consume survived source claims without promoting literary hypotheses upstream.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation restack, ON_THEO handoff and historical/literary review lanes remain open."
+      "review_gate": "EXACT_MAIN_QUALIFICATION_AND_DOWNSTREAM_BOUNDARY",
+      "frontier": "Keep Testament downstream of survived or explicitly unresolved ON_THEO claims; obtain an executable current-main qualification path before treating repository structure/manuscript integration as source-qualified, and never use literary synthesis to upgrade upstream historical evidence.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@20517788763e76863a35e02ba3cc9051d0a227bb observed with no GitHub Actions workflow and no attached executable qualification run. Multiple draft manuscript/research branches remain open; draft PR #20 is not mergeable on its current base."
     },
     {
       "subject_kind": "repository",
@@ -1129,12 +1129,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Keep hypothesis, symbolism, experiential interpretation and sourced fact distinct.",
-      "source_status": "INHERITED_WORKSTREAM_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Continuation is preserved in ON_THEO with downstream literary handoff and remains distinct from the Yeshua evidence spine."
+      "review_gate": "SOURCE_HYPOTHESIS_BOUNDARY",
+      "frontier": "Preserve sourced fact, hypothesis, symbolism, experiential report, and literary synthesis as distinct classes while repairing the shared repository qualification baseline.",
+      "source_status": "CURRENTNESS_REFRESHED_DURABLE_SURFACES__EXECUTION_HELD — Exact durable surfaces refreshed: ON_THEO main is current but validation-red with a green direct repair candidate; Testament current main is unqualified by executable CI. The Nature of Existence continuation remains a hypothesis/symbolism/experiential research line, not a source of factual proof about consciousness, source, or metaphysics."
     },
     {
       "subject_kind": "workstream",
@@ -1151,12 +1151,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Continue hostile source review upstream and consume survived or explicitly unresolved claims downstream.",
-      "source_status": "INHERITED_WORKSTREAM_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Active upstream research and downstream manuscript work remain intentionally separate in authority."
+      "review_gate": "UPSTREAM_SOURCE_AND_DOWNSTREAM_QUALIFICATION",
+      "frontier": "Repair/qualify the ON_THEO registry baseline first; continue claim-centered hostile review upstream, and allow Testament to consume only survived or explicitly unresolved claims without promoting literary hypotheses back into historical evidence.",
+      "source_status": "CURRENTNESS_REFRESHED_DURABLE_SURFACES__EXECUTION_HELD — Exact durable surfaces refreshed: ON_THEO main@2fdc9614fa4f45eb038772d736b146809e10a7f1 is current but registry-validation-red, with direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c passing validation; Testament main@20517788763e76863a35e02ba3cc9051d0a227bb has no executable CI qualification. Upstream historical research and downstream literary synthesis remain separate in authority."
     }
   ]
 }
