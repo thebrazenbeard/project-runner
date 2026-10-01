@@ -87,6 +87,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: source-critical-research
+  scheduling_state: HELD
+  scope_note: Downstream literary/research synthesis subject registered for currentness and review only; manuscript content cannot elevate unqualified upstream claims.
 - id: transcendence
   name: Transcendence
   visibility: public
@@ -133,6 +138,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: source-critical-research
+  scheduling_state: HELD
+  scope_note: Source-critical research subject registered for currentness and review only; historical claims, hypotheses, registry repair, and downstream manuscript use remain separately governed.
 - id: wip
   name: WIP
   visibility: public
