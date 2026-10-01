@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0 and P1 repository records have now been re-read from live GitHub on 2026-09-30. Semantic status for the remaining P2-P4 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution, research truth, interpretation, identity, or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0 and P1 repositories plus the P2 assurance/governance tranche (BugOps, RepairTracker, Intranel) were re-read from live GitHub on 2026-09-30. Remaining P2-P4 semantic status is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or repair/governance authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -127,8 +127,8 @@
       "family_id": "assurance-and-repair",
       "activity_state": "STABLE",
       "purpose": "Operational incident and bug-reporting surface.",
-      "status": "Recent incident repair is merged; no current pull request.",
-      "current_frontier": "Remain an incident source rather than a competing orchestrator."
+      "status": "Exact main@1d35bcbd16da24c7635a004845de1390de850b4e observed with no open PRs. incident-integrity push run 36493181042 passes at that exact head.",
+      "current_frontier": "Remain a bounded incident/evidence source rather than a competing orchestrator; require a concrete consumer before new source expansion."
     },
     {
       "id": "build-team-2.0",
@@ -323,8 +323,8 @@
       "family_id": "governance",
       "activity_state": "ACTIVE",
       "purpose": "Governance and control-boundary architecture.",
-      "status": "Hostile hardening and constructor-boundary work remain open.",
-      "current_frontier": "Close governance bypass paths and freeze a narrow reusable contract."
+      "status": "Exact main@677a1612e8a956760a40b942650b01cf0b22dd33 observed. Merged PR #7 head a187aabdb7a32316c42e4309c39154ff70a44891 passed test run 36064875602 and Dependency Review run 36064875615, but current main diverges by .github/dependabot.yml and the test/dependency-review workflows. Current main therefore lacks exact-head executable qualification.",
+      "current_frontier": "Requalify exact current main before consuming its governance boundary; then reconcile older hostile-hardening/constructor drafts without broadening policy or protected-effect authority."
     },
     {
       "id": "lgcm",
@@ -491,8 +491,8 @@
       "family_id": "assurance-and-repair",
       "activity_state": "ACTIVE",
       "purpose": "Evidence-governed repair/debugging and parallel remediation.",
-      "status": "Repair spine, artifact attestation and GitHub signal-promotion work remain open.",
-      "current_frontier": "Prove a distinct role alongside BT2, Project Runner and BugOps."
+      "status": "Exact main@cd7c6f27d27a03130d6e793d69634005a130dc3a observed. repairtracker-ci push run 36357338383 passes at that exact head. Draft PR #2@06e2221632d12e568c892aa432da4cc2cd61cb14 remains open and non-mergeable on an older base.",
+      "current_frontier": "Use current main as the qualified source baseline; reconcile artifact-attestation/deployment-evidence work only against that baseline and prove a distinct consumer role alongside Runner/BT2/BugOps before expansion."
     },
     {
       "id": "rezon",
