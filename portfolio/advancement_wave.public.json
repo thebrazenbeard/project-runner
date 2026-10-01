@@ -407,7 +407,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION",
       "frontier": "Review/integrate the workflow-only qualification candidate and rerun on resulting current main before treating main as source-qualified; keep broader continual-learning performance and Vera integration separately unproven.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD — Exact main@0043c60419de9ef0b52363b62aed8c0a52ef63f5 remains current but lacks an integrated CI workflow. Draft PR #1@c75d78b652b887a1c90e2c70b605f1fc37b56b6d is exactly one commit ahead / 0 behind main and changes only .github/workflows/ci.yml. LGCM exact-source qualification push run 36797565520 and pull-request run 36797570267 both PASS."
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@0043c60419de9ef0b52363b62aed8c0a52ef63f5 remains current but lacks an integrated CI workflow. Draft PR #1@c75d78b652b887a1c90e2c70b605f1fc37b56b6d is exactly one commit ahead / 0 behind main and changes only .github/workflows/ci.yml. LGCM exact-source qualification push run 36797565520 and pull-request run 36797570267 both PASS."
     },
     {
       "subject_kind": "repository",
@@ -464,7 +464,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION",
       "frontier": "Review/integrate the workflow-only qualification candidate and rerun on current main before treating multi-model continuity/residency as source-qualified; runtime/model continuity remains separately qualified.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD — Exact main@3a442e94b4f5b8fa365e2206c40405df6961e18d remains current. Draft PR #6@0d45d4ec627a64202514fdb35f7d120d8e6f359c is one commit ahead / 0 behind and adds only .github/workflows/current-main-qualification.yml. Mosaic exact-source qualification push run 36797722293 and pull-request run 36797730922 both PASS."
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@3a442e94b4f5b8fa365e2206c40405df6961e18d remains current. Draft PR #6@0d45d4ec627a64202514fdb35f7d120d8e6f359c is one commit ahead / 0 behind and adds only .github/workflows/current-main-qualification.yml. Mosaic exact-source qualification push run 36797722293 and pull-request run 36797730922 both PASS."
     },
     {
       "subject_kind": "repository",
@@ -709,7 +709,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "GREEN_TEST_CANDIDATE_INTEGRATION_AND_CLAIM_REVIEW",
       "frontier": "Review/integrate the qualification/test-dependency candidate and rerun on current main before stronger causal semantic/pragmatic claims; keep experiment interpretation separate from source-test success.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD — Exact main@d9ea72798ac892ac75f858177b6ed0c5a6b4c37c remains current. Draft PR #8@a2f7dc221d4b8a303f751a3fda467f26d0983837 is 3 commits ahead / 0 behind and changes only .github/workflows/ci.yml plus a pyproject test dependency group (pytest/torch/transformers). SPM exact-source qualification push run 36798100635 and pull-request run 36798104140 both PASS."
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@d9ea72798ac892ac75f858177b6ed0c5a6b4c37c remains current. Draft PR #8@a2f7dc221d4b8a303f751a3fda467f26d0983837 is 3 commits ahead / 0 behind and changes only .github/workflows/ci.yml plus a pyproject test dependency group (pytest/torch/transformers). SPM exact-source qualification push run 36798100635 and pull-request run 36798104140 both PASS."
     },
     {
       "subject_kind": "repository",
@@ -801,7 +801,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "GREEN_CURRENT_MAIN_CANDIDATE_CONTINUITY_REVIEW",
       "frontier": "Review the current-main-based core successor and preserve exact source/runtime lineage if integrated; green continuity mechanics do not establish consciousness, phenomenology, or identity continuity.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD — Exact main@69dacb467e94fb73ce106cd5176c39800c64e195 remains current. Draft PR #8@a655ab1db46453315e0680e9922d582ff420d54d is 2 commits ahead / 0 behind current main and restacks the Transcendence core with workflow, runtime source, and tests. Transcendence core qualification push run 36798438983 and pull-request run 36798442709 both PASS."
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@69dacb467e94fb73ce106cd5176c39800c64e195 remains current. Draft PR #8@a655ab1db46453315e0680e9922d582ff420d54d is 2 commits ahead / 0 behind current main and restacks the Transcendence core with workflow, runtime source, and tests. Transcendence core qualification push run 36798438983 and pull-request run 36798442709 both PASS."
     },
     {
       "subject_kind": "repository",
@@ -838,7 +838,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION",
       "frontier": "Review/integrate the local-test qualification candidate and rerun on current main before stronger source qualification; do not infer real-corpus, universal-translation, or semantic-grounding success from local tests.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD — Exact main@33edef682181e1bea6b36c5afc588d261f0c1289 remains current but lacks an integrated exact-source test workflow. Draft PR #22@4c2eac1f8818a39a7423b1b93302c27bcacbb627 is one commit ahead / 0 behind main and adds only .github/workflows/ci.yml. UNVTRSLR exact-source qualification push run 36797621872 and pull-request run 36797627264 both PASS. The separate MASSIVE real-corpus packet remains a different evidence surface."
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@33edef682181e1bea6b36c5afc588d261f0c1289 remains current but lacks an integrated exact-source test workflow. Draft PR #22@4c2eac1f8818a39a7423b1b93302c27bcacbb627 is one commit ahead / 0 behind main and adds only .github/workflows/ci.yml. UNVTRSLR exact-source qualification push run 36797621872 and pull-request run 36797627264 both PASS. The separate MASSIVE real-corpus packet remains a different evidence surface."
     },
     {
       "subject_kind": "repository",
@@ -977,7 +977,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "GREEN_CURRENT_MAIN_CANDIDATE_DONOR_REVIEW",
       "frontier": "Review PR #24 only as a requalified historical-lineage donor candidate; extract useful currentness-guard mechanisms forward rather than reviving R9A0 as a competing runtime.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD — Exact main@287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01 remains historical Vera lineage. Draft PR #24@00db39d4355f0a9d024e84cfedbb024aa2424d6a is 4 commits ahead / 0 behind current main and restacks the Voice currentness guard with workflow, source, and tests. R9A0 Voice currentness push run 36798388658, pull-request run 36798392311, and R9A0 Native Project pull-request run 36798392327 all PASS. This supersedes the earlier failed PR #21 candidate as the current green donor candidate, not as a competing canonical runtime."
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01 remains historical Vera lineage. Draft PR #24@00db39d4355f0a9d024e84cfedbb024aa2424d6a is 4 commits ahead / 0 behind current main and restacks the Voice currentness guard with workflow, source, and tests. R9A0 Voice currentness push run 36798388658, pull-request run 36798392311, and R9A0 Native Project pull-request run 36798392327 all PASS. This supersedes the earlier failed PR #21 candidate as the current green donor candidate, not as a competing canonical runtime."
     },
     {
       "subject_kind": "repository",
@@ -1016,7 +1016,7 @@
       "effect_ceiling": "SOURCE_ONLY",
       "review_gate": "GREEN_CANDIDATE_INTEGRATION_AND_REVIEW_AUTHORITY_SEPARATION",
       "frontier": "Review/integrate the workflow-only qualification candidate and rerun on current main; source qualification does not establish independent-review status, factual correctness, or authority.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__GREEN_CANDIDATE_HELD — Exact main@36a623d3a158e5aef521d42e378bafacd67d3de5 remains current. Draft PR #3@eb592caac8c81c740e2a75ea6db88c57cb676292 is one commit ahead / 0 behind and adds only .github/workflows/ci.yml. Voss exact-source qualification push run 36797816190 and pull-request run 36797816710 both PASS."
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@36a623d3a158e5aef521d42e378bafacd67d3de5 remains current. Draft PR #3@eb592caac8c81c740e2a75ea6db88c57cb676292 is one commit ahead / 0 behind and adds only .github/workflows/ci.yml. Voss exact-source qualification push run 36797816190 and pull-request run 36797816710 both PASS."
     },
     {
       "subject_kind": "repository",
