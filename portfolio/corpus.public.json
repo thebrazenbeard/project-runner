@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0/P1 repositories plus P2 assurance/governance, cognitive-subsystem, memory/time, semantic/composition/portfolio-spine, and specialist tranches were re-read from live GitHub on 2026-09-30. Five P2 repositories remain on inherited semantic status pending exact-source refresh. Four new public records are exact-source classified. This is descriptive source state, not specialist identity, independent-review status, training activation, runtime effect, or authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Every public repository record in the current corpus has now been re-read from live GitHub or exact-source classified on the 2026-09-30 refresh chain. No public repository remains on inherited 2026-09-28 semantic currentness. This is descriptive source state only: qualification, merge, installation, runtime, effect, identity, phenomenology, and authority remain separate evidence classes.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -265,10 +265,10 @@
       "default_branch": "main",
       "priority": "P2",
       "family_id": "speculative-cognition",
-      "activity_state": "INCUBATOR",
+      "activity_state": "ACTIVE_HEAVY",
       "purpose": "Falsifiable exploration of AI-mediated simulation/source questions.",
-      "status": "Broad experimental surface exists; strong claims remain unqualified.",
-      "current_frontier": "Compress hypotheses into controlled experiments with explicit nulls."
+      "status": "Exact main@495c2b42932153cba0926744d04a69bc34557f81 observed. Repository Hygiene run 36746633579, DriftGuard source-admission research run 36746633699, and Architecture Conformance run 36746633704 all pass at that exact head. Draft PR #33@5d9fcba957cdf06f12515dd97b191aac98a6aaba is based directly on current main and also passes architecture, causal-rival research, and hygiene gates; many older draft research branches remain separate.",
+      "current_frontier": "Use current main plus the green PR #33 falsification candidate to compress speculative cognition claims into controlled rival-hypothesis tests; do not promote source behavior into consciousness, simulation, identity, or runtime-effect claims."
     },
     {
       "id": "hc-brain",
@@ -631,8 +631,8 @@
       "family_id": "speculative-cognition",
       "activity_state": "ACTIVE",
       "purpose": "Reconstructible continuity and consciousness-backup architecture research.",
-      "status": "Continuity-lineage and integrity-verifier alignment remain open.",
-      "current_frontier": "Validate continuity mechanics while keeping consciousness claims unproven."
+      "status": "Exact main@69dacb467e94fb73ce106cd5176c39800c64e195 observed. No exact-main Actions qualification is recorded. Draft PR #7@be3785c83dbe89b0d4236b43eda97a277eb6baad passes test and Reference Kernel + Transcendence Core runs, but it is stacked on older PR #6 lineage rather than current main.",
+      "current_frontier": "Reconcile the green continuity/integrity candidate onto exact current main and requalify there before stronger continuity claims; keep consciousness/identity continuity explicitly unproven."
     },
     {
       "id": "unbound-sol",
@@ -701,8 +701,8 @@
       "family_id": "vera-runtime",
       "activity_state": "INCUBATOR",
       "purpose": "Vera virtual environment/habitat concept.",
-      "status": "Foundation V1 remains open and repository is minimal.",
-      "current_frontier": "Define a concrete consumer before expanding the abstraction."
+      "status": "Exact main@82cf6a625e417ced00205f66be1e76dc396ab617 observed with no open PRs. Habitat foundation push run 36700971895 passes at that exact head.",
+      "current_frontier": "Hold the qualified foundation until a concrete current Vera consumer exists; avoid expanding Habitat as an abstraction without a source-bound integration need."
     },
     {
       "id": "vera-mesh",
@@ -757,8 +757,8 @@
       "family_id": "vera-lineage",
       "activity_state": "QUIET",
       "purpose": "Historical Vera Revision 9 architecture/rollout lineage.",
-      "status": "Voice currentness-guard work remains open; otherwise mostly lineage.",
-      "current_frontier": "Migrate useful mechanisms forward rather than revive a competing runtime."
+      "status": "Exact main@287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01 observed. No exact-main qualification run is attached. Draft Voice-currentness PR #21@a079217d5a50e2ec9c494022b8c03bdc52056d81 is based on older head 84cbaedd67df79b759daac6e62de93336b52ef60, and its R9A0 Native Project run 35543804880 failed.",
+      "current_frontier": "Do not revive R9A0 as a competing runtime. Extract only mechanisms that are requalified on current lineage; treat the failed Voice-currentness candidate as unresolved evidence, not a donor ready for migration."
     },
     {
       "id": "vera-synology",
@@ -771,8 +771,8 @@
       "family_id": "vera-runtime",
       "activity_state": "ACTIVE",
       "purpose": "Synology/DS216 Vera runtime packaging and hosting.",
-      "status": "Runtime Host SPK and VeraMesh packaging/open-route work remain open.",
-      "current_frontier": "Build one reproducible source/build/install/runtime path."
+      "status": "Exact main@d13cdefbf817aeba60c673fa4a517575c311da2c observed. No exact-main qualification run is attached. Draft PR #12@8501a32e237aaca613e77c7836370261e549c1c2 is based directly on current main and passes Scaffold validation run 36698341486 and Unified Vera Runtime SPK run 36698341474. PRs #9-#11 form additional packaging/tunnel/media lineages.",
+      "current_frontier": "Use PR #12 as the current green diagnosis/package candidate while preserving source/build/install/runtime/effect separation; do not infer NAS listener ownership, deployment, or route activation from SPK qualification."
     },
     {
       "id": "voss",
