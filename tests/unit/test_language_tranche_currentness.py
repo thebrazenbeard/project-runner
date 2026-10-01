@@ -39,5 +39,5 @@ def test_language_review_gates_preserve_qualification_and_effect_boundaries():
         if item.subject_kind == "repository" and item.subject_id in TRANCHE
     }
     assert items["sql-connectome"].review_gate == "EFFECT_AUTHORITY_SEPARATION"
-    assert items["unvtrslr"].review_gate == "EXACT_MAIN_QUALIFICATION"
+    assert items["unvtrslr"].review_gate == "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION"
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())

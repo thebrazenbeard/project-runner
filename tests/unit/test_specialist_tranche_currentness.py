@@ -41,5 +41,5 @@ def test_specialist_review_gates_preserve_candidate_and_main_boundaries():
     assert items["freerowcochkar"].review_gate == "GREEN_CANDIDATE_VALUE_REVIEW"
     assert items["hephaestus"].review_gate == "EXACT_MAIN_QUALIFICATION"
     assert items["masamune"].review_gate == "CANDIDATE_MAIN_AND_EFFECT_SEPARATION"
-    assert items["voss"].review_gate == "EXACT_MAIN_QUALIFICATION"
+    assert items["voss"].review_gate == "GREEN_CANDIDATE_INTEGRATION_AND_REVIEW_AUTHORITY_SEPARATION"
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())

@@ -1,0 +1,224 @@
+{
+  "schema": "PROJECT_RUNNER_QUALIFICATION_CANDIDATE_ADVANCEMENT_V1",
+  "observed_date": "2026-09-30",
+  "authority_ceiling": "SOURCE_CANDIDATE_REVIEW_ONLY_NO_MERGE_NO_MAIN_PROMOTION_NO_RUNTIME_OR_EFFECT_AUTHORITY",
+  "candidates": [
+    {
+      "id": "lgcm",
+      "repository": "thebrazenbeard/lgcm",
+      "main": "0043c60419de9ef0b52363b62aed8c0a52ef63f5",
+      "pr": 1,
+      "head": "c75d78b652b887a1c90e2c70b605f1fc37b56b6d",
+      "relation": {
+        "ahead_by": 1,
+        "behind_by": 0,
+        "paths": [
+          ".github/workflows/ci.yml"
+        ]
+      },
+      "qualification": [
+        {
+          "run": 36797565520,
+          "event": "push",
+          "conclusion": "success"
+        },
+        {
+          "run": 36797570267,
+          "event": "pull_request",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": "unvtrslr",
+      "repository": "thebrazenbeard/unvtrslr",
+      "main": "33edef682181e1bea6b36c5afc588d261f0c1289",
+      "pr": 22,
+      "head": "4c2eac1f8818a39a7423b1b93302c27bcacbb627",
+      "relation": {
+        "ahead_by": 1,
+        "behind_by": 0,
+        "paths": [
+          ".github/workflows/ci.yml"
+        ]
+      },
+      "qualification": [
+        {
+          "run": 36797621872,
+          "event": "push",
+          "conclusion": "success"
+        },
+        {
+          "run": 36797627264,
+          "event": "pull_request",
+          "conclusion": "success"
+        }
+      ],
+      "caveat": "Local source tests do not establish the separate MASSIVE real-corpus or universal semantic claims."
+    },
+    {
+      "id": "spm",
+      "repository": "thebrazenbeard/spm",
+      "main": "d9ea72798ac892ac75f858177b6ed0c5a6b4c37c",
+      "pr": 8,
+      "head": "a2f7dc221d4b8a303f751a3fda467f26d0983837",
+      "relation": {
+        "ahead_by": 3,
+        "behind_by": 0,
+        "paths": [
+          ".github/workflows/ci.yml",
+          "pyproject.toml"
+        ]
+      },
+      "qualification": [
+        {
+          "run": 36798100635,
+          "event": "push",
+          "conclusion": "success"
+        },
+        {
+          "run": 36798104140,
+          "event": "pull_request",
+          "conclusion": "success"
+        }
+      ],
+      "caveat": "pyproject delta adds only test dependencies; green tests do not prove causal semantic/pragmatic interpretations."
+    },
+    {
+      "id": "mosaic",
+      "repository": "thebrazenbeard/mosaic",
+      "main": "3a442e94b4f5b8fa365e2206c40405df6961e18d",
+      "pr": 6,
+      "head": "0d45d4ec627a64202514fdb35f7d120d8e6f359c",
+      "relation": {
+        "ahead_by": 1,
+        "behind_by": 0,
+        "paths": [
+          ".github/workflows/current-main-qualification.yml"
+        ]
+      },
+      "qualification": [
+        {
+          "run": 36797722293,
+          "event": "push",
+          "conclusion": "success"
+        },
+        {
+          "run": 36797730922,
+          "event": "pull_request",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": "voss",
+      "repository": "thebrazenbeard/voss",
+      "main": "36a623d3a158e5aef521d42e378bafacd67d3de5",
+      "pr": 3,
+      "head": "eb592caac8c81c740e2a75ea6db88c57cb676292",
+      "relation": {
+        "ahead_by": 1,
+        "behind_by": 0,
+        "paths": [
+          ".github/workflows/ci.yml"
+        ]
+      },
+      "qualification": [
+        {
+          "run": 36797816190,
+          "event": "push",
+          "conclusion": "success"
+        },
+        {
+          "run": 36797816710,
+          "event": "pull_request",
+          "conclusion": "success"
+        }
+      ],
+      "caveat": "Repository qualification does not establish independent-review authority or factual correctness."
+    },
+    {
+      "id": "transcendence",
+      "repository": "thebrazenbeard/transcendence",
+      "main": "69dacb467e94fb73ce106cd5176c39800c64e195",
+      "pr": 8,
+      "head": "a655ab1db46453315e0680e9922d582ff420d54d",
+      "relation": {
+        "ahead_by": 2,
+        "behind_by": 0,
+        "paths": [
+          ".github/workflows/transcendence-core.yml",
+          "runtime/transcendence_core/core.py",
+          "runtime/transcendence_core/test_core.py"
+        ]
+      },
+      "qualification": [
+        {
+          "run": 36798438983,
+          "event": "push",
+          "conclusion": "success"
+        },
+        {
+          "run": 36798442709,
+          "event": "pull_request",
+          "conclusion": "success"
+        }
+      ],
+      "caveat": "Continuity mechanics do not establish consciousness, phenomenology, or identity continuity."
+    },
+    {
+      "id": "vera-r9a0",
+      "repository": "thebrazenbeard/vera-R9A0",
+      "main": "287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01",
+      "pr": 24,
+      "head": "00db39d4355f0a9d024e84cfedbb024aa2424d6a",
+      "relation": {
+        "ahead_by": 4,
+        "behind_by": 0,
+        "paths": [
+          ".github/workflows/r9a0-voice-currentness.yml",
+          "scripts/voice_currentness_guard.py",
+          "tests/native-project/test_r9b0_voice_currentness_guard.py"
+        ]
+      },
+      "qualification": [
+        {
+          "run": 36798388658,
+          "event": "push",
+          "name": "R9A0 Voice currentness qualification",
+          "conclusion": "success"
+        },
+        {
+          "run": 36798392311,
+          "event": "pull_request",
+          "name": "R9A0 Voice currentness qualification",
+          "conclusion": "success"
+        },
+        {
+          "run": 36798392327,
+          "event": "pull_request",
+          "name": "R9A0 Native Project",
+          "conclusion": "success"
+        }
+      ],
+      "caveat": "Historical-lineage donor candidate only; not a competing canonical Vera runtime."
+    }
+  ],
+  "unresolved_no_meaningful_executable_contract": [
+    {
+      "id": "testament",
+      "main": "20517788763e76863a35e02ba3cc9051d0a227bb",
+      "reason": "304-file documentation/manuscript/state repository with no GitHub Actions workflow, executable validator, script/test harness, or package manifest."
+    },
+    {
+      "id": "hephaestus",
+      "main": "030494fa2cc4c875013a9a4842abe60588c9c709",
+      "reason": "31-file source-visible specialist package with no GitHub Actions workflow, executable code/test harness, or package manifest on current main."
+    }
+  ],
+  "hostile_challenges": [
+    "A green qualification candidate does not qualify current main until integrated and rerun on the resulting exact main.",
+    "Adding a CI workflow is useful only when it executes a pre-existing meaningful test contract.",
+    "Continuity, semantic, specialist, or historical-lineage source qualification does not establish consciousness, truth, identity, or runtime authority."
+  ]
+}

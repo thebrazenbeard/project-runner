@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Every public repository record has been re-read from live GitHub or exact-source classified on the 2026-09-30 refresh chain. Both public source-critical workstreams are now also refreshed against their exact durable surfaces. No public repository or public workstream remains on inherited 2026-09-28 currentness. This is descriptive source/research state only: qualification, merge, installation, runtime, effect, identity, phenomenology, historical truth, metaphysical truth, and authority remain separate evidence classes.",
+  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. No public repository or public workstream remains on inherited 2026-09-28 currentness. This successor records newly qualified direct candidates for seven previously open source-qualification gates while keeping current-main qualification, integration, runtime, effect, identity, phenomenology, scientific/research claims, and authority separate.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -337,8 +337,8 @@
       "family_id": "cognitive-architecture",
       "activity_state": "ACTIVE",
       "purpose": "Experimental persistent continual-learning model with prequential evaluation, context recall, and bounded planning.",
-      "status": "Exact main@0043c60419de9ef0b52363b62aed8c0a52ef63f5 observed with no open PRs. No CI workflow exists in the current tree and no qualification run is attached to this head. The only recent green dependency-graph run is at older head 8a32de8f13f844b56af3f50a8fa54b864945915a; current main is 16 commits ahead with substantive LGCM source and tests.",
-      "current_frontier": "Add or otherwise obtain exact-main executable qualification before integration or stronger continual-learning claims; preserve the standalone research boundary and keep Runner execution HELD."
+      "status": "Exact main@0043c60419de9ef0b52363b62aed8c0a52ef63f5 remains current but lacks an integrated CI workflow. Draft PR #1@c75d78b652b887a1c90e2c70b605f1fc37b56b6d is exactly one commit ahead / 0 behind main and changes only .github/workflows/ci.yml. LGCM exact-source qualification push run 36797565520 and pull-request run 36797570267 both PASS.",
+      "current_frontier": "Review/integrate the workflow-only qualification candidate and rerun on resulting current main before treating main as source-qualified; keep broader continual-learning performance and Vera integration separately unproven."
     },
     {
       "id": "masamune",
@@ -379,8 +379,8 @@
       "family_id": "model-composition",
       "activity_state": "ACTIVE",
       "purpose": "Persistent core plus swappable specialist model composition.",
-      "status": "Exact main@3a442e94b4f5b8fa365e2206c40405df6961e18d observed with no open PRs. The repository contains analytical-residency and protocol-harness workflows plus tests, but no Actions runs are recorded for current main or recent main history. Current main therefore remains source-current but unqualified.",
-      "current_frontier": "Run the existing residency/protocol harness against exact current main before treating the multi-model continuity path as qualified; keep composition claims source-only and Runner execution HELD."
+      "status": "Exact main@3a442e94b4f5b8fa365e2206c40405df6961e18d remains current. Draft PR #6@0d45d4ec627a64202514fdb35f7d120d8e6f359c is one commit ahead / 0 behind and adds only .github/workflows/current-main-qualification.yml. Mosaic exact-source qualification push run 36797722293 and pull-request run 36797730922 both PASS.",
+      "current_frontier": "Review/integrate the workflow-only qualification candidate and rerun on current main before treating multi-model continuity/residency as source-qualified; runtime/model continuity remains separately qualified."
     },
     {
       "id": "noema",
@@ -561,8 +561,8 @@
       "family_id": "language-and-semantics",
       "activity_state": "ACTIVE",
       "purpose": "Semantics and Pragmatics Model research/construction hub.",
-      "status": "Exact main@d9ea72798ac892ac75f858177b6ed0c5a6b4c37c observed. Merged PR #7 integrated the verified SPM research runtime, but the repository has no GitHub Actions workflow and no executable qualification run attached to current main. The only same-head green event is dependency-graph automation, which is not source qualification. Older draft PRs #2 and #4 remain divergent historical research branches.",
-      "current_frontier": "Obtain executable exact-main qualification for the integrated SPM runtime before stronger causal semantic/pragmatic claims; preserve the current source baseline and keep Runner execution HELD."
+      "status": "Exact main@d9ea72798ac892ac75f858177b6ed0c5a6b4c37c remains current. Draft PR #8@a2f7dc221d4b8a303f751a3fda467f26d0983837 is 3 commits ahead / 0 behind and changes only .github/workflows/ci.yml plus a pyproject test dependency group (pytest/torch/transformers). SPM exact-source qualification push run 36798100635 and pull-request run 36798104140 both PASS.",
+      "current_frontier": "Review/integrate the qualification/test-dependency candidate and rerun on current main before stronger causal semantic/pragmatic claims; keep experiment interpretation separate from source-test success."
     },
     {
       "id": "sql-connectome",
@@ -631,8 +631,8 @@
       "family_id": "speculative-cognition",
       "activity_state": "ACTIVE",
       "purpose": "Reconstructible continuity and consciousness-backup architecture research.",
-      "status": "Exact main@69dacb467e94fb73ce106cd5176c39800c64e195 observed. No exact-main Actions qualification is recorded. Draft PR #7@be3785c83dbe89b0d4236b43eda97a277eb6baad passes test and Reference Kernel + Transcendence Core runs, but it is stacked on older PR #6 lineage rather than current main.",
-      "current_frontier": "Reconcile the green continuity/integrity candidate onto exact current main and requalify there before stronger continuity claims; keep consciousness/identity continuity explicitly unproven."
+      "status": "Exact main@69dacb467e94fb73ce106cd5176c39800c64e195 remains current. Draft PR #8@a655ab1db46453315e0680e9922d582ff420d54d is 2 commits ahead / 0 behind current main and restacks the Transcendence core with workflow, runtime source, and tests. Transcendence core qualification push run 36798438983 and pull-request run 36798442709 both PASS.",
+      "current_frontier": "Review the current-main-based core successor and preserve exact source/runtime lineage if integrated; green continuity mechanics do not establish consciousness, phenomenology, or identity continuity."
     },
     {
       "id": "unbound-sol",
@@ -659,8 +659,8 @@
       "family_id": "language-and-semantics",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Acoustic/semantic learning toward mathematical interlingua and target realization.",
-      "status": "Exact main@33edef682181e1bea6b36c5afc588d261f0c1289 observed. Merged PR #21 integrated the executable research stack, but neither its head nor current main has executable qualification runs. Current main's only attached green run is dependency-graph automation. The sole source workflow is a pull-request-targeted MASSIVE 1.0 packet and does not qualify current main. A large draft translation/held-out research DAG remains open.",
-      "current_frontier": "Obtain executable exact-main qualification before promoting the integrated stack or stronger held-out claims; reconcile the open research DAG only against that qualified baseline and keep Runner execution HELD."
+      "status": "Exact main@33edef682181e1bea6b36c5afc588d261f0c1289 remains current but lacks an integrated exact-source test workflow. Draft PR #22@4c2eac1f8818a39a7423b1b93302c27bcacbb627 is one commit ahead / 0 behind main and adds only .github/workflows/ci.yml. UNVTRSLR exact-source qualification push run 36797621872 and pull-request run 36797627264 both PASS. The separate MASSIVE real-corpus packet remains a different evidence surface.",
+      "current_frontier": "Review/integrate the local-test qualification candidate and rerun on current main before stronger source qualification; do not infer real-corpus, universal-translation, or semantic-grounding success from local tests."
     },
     {
       "id": "vera",
@@ -757,8 +757,8 @@
       "family_id": "vera-lineage",
       "activity_state": "QUIET",
       "purpose": "Historical Vera Revision 9 architecture/rollout lineage.",
-      "status": "Exact main@287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01 observed. No exact-main qualification run is attached. Draft Voice-currentness PR #21@a079217d5a50e2ec9c494022b8c03bdc52056d81 is based on older head 84cbaedd67df79b759daac6e62de93336b52ef60, and its R9A0 Native Project run 35543804880 failed.",
-      "current_frontier": "Do not revive R9A0 as a competing runtime. Extract only mechanisms that are requalified on current lineage; treat the failed Voice-currentness candidate as unresolved evidence, not a donor ready for migration."
+      "status": "Exact main@287a85cb5f2f6f553cfbb336cb2e03aa7b1c8d01 remains historical Vera lineage. Draft PR #24@00db39d4355f0a9d024e84cfedbb024aa2424d6a is 4 commits ahead / 0 behind current main and restacks the Voice currentness guard with workflow, source, and tests. R9A0 Voice currentness push run 36798388658, pull-request run 36798392311, and R9A0 Native Project pull-request run 36798392327 all PASS. This supersedes the earlier failed PR #21 candidate as the current green donor candidate, not as a competing canonical runtime.",
+      "current_frontier": "Review PR #24 only as a requalified historical-lineage donor candidate; extract useful currentness-guard mechanisms forward rather than reviving R9A0 as a competing runtime."
     },
     {
       "id": "vera-synology",
@@ -785,8 +785,8 @@
       "family_id": "specialist-workers",
       "activity_state": "ACTIVE",
       "purpose": "Forensic auditor/reviewer specialist.",
-      "status": "Exact main@36a623d3a158e5aef521d42e378bafacd67d3de5 observed with no open PRs. Merged PR #2 integrated Voss forensic analyst V2, and current main contains a qualification/regression test suite, but no Actions workflow or executable qualification run is recorded for the exact main.",
-      "current_frontier": "Run the existing Voss qualification/regression suite against exact current main before treating V2 as independently qualified; preserve forensic-review use as evidence review rather than automatic truth or authority."
+      "status": "Exact main@36a623d3a158e5aef521d42e378bafacd67d3de5 remains current. Draft PR #3@eb592caac8c81c740e2a75ea6db88c57cb676292 is one commit ahead / 0 behind and adds only .github/workflows/ci.yml. Voss exact-source qualification push run 36797816190 and pull-request run 36797816710 both PASS.",
+      "current_frontier": "Review/integrate the workflow-only qualification candidate and rerun on current main; source qualification does not establish independent-review status, factual correctness, or authority."
     },
     {
       "id": "wip",
