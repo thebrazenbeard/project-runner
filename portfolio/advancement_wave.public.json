@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-p2-assurance-v1-20260930",
-    "commit": "adb3ec2f79deca708d485ae6f1e0a322f9b91e01",
+    "ref": "portfolio/audit-p2-cognitive-v1-20260930",
+    "commit": "c13020d1f4d714d65a6a178ee76f4946ef4b9832",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "b34799395b0e8f811664d98ae9255b96d525270c",
+    "git_blob_sha": "d3ced24276c21b3ddb1d0529e6a1b840064db121",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -66,12 +66,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Use only when a concrete runtime needs attunement.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Foundation contracts are merged; no current pull request."
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Hold expansion until a concrete runtime consumer requires attunement; preserve the qualified foundation contract as a reusable subsystem rather than a standing authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@46461057e4d9ea25ec91a051fc17020e1113329a observed with no open PRs. qualify-foundation-contracts push run 36410199100 passes at that exact head."
     },
     {
       "subject_kind": "repository",
@@ -179,12 +179,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Treat wants/goals as provenance-bearing state, not standing instruction.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Continuity-gap work is merged."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Obtain exact-main executable qualification before reuse; keep wants/goals as provenance-bearing state rather than instruction authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@51948aac796936f0e7c437722e6f52c883e544e9 observed with no open PRs. The current tree exposes no GitHub Actions workflows and no executable qualification run; current source qualification is UNKNOWN."
     },
     {
       "subject_kind": "repository",
@@ -254,12 +254,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Consolidate lanes while preserving falsification independence.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Active-source consolidation and reviewer-lane work remain open."
+      "review_gate": "EXACT_MAIN_QUALIFICATION_AND_DRAFT_RECONCILIATION",
+      "frontier": "Establish an executable exact-main qualification path, then reconcile active Yin/Yang/falsification lanes against current main while preserving reviewer independence.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@76ebb492827a79b20b3be76fe9f9f48ab860ef1d observed. The current tree exposes no GitHub Actions workflows and no executable qualification run. Draft PRs #2-#5 remain open; #4 and #5 are non-mergeable. Current source qualification is UNKNOWN."
     },
     {
       "subject_kind": "repository",
@@ -515,12 +515,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Establish measurable behavior without laundering self-description into phenomenology.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Current work separates self-appraisal from phenomenology."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Obtain exact-main behavioral qualification before reuse and preserve the boundary between measurable self-appraisal behavior and phenomenology claims.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@31610e915047af46aa3242190a57baedaed7fbfb observed with no open PRs. The current tree exposes no GitHub Actions workflows and no executable qualification run; current source qualification is UNKNOWN."
     },
     {
       "subject_kind": "repository",
@@ -667,12 +667,12 @@
       "reviewer_identities": [
         "VOSS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Finish currentness custody while separating evidence from authority.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Retrieval-authority and provider-ledger custody work remain open."
+      "review_gate": "RETRIEVAL_AUTHORITY_SEPARATION",
+      "frontier": "Use current main as the qualified retrieval/provenance baseline; reconcile provider-ledger work without turning retrieval relevance, provider custody, or currentness into answer/effect authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@895677a64af5d29b580306ca52ecc0e0607a9ccc observed. validate-semantic-atlas push run 36792994795 passes at that exact head. Draft PR #6 remains open on an older retrieval-authority review lineage."
     },
     {
       "subject_kind": "repository",
