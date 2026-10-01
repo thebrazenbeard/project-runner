@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, two industrial-intelligence records, two language/semantics records, Unbound Sol, and three P1 mechanism records (Roots, World Zero, MESO-CRCT) were re-read from live GitHub on 2026-09-30; semantic status for the remaining prior 24 public records is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution, identity, scientific conclusion, welfare, or runtime authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). Ten P0 records, four assurance/provenance/security records, three coordination records, four cognitive/correction records, two industrial-intelligence records, two language/semantics records, Unbound Sol, three P1 mechanism records, and two source-critical research repositories were re-read from live GitHub on 2026-09-30; both public source-critical workstreams were also re-read against their exact durable surfaces. Semantic status for the remaining prior 22 public repositories is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source/research state, not historical-truth, metaphysical-truth, literary-authority, execution, or runtime authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -40,8 +40,8 @@
         "thebrazenbeard/testament"
       ],
       "purpose": "Claim-centered historical reconstruction of Yeshua with literary downstream synthesis.",
-      "status": "Active upstream research and downstream manuscript work remain intentionally separate in authority.",
-      "current_frontier": "Continue hostile source review upstream and consume survived or explicitly unresolved claims downstream."
+      "status": "Exact durable surfaces refreshed: ON_THEO main@2fdc9614fa4f45eb038772d736b146809e10a7f1 is current but registry-validation-red, with direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c passing validation; Testament main@20517788763e76863a35e02ba3cc9051d0a227bb has no executable CI qualification. Upstream historical research and downstream literary synthesis remain separate in authority.",
+      "current_frontier": "Repair/qualify the ON_THEO registry baseline first; continue claim-centered hostile review upstream, and allow Testament to consume only survived or explicitly unresolved claims without promoting literary hypotheses back into historical evidence."
     },
     {
       "id": "nature-of-existence",
@@ -55,8 +55,8 @@
         "thebrazenbeard/testament"
       ],
       "purpose": "Research line on reality, source, consciousness and self-aware beings.",
-      "status": "Continuation is preserved in ON_THEO with downstream literary handoff and remains distinct from the Yeshua evidence spine.",
-      "current_frontier": "Keep hypothesis, symbolism, experiential interpretation and sourced fact distinct."
+      "status": "Exact durable surfaces refreshed: ON_THEO main is current but validation-red with a green direct repair candidate; Testament current main is unqualified by executable CI. The Nature of Existence continuation remains a hypothesis/symbolism/experiential research line, not a source of factual proof about consciousness, source, or metaphysics.",
+      "current_frontier": "Preserve sourced fact, hypothesis, symbolism, experiential report, and literary synthesis as distinct classes while repairing the shared repository qualification baseline."
     }
   ],
   "records": [
@@ -407,8 +407,8 @@
       "family_id": "source-critical-research",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Ontological, theological, historical and source-critical research.",
-      "status": "Large active Yeshua/Nature-of-Existence/divination research frontier.",
-      "current_frontier": "Continue claim-centered hostile review and separate speculation from baseline evidence."
+      "status": "Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 observed. Validate registries push run 36353652038 fails at that exact head: 55 tests pass and test_divergent_extension_referential_preconditions_are_equivalent fails because the historical registry-shape expectation no longer matches squash-canonicalized main. Draft PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c is based directly on current main, changes only tests/test_registry_rebase_preconditions.py, and passes Validate registries run 36797514717.",
+      "current_frontier": "Treat current main as current-but-unqualified until PR #168 or an equivalent repair is integrated/qualified; continue historical research only with claim-centered source controls and keep repair status separate from the truth of any Yeshua, divination, or metaphysical proposition."
     },
     {
       "id": "personification",
@@ -603,8 +603,8 @@
       "family_id": "source-critical-research",
       "activity_state": "ACTIVE_HEAVY",
       "purpose": "Literary/research downstream for source-critical Yeshua reconstruction.",
-      "status": "Foundation restack, ON_THEO handoff and historical/literary review lanes remain open.",
-      "current_frontier": "Consume survived source claims without promoting literary hypotheses upstream."
+      "status": "Exact main@20517788763e76863a35e02ba3cc9051d0a227bb observed with no GitHub Actions workflow and no attached executable qualification run. Multiple draft manuscript/research branches remain open; draft PR #20 is not mergeable on its current base.",
+      "current_frontier": "Keep Testament downstream of survived or explicitly unresolved ON_THEO claims; obtain an executable current-main qualification path before treating repository structure/manuscript integration as source-qualified, and never use literary synthesis to upgrade upstream historical evidence."
     },
     {
       "id": "thebrazenbeard",
