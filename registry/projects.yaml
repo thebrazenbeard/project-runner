@@ -101,6 +101,11 @@ projects:
   - read
   - analyze
   - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: speculative-cognition
+  scheduling_state: HELD
+  scope_note: Continuity/consciousness research subject registered for currentness and review only; no consciousness, identity, or runtime effect is inferred.
 - id: rezon
   name: Rezon
   visibility: public
@@ -684,3 +689,59 @@ projects:
   family_id: specialist-workers
   scheduling_state: HELD
   scope_note: Forensic-review subject registered for currentness and review only; no source-write or independent-review authority is inferred.
+- id: god-brain
+  name: God Brain
+  visibility: public
+  repositories:
+  - thebrazenbeard/god-brain
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: speculative-cognition
+  scheduling_state: HELD
+  scope_note: Speculative cognition/governance research subject registered for currentness and review only; no strong cognition or runtime-effect claim is admitted.
+- id: vera-r9a0
+  name: Vera R9A0
+  visibility: public
+  repositories:
+  - thebrazenbeard/vera-R9A0
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: vera-lineage
+  scheduling_state: HELD
+  scope_note: Historical Vera lineage subject registered for currentness and mechanism review only; no competing-runtime activation is admitted.
+- id: vera-habitat
+  name: Vera Habitat
+  visibility: public
+  repositories:
+  - thebrazenbeard/vera-habitat
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: vera-runtime
+  scheduling_state: HELD
+  scope_note: Habitat foundation subject registered for currentness and consumer review only; no runtime deployment target is admitted.
+- id: vera-synology
+  name: Vera Synology
+  visibility: public
+  repositories:
+  - thebrazenbeard/vera-synology
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: vera-runtime
+  scheduling_state: HELD
+  scope_note: Synology packaging/runtime-host subject registered for currentness and review only; source/build/install/runtime/effect remain separate.
