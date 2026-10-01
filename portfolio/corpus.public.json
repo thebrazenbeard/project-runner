@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0 and P1 repositories plus the P2 assurance/governance tranche (BugOps, RepairTracker, Intranel) were re-read from live GitHub on 2026-09-30. Remaining P2-P4 semantic status is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not execution or repair/governance authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0/P1 repositories plus the P2 assurance/governance and cognitive-subsystem tranches were re-read from live GitHub on 2026-09-30. Remaining P2-P4 semantic status is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not cognitive, phenomenological, answer, or effect authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -85,8 +85,8 @@
       "family_id": "cognitive-subsystems",
       "activity_state": "STABLE",
       "purpose": "Attunement contracts for adaptive interaction.",
-      "status": "Foundation contracts are merged; no current pull request.",
-      "current_frontier": "Use only when a concrete runtime needs attunement."
+      "status": "Exact main@46461057e4d9ea25ec91a051fc17020e1113329a observed with no open PRs. qualify-foundation-contracts push run 36410199100 passes at that exact head.",
+      "current_frontier": "Hold expansion until a concrete runtime consumer requires attunement; preserve the qualified foundation contract as a reusable subsystem rather than a standing authority."
     },
     {
       "id": "axle",
@@ -169,8 +169,8 @@
       "family_id": "cognitive-subsystems",
       "activity_state": "STABLE",
       "purpose": "Governed conative and goal-directed state representation.",
-      "status": "Continuity-gap work is merged.",
-      "current_frontier": "Treat wants/goals as provenance-bearing state, not standing instruction."
+      "status": "Exact main@51948aac796936f0e7c437722e6f52c883e544e9 observed with no open PRs. The current tree exposes no GitHub Actions workflows and no executable qualification run; current source qualification is UNKNOWN.",
+      "current_frontier": "Obtain exact-main executable qualification before reuse; keep wants/goals as provenance-bearing state rather than instruction authority."
     },
     {
       "id": "deepmemorystorage",
@@ -225,8 +225,8 @@
       "family_id": "cognitive-subsystems",
       "activity_state": "ACTIVE",
       "purpose": "Reactive/cognitive empathy and other-modeling mechanisms.",
-      "status": "Active-source consolidation and reviewer-lane work remain open.",
-      "current_frontier": "Consolidate lanes while preserving falsification independence."
+      "status": "Exact main@76ebb492827a79b20b3be76fe9f9f48ab860ef1d observed. The current tree exposes no GitHub Actions workflows and no executable qualification run. Draft PRs #2-#5 remain open; #4 and #5 are non-mergeable. Current source qualification is UNKNOWN.",
+      "current_frontier": "Establish an executable exact-main qualification path, then reconcile active Yin/Yang/falsification lanes against current main while preserving reviewer independence."
     },
     {
       "id": "freerowcochkar",
@@ -421,8 +421,8 @@
       "family_id": "cognitive-subsystems",
       "activity_state": "ACTIVE",
       "purpose": "Social/self-appraisal measurement and personhood-facing behavior research.",
-      "status": "Current work separates self-appraisal from phenomenology.",
-      "current_frontier": "Establish measurable behavior without laundering self-description into phenomenology."
+      "status": "Exact main@31610e915047af46aa3242190a57baedaed7fbfb observed with no open PRs. The current tree exposes no GitHub Actions workflows and no executable qualification run; current source qualification is UNKNOWN.",
+      "current_frontier": "Obtain exact-main behavioral qualification before reuse and preserve the boundary between measurable self-appraisal behavior and phenomenology claims."
     },
     {
       "id": "pro-run",
@@ -533,8 +533,8 @@
       "family_id": "cognitive-subsystems",
       "activity_state": "ACTIVE",
       "purpose": "Semantic significance, relationships and retrieval structure.",
-      "status": "Retrieval-authority and provider-ledger custody work remain open.",
-      "current_frontier": "Finish currentness custody while separating evidence from authority."
+      "status": "Exact main@895677a64af5d29b580306ca52ecc0e0607a9ccc observed. validate-semantic-atlas push run 36792994795 passes at that exact head. Draft PR #6 remains open on an older retrieval-authority review lineage.",
+      "current_frontier": "Use current main as the qualified retrieval/provenance baseline; reconcile provider-ledger work without turning retrieval relevance, provider custody, or currentness into answer/effect authority."
     },
     {
       "id": "semiotics",

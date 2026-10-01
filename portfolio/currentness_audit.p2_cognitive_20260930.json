@@ -1,0 +1,74 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "P2_COGNITIVE_SUBSYSTEMS",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_PHENOMENOLOGY_CLAIM_NO_ANSWER_OR_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "attune",
+      "repository": "thebrazenbeard/Attune",
+      "exact_main": "46461057e4d9ea25ec91a051fc17020e1113329a",
+      "exact_main_qualification": {
+        "run": 36410199100,
+        "name": "qualify-foundation-contracts",
+        "conclusion": "success"
+      },
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "conations",
+      "repository": "thebrazenbeard/conations",
+      "exact_main": "51948aac796936f0e7c437722e6f52c883e544e9",
+      "exact_main_qualification": null,
+      "workflow_count": 0,
+      "caveat": "No executable qualification path exists on current main.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "empathy",
+      "repository": "thebrazenbeard/empathy",
+      "exact_main": "76ebb492827a79b20b3be76fe9f9f48ab860ef1d",
+      "exact_main_qualification": null,
+      "workflow_count": 0,
+      "open_drafts": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "caveat": "Current main is unqualified and open lanes remain separate; non-mergeable drafts are not promoted.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "personification",
+      "repository": "thebrazenbeard/personification",
+      "exact_main": "31610e915047af46aa3242190a57baedaed7fbfb",
+      "exact_main_qualification": null,
+      "workflow_count": 0,
+      "caveat": "Self-appraisal source state is not phenomenology evidence.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "semanticatlas",
+      "repository": "thebrazenbeard/semanticatlas",
+      "exact_main": "895677a64af5d29b580306ca52ecc0e0607a9ccc",
+      "exact_main_qualification": {
+        "run": 36792994795,
+        "name": "validate-semantic-atlas",
+        "conclusion": "success"
+      },
+      "open_draft": {
+        "pr": 6,
+        "head": "c1bd1c9e671ef292647859c67bf0142f462aad23"
+      },
+      "caveat": "Retrieval relevance/provider custody are not answer or effect authority.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "Quiet source without CI is UNKNOWN, not stable by default.",
+    "Self-appraisal or personification behavior is not phenomenology evidence.",
+    "Empathy architecture and labels do not establish empathic experience or validated social effect.",
+    "Retrieval and provider custody do not grant answer authority."
+  ]
+}

@@ -506,3 +506,73 @@ projects:
   family_id: governance
   scheduling_state: HELD
   scope_note: Governance subject registered for currentness and review only; no constructor, policy, or protected-effect authority is admitted.
+- id: attune
+  name: Attune
+  visibility: public
+  repositories:
+  - thebrazenbeard/Attune
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-subsystems
+  scheduling_state: HELD
+  scope_note: Attunement subsystem registered for currentness and review only; expansion requires a concrete runtime consumer.
+- id: conations
+  name: Conations
+  visibility: public
+  repositories:
+  - thebrazenbeard/conations
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-subsystems
+  scheduling_state: HELD
+  scope_note: Goal/want continuity subsystem registered for currentness and review only; current main has no executable qualification path.
+- id: empathy
+  name: Empathy
+  visibility: public
+  repositories:
+  - thebrazenbeard/empathy
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-subsystems
+  scheduling_state: HELD
+  scope_note: Empathy research subsystem registered for currentness and review only; current main has no executable qualification path and open draft lanes remain separate.
+- id: personification
+  name: Personification
+  visibility: public
+  repositories:
+  - thebrazenbeard/personification
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-subsystems
+  scheduling_state: HELD
+  scope_note: Self-appraisal/personification subsystem registered for currentness and review only; self-description is not phenomenology and current main lacks executable qualification.
+- id: semanticatlas
+  name: Semantic Atlas
+  visibility: public
+  repositories:
+  - thebrazenbeard/semanticatlas
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: cognitive-subsystems
+  scheduling_state: HELD
+  scope_note: Semantic retrieval/provenance subsystem registered for currentness and review only; retrieval and provider custody do not grant answer or effect authority.
