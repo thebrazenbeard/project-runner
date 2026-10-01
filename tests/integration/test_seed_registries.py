@@ -55,6 +55,10 @@ def test_seed_registry_contains_public_portfolio_without_private_expansion():
         "deepmemorystorage",
         "temporal",
         "spm",
+        "freerowcochkar",
+        "hephaestus",
+        "masamune",
+        "voss",
     }
 
     private_projects = {p.id for p in projects if p.visibility == "private"}
