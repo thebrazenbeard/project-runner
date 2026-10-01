@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. Standalone WorkBridge current main is now exact-main source/build/package qualified while installation/runtime/effect authority remains separate.",
+  "status_basis": "Authenticated GitHub membership remains bound to 76 accessible repositories (57 public, 19 private). Every public repository record and both public workstreams remain currentness-refreshed. No public repository or public workstream remains on inherited 2026-09-28 currentness. Standalone WorkBridge current main is now exact-main source/build/package qualified while installation/runtime/effect authority remains separate.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
