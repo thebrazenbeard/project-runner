@@ -2,7 +2,7 @@
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
   "observed_at": "2026-09-30T22:38:36.744Z",
   "owner": "thebrazenbeard",
-  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0/P1 repositories plus the P2 assurance/governance and cognitive-subsystem tranches were re-read from live GitHub on 2026-09-30. Remaining P2-P4 semantic status is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not cognitive, phenomenological, answer, or effect authority.",
+  "status_basis": "Authenticated GitHub membership is bound to 76 accessible repositories (57 public, 19 private). All public P0/P1 repositories plus P2 assurance/governance, cognitive-subsystem, and memory/time tranches were re-read from live GitHub on 2026-09-30. Remaining P2-P4 semantic status is inherited from the 2026-09-28 corpus unless separately re-reviewed. Four new public records are exact-source classified. This is descriptive source state, not memory truth, temporal causality, currentness, instruction, or effect authority.",
   "freshness_rule": "Membership is bound to this observed cut. Record-level semantic status may be inherited and must be refreshed from exact live source before substantive execution; priority/family/frontier never grant protected-effect authority.",
   "counts": {
     "total": 76,
@@ -183,8 +183,8 @@
       "family_id": "memory-and-provenance",
       "activity_state": "STABLE",
       "purpose": "Durable indexed long-term memory mechanism.",
-      "status": "Integration architecture is merged; repo is quiet.",
-      "current_frontier": "Donate proven memory mechanisms to current runtime instead of creating another authority."
+      "status": "Exact main@3199b05a24411ed1b3a3561fe90866adf9c74d14 observed with no open PRs. Deep Memory architecture validation push run 36732610336 passes at that exact head.",
+      "current_frontier": "Reuse the qualified storage/integration mechanisms only through a concrete consumer; keep persistence separate from truth, instruction, currentness, and activation authority."
     },
     {
       "id": "discovery",
@@ -589,8 +589,8 @@
       "family_id": "memory-and-provenance",
       "activity_state": "STABLE",
       "purpose": "Event-time/currentness tracking and Temporal Watch mechanisms.",
-      "status": "Temporal Watch and cross-chat timing probes are on main.",
-      "current_frontier": "Reuse wherever event, observation and record time must remain distinct."
+      "status": "Exact main@0fc7071a6b01e609fb2cdc76a32c73276ab27094 observed with no open PRs. The current tree exposes no GitHub Actions workflows and has no workflow history; exact-main source qualification is UNKNOWN.",
+      "current_frontier": "Obtain executable exact-main qualification before reuse; preserve event time, observation time, and record time as distinct data without treating timestamps alone as source or causal authority."
     },
     {
       "id": "testament",
