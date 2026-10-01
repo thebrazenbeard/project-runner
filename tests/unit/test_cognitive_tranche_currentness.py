@@ -38,6 +38,6 @@ def test_lgcm_alone_remains_blocked_on_exact_main_qualification():
         for item in wave.items
         if item.subject_kind == "repository" and item.subject_id in TRANCHE
     }
-    assert items["lgcm"].review_gate == "EXACT_MAIN_QUALIFICATION"
+    assert items["lgcm"].review_gate == "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION"
     for project_id in {"fuckup", "hc-brain", "noema"}:
         assert items[project_id].review_gate == "EXECUTION_ROUTE_ADMISSION"
