@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/close-achilles-main-gate-v1-20261001",
-    "commit": "d480a8bab445faf1a20b7e1e80462d810b6ec710",
+    "ref": "portfolio/advance-commander-qualification-candidate-v1-20261001",
+    "commit": "660e8987a50ee8d82a5e6aae693a5c6d6986a7ff",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "3c6dcd8dae79ee878121c65f7854c98a61fdbed1",
+    "git_blob_sha": "cb7f4907ba72553f6e2446f9ebed665677cbfb19",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -1072,9 +1072,9 @@
       "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_MAIN_REQUALIFICATION",
-      "frontier": "Requalify exact current main and separately verify endpoint/authentication/device binding/runtime reachability before any remote-control claim; Runner keeps the subject HELD with no execution target.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@c2b95be79ca011a539c20bfee60fcbc46cfea177 observed with no open PRs. Merged PR #4 head bc4ae82d78e4b5dd2051700f145b8d5f53d1aa1c passed CI run 36629389444, but current main differs by docs/runtime/MEDIA_LIBRARY_DIRECT_UNC_EVIDENCE_20260929.md; exact-main qualification and live endpoint effect are not inferred."
+      "review_gate": "GREEN_CANDIDATE_INTEGRATION_AND_MAIN_REQUALIFICATION",
+      "frontier": "Qualification candidate is green. Integrate PR #5 only if authorized, then require the resulting exact main to rerun CI before calling main source-qualified. Separately verify deployed endpoint, bearer/device authentication, exact device binding, workstation payload/currentness, and live remote effects before any operational-control claim.",
+      "source_status": "CURRENTNESS_REFRESHED_GREEN_QUALIFICATION_CANDIDATE__MAIN_UNQUALIFIED__EXECUTION_HELD — Exact main@c2b95be79ca011a539c20bfee60fcbc46cfea177 remains current but has no exact-main CI run because the existing workflow intentionally ignored main. Workflow-only qualification candidate PR #5@221c8db74b2d2a6dfe03c71b2f4fd06bed272c24 changes only .github/workflows/ci.yml so the existing Linux/Windows build-test, audit, exact DesktopCommander payload qualification, and launcher parsing run on the qualification branch and future main pushes. Push run 36848740308 and PR run 36848747458 both pass."
     },
     {
       "subject_kind": "repository",
