@@ -1,0 +1,48 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-10-01",
+  "tranche": "DRIFTGUARD_EFFECT_FENCE_REVIEW",
+  "authority_ceiling": "SOURCE_REVIEW_ONLY_NO_MERGE_NO_PROVIDER_AUTHORITY_NO_RUNTIME_EFFECT",
+  "subject": {
+    "id": "driftguard",
+    "repository": "thebrazenbeard/driftguard",
+    "exact_main": "52fa829c629fa0f3e729204912db9f9f783f322a",
+    "candidate": {
+      "pr": 40,
+      "head": "33b75523a1130c614c270f3de45417e1acf4e32b",
+      "base": "52fa829c629fa0f3e729204912db9f9f783f322a"
+    },
+    "candidate_qualification": [
+      {
+        "run": 35940813596,
+        "name": "tests",
+        "conclusion": "success"
+      },
+      {
+        "run": 35940813553,
+        "name": "action-smoke",
+        "conclusion": "success"
+      },
+      {
+        "run": 35940813564,
+        "name": "CodeQL Advanced",
+        "conclusion": "success"
+      }
+    ],
+    "hostile_review": {
+      "repository": "thebrazenbeard/rezon",
+      "pr": 100,
+      "head": "41978d83a00ac4f5be49246e23bbf6669d0fed2a",
+      "kernel": "success",
+      "benchmark": "success"
+    },
+    "surviving_claim": "LOCAL_DURABLE_EFFECT_RESERVATION_AND_SINGLE_USE_DISPATCH_FENCE_ONLY",
+    "remaining_gate": "EXECUTION_ROUTE_ADMISSION",
+    "caveats": [
+      "EffectDispatchPermit is an in-process mechanical token, not protected-effect authority.",
+      "DISPATCH_UNCERTAIN proves only the local dispatch claim was consumed, not provider effect.",
+      "The unresolved fence intentionally blocks retry and ordinary acknowledgement until a future effect-aware reconciliation path exists.",
+      "SQLite BEGIN IMMEDIATE is local serialization, not a distributed lock."
+    ]
+  }
+}
