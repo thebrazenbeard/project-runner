@@ -33,7 +33,7 @@ def test_validate_command_returns_zero(capsys):
 def test_inventory_reports_reference_worker_and_twelve_registered_workers(capsys):
     assert main(["inventory"]) == 0
     out = capsys.readouterr().out
-    assert "projects: 43" in out.lower()
+    assert "projects: 45" in out.lower()
     assert "workers: 13" in out.lower()
     assert "registered: 12" in out.lower()
     assert "executable: 1" in out.lower()

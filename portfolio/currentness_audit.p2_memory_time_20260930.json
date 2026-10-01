@@ -1,0 +1,34 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "P2_MEMORY_TIME",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MERGE_NO_TRUTH_OR_CURRENTNESS_AUTHORITY_NO_RUNTIME_EFFECT",
+  "subjects": [
+    {
+      "id": "deepmemorystorage",
+      "repository": "thebrazenbeard/deepmemorystorage",
+      "exact_main": "3199b05a24411ed1b3a3561fe90866adf9c74d14",
+      "exact_main_qualification": {
+        "run": 36732610336,
+        "name": "Deep Memory architecture validation",
+        "conclusion": "success"
+      },
+      "open_pr_count": 0,
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "temporal",
+      "repository": "thebrazenbeard/temporal",
+      "exact_main": "0fc7071a6b01e609fb2cdc76a32c73276ab27094",
+      "exact_main_qualification": null,
+      "workflow_count": 0,
+      "caveat": "No executable qualification path exists on current main; temporal records remain data, not authority.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "Persistent memory is not truth authority.",
+    "A timestamp does not prove observation quality, source authority, causality, or present currentness.",
+    "Quiet repositories without CI remain UNKNOWN at the source-qualification layer."
+  ]
+}

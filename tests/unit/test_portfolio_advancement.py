@@ -239,6 +239,8 @@ def test_inherited_non_p0_repository_status_is_currentness_gated():
             "empathy",
             "personification",
             "semanticatlas",
+            "deepmemorystorage",
+            "temporal",
         }
     ]
     assert inherited

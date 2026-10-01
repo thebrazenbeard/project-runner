@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-p2-cognitive-v1-20260930",
-    "commit": "c13020d1f4d714d65a6a178ee76f4946ef4b9832",
+    "ref": "portfolio/audit-p2-memory-time-v1-20260930",
+    "commit": "278513b922385bae3d56053e15b033d615b52f16",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "d3ced24276c21b3ddb1d0529e6a1b840064db121",
+    "git_blob_sha": "b96148d7f7331f769561abb585819f910fc6d2de",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -198,12 +198,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Donate proven memory mechanisms to current runtime instead of creating another authority.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Integration architecture is merged; repo is quiet."
+      "review_gate": "CONSUMER_EVIDENCE",
+      "frontier": "Reuse the qualified storage/integration mechanisms only through a concrete consumer; keep persistence separate from truth, instruction, currentness, and activation authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@3199b05a24411ed1b3a3561fe90866adf9c74d14 observed with no open PRs. Deep Memory architecture validation push run 36732610336 passes at that exact head."
     },
     {
       "subject_kind": "repository",
@@ -741,12 +741,12 @@
         "VOSS",
         "REZON"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "VERIFY_REUSE_OR_HOLD",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Reuse wherever event, observation and record time must remain distinct.",
-      "source_status": "INHERITED_SEMANTIC_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Temporal Watch and cross-chat timing probes are on main."
+      "review_gate": "EXACT_MAIN_QUALIFICATION",
+      "frontier": "Obtain executable exact-main qualification before reuse; preserve event time, observation time, and record time as distinct data without treating timestamps alone as source or causal authority.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@0fc7071a6b01e609fb2cdc76a32c73276ab27094 observed with no open PRs. The current tree exposes no GitHub Actions workflows and has no workflow history; exact-main source qualification is UNKNOWN."
     },
     {
       "subject_kind": "repository",
