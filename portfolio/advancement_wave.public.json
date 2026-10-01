@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/gate-qualification-candidates-v1-20260930",
-    "commit": "02b893aec394eb12f3ed141a2442e2507e57f410",
+    "ref": "portfolio/close-workbridge-main-gate-v1-20261001",
+    "commit": "c45d5840cfdcdf832d8293b338bd52a5603995c6",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "3358d637ae4f52353e91b9d7b3997cbe1753b8e2",
+    "git_blob_sha": "7d5542046835f593f415f8055e2dcd5c4bad0f18",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -1053,9 +1053,9 @@
       "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_HEAD_REVIEW",
-      "frontier": "Qualify independent source/build/package hardening and establish explicit donor-patch currentness so security fixes do not silently diverge across the WorkBridgeMCP-derived lineage.",
-      "source_status": "EXACT_SOURCE_CLASSIFIED_NO_REGISTERED_EXECUTION_TARGET — Exact-source classification at 7caab29eb5667897a0a03d0ce67d733380b01685: derived from an earlier WorkBridgeMCP Go-server cut and independently evolving; process-argument hardening and relay package 0003 qualification are active."
+      "review_gate": "INSTALL_RUNTIME_EFFECT_SEPARATION",
+      "frontier": "Treat standalone current main as source/build/package qualified; keep NAS installation, live listener, workstation attachment, Commander transport, and downstream runtime effect behind separate qualification. Track donor-patch drift independently from WorkBridgeMCP.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_MAIN_SOURCE_BUILD_PACKAGE_QUALIFIED__EXECUTION_HELD — Exact main@e88e14ea25f25abd723bb50909b3e25e67f889fd observed after merged PR #4. WorkBridge source checks run 36792749209 and WorkBridgeRelay ARMv7 SPK run 36792749216 both pass at that exact main. Rezon PR #99 review head 54e41462dfc9171fb79ec4494056203cccf8114c refreshes the WorkBridge-family topology and preserves standalone lineage separation."
     },
     {
       "subject_kind": "repository",
