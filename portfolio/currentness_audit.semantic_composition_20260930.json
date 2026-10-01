@@ -1,0 +1,64 @@
+{
+  "schema": "PROJECT_RUNNER_CURRENTNESS_AUDIT_V1",
+  "observed_date": "2026-09-30",
+  "tranche": "P2_SEMANTIC_MODEL_COMPOSITION_PORTFOLIO_SPINE",
+  "authority_ceiling": "READ_ANALYZE_PROPOSE_ONLY_NO_SOURCE_WRITE_NO_MODEL_RUNTIME_NO_ORCHESTRATION_EFFECT",
+  "subjects": [
+    {
+      "id": "spm",
+      "repository": "thebrazenbeard/spm",
+      "exact_main": "d9ea72798ac892ac75f858177b6ed0c5a6b4c37c",
+      "merged_runtime_pr": {
+        "pr": 7,
+        "head": "22d0fdaf5f6be2cb30d1c9e4a1e6d3dda13e949a",
+        "merge_commit": "d9ea72798ac892ac75f858177b6ed0c5a6b4c37c"
+      },
+      "exact_main_qualification": null,
+      "current_tree_has_tests": true,
+      "current_tree_has_ci_workflow": false,
+      "observed_same_head_automation": {
+        "run": 36205169131,
+        "name": "Graph Update: pip in /. #1592526546",
+        "conclusion": "success"
+      },
+      "caveat": "Dependency-graph automation is not executable source qualification. Current main remains unqualified.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "mosaic",
+      "repository": "thebrazenbeard/mosaic",
+      "exact_main": "3a442e94b4f5b8fa365e2206c40405df6961e18d",
+      "exact_main_qualification": null,
+      "current_workflows": [
+        ".github/workflows/p0-analytical-residency.yml",
+        ".github/workflows/p1-protocol-harness.yml"
+      ],
+      "current_tests": [
+        "tests/p1_cases.py",
+        "tests/test_p1_handoff.py",
+        "tests/test_residency.py"
+      ],
+      "observed_actions_runs": 0,
+      "caveat": "Workflow and test source existence is not an executed exact-head qualification.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    },
+    {
+      "id": "wip",
+      "repository": "thebrazenbeard/wip",
+      "exact_main": "3b93b64c09f5ed704b21a9db28cb918df181947e",
+      "exact_main_qualification": {
+        "run": 36709186924,
+        "name": "validate-wip",
+        "conclusion": "success"
+      },
+      "open_pr_count": 0,
+      "caveat": "Source qualification does not grant portfolio orchestration, recovery authority, or effect authority.",
+      "runner_registry_state": "HELD_READ_ANALYZE_PROPOSE"
+    }
+  ],
+  "hostile_challenges": [
+    "Tests and workflows in source are not qualification until executed against the exact subject.",
+    "A green recovery/composition source check does not establish a consumer or justify another orchestration authority.",
+    "Historical divergent SPM drafts must not outrank the integrated current main merely because they contain research detail."
+  ]
+}
