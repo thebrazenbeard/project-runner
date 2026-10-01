@@ -3,10 +3,10 @@
   "generated_at": "2026-09-30T18:51:00-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "portfolio/audit-final-p2-vera-speculative-v1-20260930",
-    "commit": "5ca906dc9f99c7e0bc6bbd41ce22ae1e9d85d7ca",
+    "ref": "portfolio/audit-public-workstreams-v1-20260930",
+    "commit": "f5d79d06992e55e3e129cdb050b0722d6e8067a3",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "0a80247391859cc41b82d13d036f34543c0734bc",
+    "git_blob_sha": "db0f941e9e173f7642b7b74170e2b06876f2810a",
     "public_repository_count": 57,
     "total_repository_count": 76,
     "private_repository_count": 19,
@@ -500,9 +500,9 @@
       "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "EXACT_MAIN_VALIDATION_REPAIR",
-      "frontier": "Repair and rerun exact-main registry validation before promoting any current research packet or consuming the open Yeshua/mythos/divination DAG downstream; preserve claim-by-claim evidence ceilings.",
-      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 observed with a large open research DAG. Validate registries run 36353652038 FAILS at that exact head: 1 failed / 55 passed, specifically tests/test_registry_rebase_preconditions.py::test_divergent_extension_referential_preconditions_are_equivalent. The failure is a registry-rebase referential-precondition mismatch; current main is not source-qualified."
+      "review_gate": "REPAIR_CANDIDATE_AND_EXACT_MAIN_REQUALIFICATION",
+      "frontier": "Preserve current main as unqualified until the rebase-precondition repair is integrated and exact-main validation reruns; research claims remain separately evidence-bounded regardless of repository validation status.",
+      "source_status": "CURRENTNESS_REFRESHED_EXACT_SOURCE__EXECUTION_HELD — Exact main@2fdc9614fa4f45eb038772d736b146809e10a7f1 remains current but unqualified: Validate registries run 36353652038 fails 1 test / passes 55. Direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c is based on that exact main, changes only tests/test_registry_rebase_preconditions.py, and passes Validate registries run 36797514717."
     },
     {
       "subject_kind": "repository",
@@ -1129,12 +1129,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Keep hypothesis, symbolism, experiential interpretation and sourced fact distinct.",
-      "source_status": "INHERITED_WORKSTREAM_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Continuation is preserved in ON_THEO with downstream literary handoff and remains distinct from the Yeshua evidence spine."
+      "review_gate": "SOURCE_HYPOTHESIS_BOUNDARY",
+      "frontier": "Preserve sourced fact, hypothesis, symbolism, experiential report, and literary synthesis as distinct evidence classes while the shared repository qualification baseline remains incomplete.",
+      "source_status": "CURRENTNESS_REFRESHED_DURABLE_SURFACES__EXECUTION_HELD — Durable surfaces refreshed on 2026-09-30: ON_THEO main is current but validation-red with a green direct repair candidate; Testament current main has no executable CI qualification. Nature-of-Existence material remains hypothesis/symbolism/experiential research and is not factual proof of consciousness, source, or metaphysics."
     },
     {
       "subject_kind": "workstream",
@@ -1151,12 +1151,12 @@
         "REZON",
         "ROOTS"
       ],
-      "action": "CURRENTNESS_AUDIT",
+      "action": "EXECUTE_FRONTIER",
       "execution_state": "HELD",
       "effect_ceiling": "SOURCE_ONLY",
-      "review_gate": "CURRENTNESS_CHECK",
-      "frontier": "Continue hostile source review upstream and consume survived or explicitly unresolved claims downstream.",
-      "source_status": "INHERITED_WORKSTREAM_STATUS_REQUIRES_EXACT_SOURCE_REFRESH — Active upstream research and downstream manuscript work remain intentionally separate in authority."
+      "review_gate": "UPSTREAM_SOURCE_AND_DOWNSTREAM_QUALIFICATION",
+      "frontier": "Repair and exact-main qualify ON_THEO first; continue claim-centered hostile source review upstream, and allow Testament to consume only survived or explicitly unresolved claims without back-propagating literary hypotheses into historical evidence.",
+      "source_status": "CURRENTNESS_REFRESHED_DURABLE_SURFACES__EXECUTION_HELD — Durable surfaces refreshed on 2026-09-30: ON_THEO main@2fdc9614fa4f45eb038772d736b146809e10a7f1 is current but validation-red, with direct repair candidate PR #168@98cea0dcb9bdf83ac352f02ce94808ac4670105c passing validation; Testament main@20517788763e76863a35e02ba3cc9051d0a227bb has no executable CI qualification. Historical research and downstream literary synthesis remain separate authority layers."
     }
   ]
 }
