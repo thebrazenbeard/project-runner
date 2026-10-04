@@ -49,6 +49,28 @@ function Get-DescendantProcessIds {
     return @($seen)
 }
 
+function Test-HasAncestorNamed {
+    param(
+        [int]$ProcessId,
+        [string]$Name,
+        [hashtable]$ProcessByPid
+    )
+
+    $current = $ProcessId
+    $visited = New-Object 'System.Collections.Generic.HashSet[int]'
+    for ($depth = 0; $depth -lt 64; $depth++) {
+        if (-not $ProcessByPid.ContainsKey($current)) { return $false }
+        $row = $ProcessByPid[$current]
+        $parent = [int]$row.ParentProcessId
+        if ($parent -le 0 -or -not $visited.Add($parent)) { return $false }
+        if (-not $ProcessByPid.ContainsKey($parent)) { return $false }
+        $parentRow = $ProcessByPid[$parent]
+        if ([string]$parentRow.Name -ieq $Name) { return $true }
+        $current = $parent
+    }
+    return $false
+}
+
 function Test-RootProcessIdentity {
     param(
         [object]$Task,
@@ -70,6 +92,114 @@ function Test-RootProcessIdentity {
     }
 }
 
+function Get-TreeMetrics {
+    param(
+        [int]$RootPid,
+        [object[]]$ProcessRows
+    )
+
+    $treePids = @($RootPid)
+    $treePids += @(Get-DescendantProcessIds -RootPid $RootPid -ProcessRows $ProcessRows)
+    $liveProcesses = @(
+        $treePids |
+            Sort-Object -Unique |
+            ForEach-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue } |
+            Where-Object { $null -ne $_ }
+    )
+
+    if ($liveProcesses.Count -gt 0) {
+        $cpuSeconds = ($liveProcesses | Measure-Object -Property CPU -Sum).Sum
+        $ramBytes = ($liveProcesses | Measure-Object -Property WorkingSet64 -Sum).Sum
+    }
+    else {
+        $cpuSeconds = 0
+        $ramBytes = 0
+    }
+
+    return [pscustomobject]@{
+        Processes = $liveProcesses
+        CPUSeconds = [double]$cpuSeconds
+        RAMBytes = [double]$ramBytes
+        ChildCount = [Math]::Max(0, $liveProcesses.Count - 1)
+        Pids = @($treePids | Sort-Object -Unique)
+    }
+}
+
+function Get-ProcessRuntimeText {
+    param(
+        [int]$RootPid,
+        [DateTimeOffset]$Now
+    )
+
+    try {
+        $process = Get-Process -Id $RootPid -ErrorAction Stop
+        $runtime = $Now.UtcDateTime - $process.StartTime.ToUniversalTime()
+        return "{0:00}:{1:00}:{2:00}" -f [Math]::Floor($runtime.TotalHours), $runtime.Minutes, $runtime.Seconds
+    }
+    catch {
+        return "UNKNOWN"
+    }
+}
+
+function Get-DiscoveredTaskLabel {
+    param(
+        [string]$Origin,
+        [object]$ProcessRow
+    )
+
+    $commandLine = [string]$ProcessRow.CommandLine
+    if ($Origin -eq "EXECUTOR" -and $commandLine -match '(?i)([A-Za-z0-9_.-]+\.py)\b') {
+        return "executor:$([System.IO.Path]::GetFileName($Matches[1]))"
+    }
+    if ($Origin -eq "CODEX_BRIDGE") {
+        return "codex:$([int]$ProcessRow.ProcessId)"
+    }
+    if ($Origin -eq "VERA_WORKER") {
+        return "vera-mono:$([int]$ProcessRow.ProcessId)"
+    }
+    return "$($Origin.ToLowerInvariant()):$([string]$ProcessRow.Name):$([int]$ProcessRow.ProcessId)"
+}
+
+function Add-DiscoveredTaskRow {
+    param(
+        [System.Collections.ArrayList]$Rows,
+        [System.Collections.Generic.HashSet[int]]$ClaimedPids,
+        [object]$ProcessRow,
+        [string]$Origin,
+        [string]$Trust,
+        [object[]]$ProcessRows,
+        [DateTimeOffset]$Now,
+        [bool]$ShowCommand
+    )
+
+    $rootPid = [int]$ProcessRow.ProcessId
+    if ($ClaimedPids.Contains($rootPid)) { return }
+
+    $metrics = Get-TreeMetrics -RootPid $rootPid -ProcessRows $ProcessRows
+    foreach ($pidValue in $metrics.Pids) {
+        [void]$ClaimedPids.Add([int]$pidValue)
+    }
+
+    $row = [ordered]@{
+        Task = Get-DiscoveredTaskLabel -Origin $Origin -ProcessRow $ProcessRow
+        PID = $rootPid
+        State = "RUNNING"
+        Origin = $Origin
+        Trust = $Trust
+        Runtime = Get-ProcessRuntimeText -RootPid $rootPid -Now $Now
+        CPU_s = [Math]::Round($metrics.CPUSeconds, 1)
+        RAM_MB = [Math]::Round(($metrics.RAMBytes / 1MB), 1)
+        Children = $metrics.ChildCount
+        Repo = ""
+        Lane = ""
+        Owner = "chatgpt-discovered"
+    }
+    if ($ShowCommand) {
+        $row["Command"] = [string]$ProcessRow.CommandLine
+    }
+    [void]$Rows.Add([pscustomobject]$row)
+}
+
 $TasksRoot = Resolve-ProjectRunnerTasksRoot $TasksRoot
 $activeRoot = Join-Path $TasksRoot "active"
 
@@ -77,9 +207,15 @@ do {
     $now = [DateTimeOffset]::UtcNow
     $processRows = @(
         Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-            Select-Object ProcessId, ParentProcessId
+            Select-Object ProcessId, ParentProcessId, Name, CreationDate, CommandLine
     )
-    $rows = @()
+    $processByPid = @{}
+    foreach ($processRow in $processRows) {
+        $processByPid[[int]$processRow.ProcessId] = $processRow
+    }
+
+    $rows = New-Object System.Collections.ArrayList
+    $claimedPids = New-Object 'System.Collections.Generic.HashSet[int]'
 
     if (Test-Path $activeRoot) {
         foreach ($file in Get-ChildItem -Path $activeRoot -Filter "*.json" -File) {
@@ -91,31 +227,18 @@ do {
                 $identityMatches = Test-RootProcessIdentity -Task $task -Process $rootProcess
                 if ($null -ne $rootProcess -and -not $identityMatches) {
                     $state = "PID_REUSED"
-                    $liveProcesses = @()
+                    $metrics = [pscustomobject]@{ CPUSeconds = 0; RAMBytes = 0; ChildCount = 0; Pids = @() }
                 }
                 elseif ($null -eq $rootProcess) {
                     $state = "ORPHANED"
-                    $liveProcesses = @()
+                    $metrics = [pscustomobject]@{ CPUSeconds = 0; RAMBytes = 0; ChildCount = 0; Pids = @() }
                 }
                 else {
                     $state = "RUNNING"
-                    $treePids = @([int]$task.pid)
-                    $treePids += @(Get-DescendantProcessIds -RootPid ([int]$task.pid) -ProcessRows $processRows)
-                    $liveProcesses = @(
-                        $treePids |
-                            Sort-Object -Unique |
-                            ForEach-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue } |
-                            Where-Object { $null -ne $_ }
-                    )
-                }
-
-                if ($liveProcesses.Count -gt 0) {
-                    $cpuSeconds = ($liveProcesses | Measure-Object -Property CPU -Sum).Sum
-                    $ramBytes = ($liveProcesses | Measure-Object -Property WorkingSet64 -Sum).Sum
-                }
-                else {
-                    $cpuSeconds = 0
-                    $ramBytes = 0
+                    $metrics = Get-TreeMetrics -RootPid ([int]$task.pid) -ProcessRows $processRows
+                    foreach ($pidValue in $metrics.Pids) {
+                        [void]$claimedPids.Add([int]$pidValue)
+                    }
                 }
 
                 try {
@@ -131,10 +254,12 @@ do {
                     Task = [string]$task.name
                     PID = [int]$task.pid
                     State = $state
+                    Origin = "REGISTERED"
+                    Trust = "EXACT"
                     Runtime = $runtimeText
-                    CPU_s = [Math]::Round([double]$cpuSeconds, 1)
-                    RAM_MB = [Math]::Round(([double]$ramBytes / 1MB), 1)
-                    Children = [Math]::Max(0, $liveProcesses.Count - 1)
+                    CPU_s = [Math]::Round($metrics.CPUSeconds, 1)
+                    RAM_MB = [Math]::Round(($metrics.RAMBytes / 1MB), 1)
+                    Children = $metrics.ChildCount
                     Repo = [string]$task.repository
                     Lane = [string]$task.lane
                     Owner = [string]$task.owner
@@ -142,13 +267,15 @@ do {
                 if ($IncludeCommand) {
                     $row["Command"] = [string]$task.command
                 }
-                $rows += [pscustomobject]$row
+                [void]$rows.Add([pscustomobject]$row)
             }
             catch {
-                $rows += [pscustomobject]@{
+                [void]$rows.Add([pscustomobject]@{
                     Task = $file.BaseName
                     PID = ""
                     State = "INVALID_RECORD"
+                    Origin = "REGISTERED"
+                    Trust = "EXACT"
                     Runtime = ""
                     CPU_s = ""
                     RAM_MB = ""
@@ -156,22 +283,89 @@ do {
                     Repo = ""
                     Lane = ""
                     Owner = ""
-                }
+                })
             }
         }
     }
 
+    $executorRoots = @(
+        $processRows | Where-Object {
+            [string]$_.Name -ieq "node.exe" -and
+            [string]$_.CommandLine -match '(?i)\\AppData\\Local\\Executor\\DesktopCommanderMCP\\.*dist\\index\.js'
+        }
+    )
+    foreach ($executorRoot in $executorRoots) {
+        $directChildren = @(
+            $processRows | Where-Object {
+                [int]$_.ParentProcessId -eq [int]$executorRoot.ProcessId -and
+                [string]$_.Name -ine "conhost.exe"
+            }
+        )
+        foreach ($child in $directChildren) {
+            $childTree = @([int]$child.ProcessId)
+            $childTree += @(Get-DescendantProcessIds -RootPid ([int]$child.ProcessId) -ProcessRows $processRows)
+            if ($childTree -contains $PID) { continue }
+            if ([string]$child.CommandLine -match '(?i)Watch-ProjectRunnerTasks\.ps1') { continue }
+
+            $params = @{
+                Rows = $rows
+                ClaimedPids = $claimedPids
+                ProcessRow = $child
+                Origin = "EXECUTOR"
+                Trust = "EXACT"
+                ProcessRows = $processRows
+                Now = $now
+                ShowCommand = [bool]$IncludeCommand
+            }
+            Add-DiscoveredTaskRow @params
+        }
+    }
+
+    $codexWorkers = @($processRows | Where-Object { [string]$_.Name -ieq "codex.exe" })
+    foreach ($worker in $codexWorkers) {
+        if (Test-HasAncestorNamed -ProcessId ([int]$worker.ProcessId) -Name "tunnel-client.exe" -ProcessByPid $processByPid) {
+            $params = @{
+                Rows = $rows
+                ClaimedPids = $claimedPids
+                ProcessRow = $worker
+                Origin = "CODEX_BRIDGE"
+                Trust = "STRONG"
+                ProcessRows = $processRows
+                Now = $now
+                ShowCommand = [bool]$IncludeCommand
+            }
+            Add-DiscoveredTaskRow @params
+        }
+    }
+
+    $veraWorkers = @($processRows | Where-Object { [string]$_.Name -ieq "vera-mono.exe" })
+    foreach ($worker in $veraWorkers) {
+        $params = @{
+            Rows = $rows
+            ClaimedPids = $claimedPids
+            ProcessRow = $worker
+            Origin = "VERA_WORKER"
+            Trust = "HEURISTIC"
+            ProcessRows = $processRows
+            Now = $now
+            ShowCommand = [bool]$IncludeCommand
+        }
+        Add-DiscoveredTaskRow @params
+    }
+
     if (-not $Once) { Clear-Host }
-    Write-Host "Project Runner Task Monitor  |  $TasksRoot"
+    Write-Host "Project Runner / ChatGPT Task Monitor  |  $TasksRoot"
     Write-Host "Updated: $($now.ToLocalTime().ToString('yyyy-MM-dd HH:mm:ss zzz'))"
+    Write-Host "REGISTERED/EXACT = explicit Project Runner ownership; EXECUTOR/EXACT = live Executor child tree;"
+    Write-Host "CODEX_BRIDGE/STRONG = Codex under tunnel bridge; VERA_WORKER/HEURISTIC = named worker discovery."
     Write-Host ""
 
     if ($rows.Count -eq 0) {
-        Write-Host "No registered Project Runner tasks."
+        Write-Host "No registered or discovered ChatGPT task trees are currently visible."
     }
     else {
         $rows |
-            Sort-Object State, Task, PID |
+            Sort-Object State, Origin, Task, PID |
             Format-Table -AutoSize
     }
 
