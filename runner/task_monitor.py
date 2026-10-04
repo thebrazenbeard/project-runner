@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import errno
 import json
 import os
@@ -397,9 +397,9 @@ def _windows_process_started_at_utc(pid: int) -> str | None:
         ):
             return None
         ticks = (creation.dwHighDateTime << 32) | creation.dwLowDateTime
-        started = datetime(1601, 1, 1, tzinfo=timezone.utc) + __import__(
-            "datetime"
-        ).timedelta(microseconds=ticks / 10)
+        started = datetime(1601, 1, 1, tzinfo=timezone.utc) + timedelta(
+            microseconds=ticks / 10
+        )
         return started.isoformat()
     finally:
         close_handle(handle)
