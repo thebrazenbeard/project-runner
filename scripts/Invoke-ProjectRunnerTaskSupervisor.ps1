@@ -99,11 +99,11 @@ $exitReceiptPath = Join-Path $exitReceiptsRoot "$taskId.txt"
 $receiptLiteral = $exitReceiptPath.Replace("'", "''")
 $exeLiteral = $powershellExe.Replace("'", "''")
 $wrapperCommand = @"
-\$inner = Start-Process -FilePath '$exeLiteral' -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand','$encodedCommand') -NoNewWindow -PassThru
-\$inner.WaitForExit()
-\$code = [int]\$inner.ExitCode
-Set-Content -LiteralPath '$receiptLiteral' -Value \$code -Encoding ASCII
-exit \$code
+`$inner = Start-Process -FilePath '$exeLiteral' -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand','$encodedCommand') -NoNewWindow -PassThru
+`$inner.WaitForExit()
+`$code = [int]`$inner.ExitCode
+Set-Content -LiteralPath '$receiptLiteral' -Value `$code -Encoding ASCII
+exit `$code
 "@
 $wrapperEncoded = [Convert]::ToBase64String(
     [Text.Encoding]::Unicode.GetBytes($wrapperCommand)
