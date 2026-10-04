@@ -158,6 +158,29 @@ Reconciliation moves dead unresolved records to history as `UNKNOWN_EXIT` with
 
 The monitor remains observability-only: it has no stop/kill action.
 
+## Multi-lane scheduling
+
+Project Runner can bound independent progress streams without creating separate authority domains. Advancement items may declare an optional `lane`; otherwise their lead identity is the effective lane. The wave planner keeps collision keys global and can enforce global, per-lane, per-identity, and per-family capacity at the same time.
+
+```bash
+project-runner portfolio-wave-plan \
+  --max-parallel 6 \
+  --max-per-lane 2 \
+  --max-per-identity 2 \
+  --max-per-family 2
+```
+
+Lane placement is scheduling metadata, not durable work identity or permission. The plan digest binds the lane assignment, while the operator bridge continues to bind the underlying work subject independently.
+
+Local supervised tasks can also be inspected per lane:
+
+```powershell
+project-runner task-status --lane lane-b
+project-runner task-history --lane lane-b
+```
+
+The task monitor binds a recorded Windows supervisor PID to its process creation time when available, preventing PID reuse from masquerading as the original task. See `docs/MULTI_LANE_TASK_HANDLING_V1.md`.
+
 ## Durable portfolio currentness
 
 Project Runner can now collect registered dependency refs itself and persist the resulting scheduler state:
