@@ -501,13 +501,16 @@ def _portfolio_wave_plan(
             "corpus_binding": dict(wave.corpus_binding),
         },
         "summary": plan.summary(),
+        "lane_assignments": {
+            f"{item.subject_kind}:{item.subject_id}": item.effective_lane
+            for item in wave.items
+        },
         "selected": [
             {
                 "subject_kind": item.subject_kind,
                 "subject_id": item.subject_id,
                 "family_id": item.family_id,
                 "lead_identity": item.lead_identity,
-                "lane_id": item.lane_id,
                 "reviewer_identities": list(item.reviewer_identities),
                 "priority": item.priority,
                 "action": item.action,
@@ -526,7 +529,6 @@ def _portfolio_wave_plan(
                 "subject_id": item.subject_id,
                 "family_id": item.family_id,
                 "lead_identity": item.lead_identity,
-                "lane_id": item.lane_id,
                 "priority": item.priority,
                 "reason": item.reason,
                 "collision_keys": list(item.collision_keys),
