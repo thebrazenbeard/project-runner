@@ -2,6 +2,8 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 from runner.cli import main
 
 
@@ -52,3 +54,30 @@ def test_windows_task_launcher_and_read_only_monitor_are_shipped():
     assert "Get-CimInstance Win32_Process" in monitor
     assert "Stop-Process" not in monitor
     assert "Remove-Item" not in monitor
+
+
+def test_task_status_marks_missing_pid_orphaned(tmp_path, capsys):
+    tasks_root = tmp_path / "tasks"
+
+    assert main([
+        "task-register",
+        "--tasks-root", str(tasks_root),
+        "--name", "finished-task",
+        "--pid", "2147483646",
+        "--owner", "test",
+    ]) == 0
+    capsys.readouterr()
+
+    assert main(["task-status", "--tasks-root", str(tasks_root)]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["tasks"][0]["state"] == "ORPHANED"
+
+
+def test_task_register_rejects_nonpositive_pid(tmp_path):
+    with pytest.raises(ValueError, match="task pid must be positive"):
+        main([
+            "task-register",
+            "--tasks-root", str(tmp_path / "tasks"),
+            "--name", "bad-task",
+            "--pid", "0",
+        ])
