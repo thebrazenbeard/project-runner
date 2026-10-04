@@ -972,6 +972,7 @@ def _task_finalize(args) -> int:
         args.tasks_root,
         task_id=args.task_id,
         exit_code=args.exit_code,
+        terminal_reason=args.terminal_reason,
     )
     print(json.dumps({"mode": "PROJECT_RUNNER_TASK_FINALIZE_V1", "task": task}, sort_keys=True))
     return 0
@@ -1461,6 +1462,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     task_finalize.add_argument("--task-id", required=True)
     task_finalize.add_argument("--exit-code", type=int, required=True)
+    task_finalize.add_argument("--terminal-reason", default="PROCESS_EXITED")
 
     task_history = subparsers.add_parser("task-history")
     task_history.add_argument(
