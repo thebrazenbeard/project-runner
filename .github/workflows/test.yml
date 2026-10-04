@@ -59,6 +59,24 @@ jobs:
       - name: Exercise registered Windows task lifecycle
         shell: pwsh
         run: |
+          function Wait-ForTaskHistory {
+            param(
+              [string]$TasksRoot,
+              [string]$Name,
+              [int]$TimeoutSeconds = 30
+            )
+            $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+            do {
+              $history = project-runner task-history --tasks-root $TasksRoot | ConvertFrom-Json
+              $match = @($history.tasks | Where-Object { $_.name -eq $Name }) | Select-Object -First 1
+              if ($null -ne $match) {
+                return $match
+              }
+              Start-Sleep -Milliseconds 500
+            } while ([DateTime]::UtcNow -lt $deadline)
+            return $null
+          }
+
           $tasksRoot = Join-Path $env:RUNNER_TEMP "project-runner-task-monitor"
           .\scripts\Start-ProjectRunnerTask.ps1 `
             -Name "ci-task-monitor" `
@@ -66,22 +84,21 @@ jobs:
             -Repository "$env:GITHUB_REPOSITORY" `
             -Lane "windows-ci" `
             -TasksRoot $tasksRoot `
-            -Command "Start-Sleep -Seconds 5; exit 0" | Out-Null
+            -Command "Start-Sleep -Seconds 2; exit 0" | Out-Null
           $snapshot = .\scripts\Watch-ProjectRunnerTasks.ps1 -TasksRoot $tasksRoot -Once | Out-String
           Write-Host $snapshot
           if ($snapshot -notmatch "ci-task-monitor" -or $snapshot -notmatch "RUNNING") {
             throw "task monitor did not observe the supervised task as RUNNING"
           }
-          Start-Sleep -Seconds 7
+
+          $completed = Wait-ForTaskHistory -TasksRoot $tasksRoot -Name "ci-task-monitor"
+          if ($null -eq $completed -or $completed.state -ne "COMPLETED" -or $completed.exit_code -ne 0) {
+            throw "completed task did not receive an authoritative terminal receipt"
+          }
           $liveAfter = .\scripts\Watch-ProjectRunnerTasks.ps1 -TasksRoot $tasksRoot -Once | Out-String
           Write-Host $liveAfter
           if ($liveAfter -match "ci-task-monitor") {
             throw "completed task remained in the live task set"
-          }
-          $history = project-runner task-history --tasks-root $tasksRoot | ConvertFrom-Json
-          $completed = @($history.tasks | Where-Object { $_.name -eq "ci-task-monitor" }) | Select-Object -First 1
-          if ($null -eq $completed -or $completed.state -ne "COMPLETED" -or $completed.exit_code -ne 0) {
-            throw "completed task did not receive an authoritative terminal receipt"
           }
 
           .\scripts\Start-ProjectRunnerTask.ps1 `
@@ -89,9 +106,7 @@ jobs:
             -Owner "github-actions" `
             -TasksRoot $tasksRoot `
             -Command "exit 7" | Out-Null
-          Start-Sleep -Seconds 2
-          $history = project-runner task-history --tasks-root $tasksRoot | ConvertFrom-Json
-          $failed = @($history.tasks | Where-Object { $_.name -eq "ci-task-failure" }) | Select-Object -First 1
+          $failed = Wait-ForTaskHistory -TasksRoot $tasksRoot -Name "ci-task-failure"
           if ($null -eq $failed -or $failed.state -ne "FAILED" -or $failed.exit_code -ne 7) {
             throw "failed task did not preserve its nonzero exit code"
           }
