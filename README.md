@@ -112,9 +112,9 @@ Launch a tracked background task with:
       -Lane "lane-b" `
       -Command "python train.py"
 
-Tracked launches run through `Invoke-ProjectRunnerTaskSupervisor.ps1`. The
+Tracked launches run through the Python `runner.task_supervisor` module. The
 supervisor registers itself as the live task root, launches the requested command,
-waits for it to terminate, captures its exit code, and writes a terminal receipt.
+waits for it to terminate, captures the real process return code, and writes a terminal receipt.
 Exit code `0` becomes `COMPLETED`; a nonzero exit code becomes `FAILED`.
 Terminal tasks are atomically moved from `active\` to `history\` instead of
 remaining in the live monitor as dead PIDs.
