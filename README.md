@@ -97,6 +97,44 @@ This first operator route is intentionally read-only. A GitHub token's technical
 
 See docs/OPERATOR_EXECUTION_V1.md.
 
+## Local background-task monitor (Windows / Lappy)
+
+Project Runner can keep a local registry of background processes that it explicitly owns.
+This is intentionally registration-based: it does not guess that every `python.exe`,
+`pwsh.exe`, or `git.exe` on a shared workstation belongs to Project Runner.
+
+Launch a tracked background task with:
+
+    powershell -NoProfile -File .\scripts\Start-ProjectRunnerTask.ps1 `
+      -Name "model-training-lane-b" `
+      -Repository "thebrazenbeard/vera_model_training" `
+      -Lane "lane-b" `
+      -Command "python train.py"
+
+The launcher redirects stdout/stderr to per-launch log files and registers the root
+PID, process-start identity, repository/worktree, lane, owner, optional WorkUnit,
+working directory, and display command. By default Windows state is stored under
+`%LOCALAPPDATA%\ProjectRunner\tasks`; set `PROJECT_RUNNER_TASKS_ROOT` or pass
+`-TasksRoot` to select another local state directory.
+
+Open the read-only live dashboard with:
+
+    powershell -NoProfile -File .\scripts\Watch-ProjectRunnerTasks.ps1
+
+Use `-Once` for one snapshot and `-IncludeCommand` to display command metadata.
+The dashboard aggregates the registered root process and its live descendants for
+CPU/RAM reporting. States include `RUNNING`, `ORPHANED`, `PID_REUSED`, and
+`INVALID_RECORD`. PID reuse is checked against the recorded process start time so
+an unrelated later process is not silently attributed to an old task.
+
+The same registry is available as JSON for automation:
+
+    project-runner task-status --tasks-root "$env:LOCALAPPDATA\ProjectRunner\tasks"
+
+Existing processes are not retroactively claimed. They can be registered explicitly
+with `project-runner task-register` when their ownership and PID are already known.
+The monitor itself is observability-only: it has no stop/kill action.
+
 ## Durable portfolio currentness
 
 Project Runner can now collect registered dependency refs itself and persist the resulting scheduler state:
