@@ -170,3 +170,13 @@ def test_task_reconcile_archives_missing_process_as_unknown_exit(tmp_path, capsy
     assert historical["state"] == "UNKNOWN_EXIT"
     assert historical["exit_code"] is None
     assert historical["terminal_reason"] == "PROCESS_GONE_WITHOUT_FINAL_RECEIPT"
+
+
+def test_task_finalize_rejects_unsafe_task_id(tmp_path):
+    with pytest.raises(ValueError, match="invalid task id"):
+        main([
+            "task-finalize",
+            "--tasks-root", str(tmp_path / "tasks"),
+            "--task-id", "../escape",
+            "--exit-code", "0",
+        ])
