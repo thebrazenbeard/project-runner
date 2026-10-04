@@ -152,19 +152,19 @@ def plan_wave_admission(
             ))
             continue
 
-        if item.action in _INERT_ACTIONS or item.effect_ceiling == "NO_EFFECT":
+        if item.action in _INERT_ACTIONS:
             deferred.append(WaveDeferral(
                 subject_kind=item.subject_kind,
                 subject_id=item.subject_id,
                 family_id=item.family_id,
                 lead_identity=item.lead_identity,
                 priority=item.priority,
-                reason="INERT_OR_NO_EFFECT",
+                reason="INERT_ACTION",
                 collision_keys=keys,
             ))
             continue
 
-        if item.effect_ceiling != "SOURCE_ONLY":
+        if item.effect_ceiling not in {"SOURCE_ONLY", "NO_EFFECT"}:
             raise ValueError(
                 f"wave item exceeds source-only admission ceiling: {item.subject_id}"
             )
