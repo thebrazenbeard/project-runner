@@ -97,6 +97,67 @@ This first operator route is intentionally read-only. A GitHub token's technical
 
 See docs/OPERATOR_EXECUTION_V1.md.
 
+## Local background-task monitor (Windows / Lappy)
+
+Project Runner keeps an explicit local registry for background processes it owns and
+also discovers several live ChatGPT execution trees (Executor, Codex bridge workers,
+and named VERA workers) without pretending that every generic Python/PowerShell
+process belongs to ChatGPT.
+
+Launch a tracked background task from **any working directory** with:
+
+    project-runner task-start `
+      --name "model-training-lane-b" `
+      --repository "thebrazenbeard/vera_model_training" `
+      --lane "lane-b" `
+      --working-directory "C:\path\to\vera_model_training" `
+      --command "python train.py"
+
+The CLI and all task-status/history/reconcile commands share the same default task
+root: `PROJECT_RUNNER_TASKS_ROOT` when set, otherwise
+`%LOCALAPPDATA%\ProjectRunner\tasks` on Windows. They therefore do not depend on
+the shell's current directory.
+
+`task-start` uses `cmd.exe` by default for bounded noninteractive execution.
+Use `--shell powershell` only when the task command requires PowerShell syntax.
+The checkout-local `scripts\Start-ProjectRunnerTask.ps1` compatibility launcher
+retains its historical PowerShell command semantics.
+
+Tracked launches run through the Python `runner.task_supervisor` module. The
+supervisor registers itself as the live task root, launches the requested command,
+waits for it to terminate, captures the real process return code, and writes a terminal receipt.
+Exit code `0` becomes `COMPLETED`; a nonzero exit code becomes `FAILED`.
+Terminal tasks are atomically moved from `active\` to `history\` instead of
+remaining in the live monitor as dead PIDs.
+
+By default Windows state is stored under
+`%LOCALAPPDATA%\ProjectRunner\tasks`; set `PROJECT_RUNNER_TASKS_ROOT` or pass
+`--tasks-root` to a Project Runner task command to select another local state
+directory.
+
+Open the live dashboard with:
+
+    powershell -NoProfile -File .\scripts\Watch-ProjectRunnerTasks.ps1
+
+Use `-Once` for one snapshot, `-IncludeCommand` to display command metadata,
+and `-History` to display terminal task history below the live set. The live
+dashboard reports registered Project Runner tasks plus discovered ChatGPT process
+trees and labels their attribution strength (`EXACT`, `STRONG`, or
+`HEURISTIC`).
+
+An `ORPHANED` record is now exceptional: the registered supervisor disappeared
+before an authoritative terminal receipt was written. Reconcile such stale records
+without inventing an exit code with:
+
+    project-runner task-reconcile --tasks-root "$env:LOCALAPPDATA\ProjectRunner\tasks"
+
+Reconciliation moves dead unresolved records to history as `UNKNOWN_EXIT` with
+`PROCESS_GONE_WITHOUT_FINAL_RECEIPT`. Historical state is available as JSON with:
+
+    project-runner task-history --tasks-root "$env:LOCALAPPDATA\ProjectRunner\tasks"
+
+The monitor remains observability-only: it has no stop/kill action.
+
 ## Durable portfolio currentness
 
 Project Runner can now collect registered dependency refs itself and persist the resulting scheduler state:

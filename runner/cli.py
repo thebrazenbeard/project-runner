@@ -62,6 +62,15 @@ from .queue_consumer import (
     summarize_queue_state,
 )
 from .reference_worker import run_reference_read_worker_once
+from .task_monitor import (
+    default_tasks_root,
+    finalize_task,
+    reconcile_orphaned_tasks,
+    register_task,
+    summarize_task_history,
+    summarize_tasks,
+)
+from .task_supervisor import launch_background_task
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import (
@@ -935,6 +944,77 @@ def _run_inspection(args) -> int:
     return 0 if result.status is WorkUnitStatus.COMPLETE else 2
 
 
+def _task_start(args) -> int:
+    launch = launch_background_task(
+        name=args.name,
+        command=args.task_command,
+        owner=args.owner,
+        repository=args.repository,
+        worktree=args.worktree,
+        lane=args.lane,
+        work_unit=args.work_unit,
+        display_command=args.display_command,
+        shell=args.shell,
+        working_directory=args.working_directory,
+        tasks_root=args.tasks_root,
+        registration_timeout_seconds=args.registration_timeout,
+    )
+    print(json.dumps(launch, sort_keys=True))
+    return 0
+
+
+def _task_register(args) -> int:
+    task = register_task(
+        args.tasks_root,
+        name=args.name,
+        pid=args.pid,
+        owner=args.owner,
+        repository=args.repository,
+        worktree=args.worktree,
+        lane=args.lane,
+        work_unit=args.work_unit,
+        command=args.display_command,
+        shell=args.shell,
+        working_directory=args.working_directory,
+        process_started_at_utc=args.process_started_at_utc,
+        stdout_log=args.stdout_log,
+        stderr_log=args.stderr_log,
+    )
+    print(json.dumps({"mode": "PROJECT_RUNNER_TASK_REGISTER_V1", "task": task}, sort_keys=True))
+    return 0
+
+
+def _task_status(args) -> int:
+    print(json.dumps(summarize_tasks(args.tasks_root), sort_keys=True))
+    return 0
+
+
+def _task_finalize(args) -> int:
+    task = finalize_task(
+        args.tasks_root,
+        task_id=args.task_id,
+        exit_code=args.exit_code,
+        terminal_reason=args.terminal_reason,
+    )
+    print(json.dumps({"mode": "PROJECT_RUNNER_TASK_FINALIZE_V1", "task": task}, sort_keys=True))
+    return 0
+
+
+def _task_history(args) -> int:
+    print(json.dumps(summarize_task_history(args.tasks_root), sort_keys=True))
+    return 0
+
+
+def _task_reconcile(args) -> int:
+    tasks = reconcile_orphaned_tasks(args.tasks_root)
+    print(json.dumps({
+        "mode": "PROJECT_RUNNER_TASK_RECONCILE_V1",
+        "reconciled": len(tasks),
+        "tasks": tasks,
+    }, sort_keys=True))
+    return 0
+
+
 def _operator_status(args) -> int:
     if args.detailed:
         _require_public_safe_reporting()
@@ -1370,6 +1450,87 @@ def main(argv: Sequence[str] | None = None) -> int:
     run_inspection.add_argument("--holder", default="project-runner-cli")
     run_inspection.add_argument("--lease-ttl", type=float, default=300.0)
 
+    task_start = subparsers.add_parser("task-start")
+    task_start.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=default_tasks_root(),
+    )
+    task_start.add_argument("--name", required=True)
+    task_start.add_argument("--command", dest="task_command", required=True)
+    task_start.add_argument("--owner", default="chatgpt")
+    task_start.add_argument("--repository")
+    task_start.add_argument("--worktree")
+    task_start.add_argument("--lane")
+    task_start.add_argument("--work-unit")
+    task_start.add_argument("--display-command")
+    task_start.add_argument(
+        "--shell",
+        choices=("cmd", "powershell"),
+        default="cmd",
+    )
+    task_start.add_argument(
+        "--working-directory",
+        type=Path,
+        default=Path.cwd(),
+    )
+    task_start.add_argument(
+        "--registration-timeout",
+        type=float,
+        default=5.0,
+    )
+
+    task_register = subparsers.add_parser("task-register")
+    task_register.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=default_tasks_root(),
+    )
+    task_register.add_argument("--name", required=True)
+    task_register.add_argument("--pid", type=int, required=True)
+    task_register.add_argument("--owner", default="project-runner")
+    task_register.add_argument("--repository")
+    task_register.add_argument("--worktree")
+    task_register.add_argument("--lane")
+    task_register.add_argument("--work-unit")
+    task_register.add_argument("--command", dest="display_command")
+    task_register.add_argument("--shell", choices=("cmd", "powershell"))
+    task_register.add_argument("--working-directory")
+    task_register.add_argument("--process-started-at-utc")
+    task_register.add_argument("--stdout-log")
+    task_register.add_argument("--stderr-log")
+
+    task_status = subparsers.add_parser("task-status")
+    task_status.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=default_tasks_root(),
+    )
+
+    task_finalize = subparsers.add_parser("task-finalize")
+    task_finalize.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=default_tasks_root(),
+    )
+    task_finalize.add_argument("--task-id", required=True)
+    task_finalize.add_argument("--exit-code", type=int, required=True)
+    task_finalize.add_argument("--terminal-reason", default="PROCESS_EXITED")
+
+    task_history = subparsers.add_parser("task-history")
+    task_history.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=default_tasks_root(),
+    )
+
+    task_reconcile = subparsers.add_parser("task-reconcile")
+    task_reconcile.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=default_tasks_root(),
+    )
+
     operator_status = subparsers.add_parser("operator-status")
     operator_status.add_argument(
         "--state-db",
@@ -1600,6 +1761,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     if args.command == "run-inspection":
         return _run_inspection(args)
+    if args.command == "task-start":
+        return _task_start(args)
+    if args.command == "task-register":
+        return _task_register(args)
+    if args.command == "task-status":
+        return _task_status(args)
+    if args.command == "task-finalize":
+        return _task_finalize(args)
+    if args.command == "task-history":
+        return _task_history(args)
+    if args.command == "task-reconcile":
+        return _task_reconcile(args)
     if args.command == "operator-status":
         return _operator_status(args)
     if args.command == "portfolio-cycle":
