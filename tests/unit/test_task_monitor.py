@@ -285,3 +285,58 @@ def test_task_process_identity_rejects_reused_pid(monkeypatch):
         lambda pid: "2026-10-04T12:05:00+00:00",
     )
     assert task_monitor_module._process_matches_record(record) is False
+
+
+def test_task_status_filters_by_lane(tmp_path, capsys):
+    tasks_root = tmp_path / "tasks"
+    for name, lane in (("lane-a-task", "lane-a"), ("lane-b-task", "lane-b")):
+        assert main([
+            "task-register",
+            "--tasks-root", str(tasks_root),
+            "--name", name,
+            "--pid", str(os.getpid()),
+            "--owner", "test",
+            "--lane", lane,
+        ]) == 0
+        capsys.readouterr()
+
+    assert main([
+        "task-status",
+        "--tasks-root", str(tasks_root),
+        "--lane", "lane-b",
+    ]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert [task["name"] for task in status["tasks"]] == ["lane-b-task"]
+    assert status["lane_counts"] == {"lane-b": {"RUNNING": 1}}
+
+
+def test_task_status_marks_reused_pid_distinct_from_missing_process(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    tasks_root = tmp_path / "tasks"
+    assert main([
+        "task-register",
+        "--tasks-root", str(tasks_root),
+        "--name", "reused-pid",
+        "--pid", "4242",
+        "--owner", "test",
+        "--process-started-at-utc", "2026-10-04T12:00:00+00:00",
+    ]) == 0
+    capsys.readouterr()
+
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_is_running",
+        lambda pid: pid == 4242,
+    )
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_started_at_utc",
+        lambda pid: "2026-10-04T12:05:00+00:00",
+    )
+
+    assert main(["task-status", "--tasks-root", str(tasks_root)]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["tasks"][0]["state"] == "PID_REUSED"
