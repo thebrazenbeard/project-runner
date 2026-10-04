@@ -474,6 +474,7 @@ def _portfolio_wave_plan(
     max_parallel: int,
     max_per_identity: int,
     max_per_family: int,
+    max_per_lane: int | None,
     occupied_collision_keys: Sequence[str],
 ) -> int:
     wave_bytes = wave_path.read_bytes()
@@ -485,6 +486,7 @@ def _portfolio_wave_plan(
             max_parallel=max_parallel,
             max_per_identity=max_per_identity,
             max_per_family=max_per_family,
+            max_per_lane=max_per_lane,
         ),
         occupied_collision_keys=occupied_collision_keys,
     )
@@ -499,6 +501,10 @@ def _portfolio_wave_plan(
             "corpus_binding": dict(wave.corpus_binding),
         },
         "summary": plan.summary(),
+        "lane_assignments": {
+            f"{item.subject_kind}:{item.subject_id}": item.effective_lane
+            for item in wave.items
+        },
         "selected": [
             {
                 "subject_kind": item.subject_kind,
@@ -985,7 +991,10 @@ def _task_register(args) -> int:
 
 
 def _task_status(args) -> int:
-    print(json.dumps(summarize_tasks(args.tasks_root), sort_keys=True))
+    print(json.dumps(
+        summarize_tasks(args.tasks_root, lane=args.lane),
+        sort_keys=True,
+    ))
     return 0
 
 
@@ -1001,7 +1010,10 @@ def _task_finalize(args) -> int:
 
 
 def _task_history(args) -> int:
-    print(json.dumps(summarize_task_history(args.tasks_root), sort_keys=True))
+    print(json.dumps(
+        summarize_task_history(args.tasks_root, lane=args.lane),
+        sort_keys=True,
+    ))
     return 0
 
 
@@ -1339,6 +1351,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     wave_plan.add_argument("--max-per-identity", type=int, required=True)
     wave_plan.add_argument("--max-per-family", type=int, required=True)
     wave_plan.add_argument(
+        "--max-per-lane",
+        type=int,
+        help="optional capacity ceiling for each explicit/effective lane",
+    )
+    wave_plan.add_argument(
         "--occupied-collision-key",
         action="append",
         default=[],
@@ -1506,6 +1523,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         default=default_tasks_root(),
     )
+    task_status.add_argument("--lane")
 
     task_finalize = subparsers.add_parser("task-finalize")
     task_finalize.add_argument(
@@ -1523,6 +1541,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         default=default_tasks_root(),
     )
+    task_history.add_argument("--lane")
 
     task_reconcile = subparsers.add_parser("task-reconcile")
     task_reconcile.add_argument(
@@ -1695,6 +1714,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_parallel=args.max_parallel,
             max_per_identity=args.max_per_identity,
             max_per_family=args.max_per_family,
+            max_per_lane=args.max_per_lane,
             occupied_collision_keys=args.occupied_collision_key,
         )
     if args.command == "portfolio-operator-bindings":

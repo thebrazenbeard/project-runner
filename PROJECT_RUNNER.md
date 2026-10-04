@@ -138,6 +138,18 @@ Qualified non-INSPECT work is handed off through a durable worker-route outbox. 
 
 The evidence digest binds the operator's reconciliation record; it is not independently self-authenticating proof of the external event.
 
+## Multi-lane scheduling and local task identity
+
+Project Runner may classify advancement work into explicit scheduling lanes. Lane membership is routing/capacity metadata only; it is not repository authority, execution authority, protected-effect authority, or a new semantic work identity. When no explicit lane is declared, the lead identity is the effective lane for backward-compatible scheduling.
+
+Global collision keys remain global across lanes. The planner may enforce a separate per-lane capacity in addition to global, per-identity, and per-family ceilings. A saturated lane does not stall unrelated eligible lanes, but a different lane never bypasses a collision or authority gate.
+
+Lane assignments are bound by the admission-plan digest but are intentionally excluded from the selected work payload consumed by the operator bridge. Moving the same work between lanes therefore changes the scheduling plan without silently redefining the durable downstream work subject.
+
+The local Windows task monitor may filter and summarize tasks by lane. When a registered task includes process creation time, liveness must bind both PID and creation time so PID reuse cannot impersonate the registered supervisor. An unverifiable process identity remains nonterminal and must not be reconciled as dead merely because creation-time readback failed.
+
+See `docs/MULTI_LANE_TASK_HANDLING_V1.md`.
+
 ## Current effect ceiling
 
 M6 does not grant standing mutation authority over another repository, deploy production systems, create credentials, invoke Custom GPTs, or infer authority from connector/token permission. The first operator route is intentionally read-only.
