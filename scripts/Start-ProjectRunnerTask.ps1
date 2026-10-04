@@ -79,7 +79,19 @@ try {
     if ($Lane) { $registerArgs += @("--lane", $Lane) }
     if ($WorkUnit) { $registerArgs += @("--work-unit", $WorkUnit) }
 
-    $registration = & project-runner @registerArgs
+    $runnerCommand = Get-Command project-runner -ErrorAction SilentlyContinue
+    if ($null -ne $runnerCommand) {
+        $registration = & $runnerCommand.Source @registerArgs
+    }
+    elseif ($null -ne (Get-Command py -ErrorAction SilentlyContinue)) {
+        $registration = & py -m runner.cli @registerArgs
+    }
+    elseif ($null -ne (Get-Command python -ErrorAction SilentlyContinue)) {
+        $registration = & python -m runner.cli @registerArgs
+    }
+    else {
+        throw "Project Runner is installed but no usable Python launcher was found"
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "project-runner task registration failed with exit code $LASTEXITCODE"
     }
