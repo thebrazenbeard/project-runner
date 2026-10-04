@@ -41,16 +41,23 @@ def test_task_register_and_status_round_trip(tmp_path, capsys):
 def test_windows_task_launcher_and_read_only_monitor_are_shipped():
     root = Path(__file__).resolve().parents[2]
     launcher_path = root / "scripts" / "Start-ProjectRunnerTask.ps1"
+    supervisor_path = root / "scripts" / "Invoke-ProjectRunnerTaskSupervisor.ps1"
     monitor_path = root / "scripts" / "Watch-ProjectRunnerTasks.ps1"
 
     assert launcher_path.exists()
+    assert supervisor_path.exists()
     assert monitor_path.exists()
 
     launcher = launcher_path.read_text(encoding="utf-8")
+    supervisor = supervisor_path.read_text(encoding="utf-8")
     monitor = monitor_path.read_text(encoding="utf-8")
     assert "Start-Process" in launcher
-    assert "task-register" in launcher
-    assert "EncodedCommand" in launcher
+    assert "Invoke-ProjectRunnerTaskSupervisor.ps1" in launcher
+    assert "task-register" in supervisor
+    assert "task-finalize" in supervisor
+    assert "WaitForExit" in supervisor
+    assert "ExitCode" in supervisor
+    assert "EncodedCommand" in supervisor
     assert "Get-CimInstance Win32_Process" in monitor
     assert "Stop-Process" not in monitor
     assert "Remove-Item" not in monitor
@@ -81,3 +88,86 @@ def test_task_register_rejects_nonpositive_pid(tmp_path):
             "--name", "bad-task",
             "--pid", "0",
         ])
+
+
+def test_task_finalize_moves_success_to_history(tmp_path, capsys):
+    tasks_root = tmp_path / "tasks"
+
+    assert main([
+        "task-register",
+        "--tasks-root", str(tasks_root),
+        "--name", "successful-task",
+        "--pid", str(os.getpid()),
+        "--owner", "test",
+    ]) == 0
+    registered = json.loads(capsys.readouterr().out)["task"]
+    task_id = registered["task_id"]
+
+    assert main([
+        "task-finalize",
+        "--tasks-root", str(tasks_root),
+        "--task-id", task_id,
+        "--exit-code", "0",
+    ]) == 0
+    finalized = json.loads(capsys.readouterr().out)["task"]
+
+    assert finalized["state"] == "COMPLETED"
+    assert finalized["exit_code"] == 0
+    assert finalized["ended_at_utc"]
+    assert not (tasks_root / "active" / f"{task_id}.json").exists()
+    assert (tasks_root / "history" / f"{task_id}.json").exists()
+
+    assert main(["task-status", "--tasks-root", str(tasks_root)]) == 0
+    assert json.loads(capsys.readouterr().out)["tasks"] == []
+
+    assert main(["task-history", "--tasks-root", str(tasks_root)]) == 0
+    history = json.loads(capsys.readouterr().out)
+    assert history["tasks"][0]["state"] == "COMPLETED"
+
+
+def test_task_finalize_records_nonzero_exit_as_failed(tmp_path, capsys):
+    tasks_root = tmp_path / "tasks"
+
+    assert main([
+        "task-register",
+        "--tasks-root", str(tasks_root),
+        "--name", "failed-task",
+        "--pid", str(os.getpid()),
+        "--owner", "test",
+    ]) == 0
+    task_id = json.loads(capsys.readouterr().out)["task"]["task_id"]
+
+    assert main([
+        "task-finalize",
+        "--tasks-root", str(tasks_root),
+        "--task-id", task_id,
+        "--exit-code", "7",
+    ]) == 0
+    finalized = json.loads(capsys.readouterr().out)["task"]
+    assert finalized["state"] == "FAILED"
+    assert finalized["exit_code"] == 7
+
+
+def test_task_reconcile_archives_missing_process_as_unknown_exit(tmp_path, capsys):
+    tasks_root = tmp_path / "tasks"
+
+    assert main([
+        "task-register",
+        "--tasks-root", str(tasks_root),
+        "--name", "lost-supervisor",
+        "--pid", "2147483646",
+        "--owner", "test",
+    ]) == 0
+    task_id = json.loads(capsys.readouterr().out)["task"]["task_id"]
+
+    assert main(["task-reconcile", "--tasks-root", str(tasks_root)]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["reconciled"] == 1
+
+    assert not (tasks_root / "active" / f"{task_id}.json").exists()
+    historical = json.loads(
+        (tasks_root / "history" / f"{task_id}.json").read_text(encoding="utf-8")
+    )
+    assert historical["state"] == "UNKNOWN_EXIT"
+    assert historical["exit_code"] is None
+    assert historical["terminal_reason"] == "PROCESS_GONE_WITHOUT_FINAL_RECEIPT"
