@@ -73,3 +73,12 @@ jobs:
             throw "task monitor did not observe the registered process as RUNNING"
           }
           project-runner task-status --tasks-root $tasksRoot
+          Start-Sleep -Seconds 21
+          $orphanSnapshot = .\scripts\Watch-ProjectRunnerTasks.ps1 -TasksRoot $tasksRoot -Once | Out-String
+          Write-Host $orphanSnapshot
+          if ($orphanSnapshot -notmatch "ORPHANED") {
+            throw "task monitor did not render an exited registered process as ORPHANED"
+          }
+          if ($orphanSnapshot -match "INVALID_RECORD") {
+            throw "task monitor misclassified a valid orphaned record as INVALID_RECORD"
+          }
