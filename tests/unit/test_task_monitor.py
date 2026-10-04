@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import runner.cli as cli_module
+import runner.task_monitor as task_monitor_module
 from runner.cli import main
 from runner.task_supervisor import _windows_command_argv
 
@@ -266,3 +267,21 @@ def test_task_finalize_rejects_unsafe_task_id(tmp_path):
             "--task-id", "../escape",
             "--exit-code", "0",
         ])
+
+
+def test_task_process_identity_rejects_reused_pid(monkeypatch):
+    record = {
+        "pid": 4242,
+        "process_started_at_utc": "2026-10-04T12:00:00+00:00",
+    }
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_is_running",
+        lambda pid: pid == 4242,
+    )
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_started_at_utc",
+        lambda pid: "2026-10-04T12:05:00+00:00",
+    )
+    assert task_monitor_module._process_matches_record(record) is False
