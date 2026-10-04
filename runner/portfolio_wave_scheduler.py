@@ -18,6 +18,7 @@ class WaveExecutionBudget:
     max_parallel: int
     max_per_identity: int
     max_per_family: int
+    max_per_lane: int | None = None
 
     def validate(self) -> None:
         if type(self.max_parallel) is not int or self.max_parallel < 1:
@@ -30,6 +31,11 @@ class WaveExecutionBudget:
             raise ValueError("max_per_identity cannot exceed max_parallel")
         if self.max_per_family > self.max_parallel:
             raise ValueError("max_per_family cannot exceed max_parallel")
+        if self.max_per_lane is not None:
+            if type(self.max_per_lane) is not int or self.max_per_lane < 1:
+                raise ValueError("max_per_lane must be a positive integer")
+            if self.max_per_lane > self.max_parallel:
+                raise ValueError("max_per_lane cannot exceed max_parallel")
 
 
 @dataclass(frozen=True)
@@ -38,6 +44,7 @@ class WaveAdmission:
     subject_id: str
     family_id: str
     lead_identity: str
+    lane_id: str
     reviewer_identities: tuple[str, ...]
     priority: str
     action: str
@@ -55,6 +62,7 @@ class WaveDeferral:
     subject_id: str
     family_id: str
     lead_identity: str
+    lane_id: str
     priority: str
     reason: str
     collision_keys: tuple[str, ...]
@@ -74,11 +82,15 @@ class WaveAdmissionPlan:
             "max_parallel": self.budget.max_parallel,
             "max_per_identity": self.budget.max_per_identity,
             "max_per_family": self.budget.max_per_family,
+            "max_per_lane": self.budget.max_per_lane,
             "selected_by_identity": dict(sorted(Counter(
                 item.lead_identity for item in self.selected
             ).items())),
             "selected_by_priority": dict(sorted(Counter(
                 item.priority for item in self.selected
+            ).items())),
+            "selected_by_lane": dict(sorted(Counter(
+                item.lane_id for item in self.selected
             ).items())),
             "selected_by_family": dict(sorted(Counter(
                 item.family_id for item in self.selected
@@ -136,9 +148,11 @@ def plan_wave_admission(
     reserved = set(occupied)
     identity_load: Counter[str] = Counter()
     family_load: Counter[str] = Counter()
+    lane_load: Counter[str] = Counter()
 
     for item in sorted(wave.items, key=_admission_sort_key):
         keys = collision_keys(item)
+        lane_id = item.effective_lane
 
         if item.execution_state != "QUEUED":
             deferred.append(WaveDeferral(
@@ -146,6 +160,7 @@ def plan_wave_admission(
                 subject_id=item.subject_id,
                 family_id=item.family_id,
                 lead_identity=item.lead_identity,
+                lane_id=lane_id,
                 priority=item.priority,
                 reason="NOT_QUEUED",
                 collision_keys=keys,
@@ -158,6 +173,7 @@ def plan_wave_admission(
                 subject_id=item.subject_id,
                 family_id=item.family_id,
                 lead_identity=item.lead_identity,
+                lane_id=lane_id,
                 priority=item.priority,
                 reason="INERT_ACTION",
                 collision_keys=keys,
@@ -175,6 +191,7 @@ def plan_wave_admission(
                 subject_id=item.subject_id,
                 family_id=item.family_id,
                 lead_identity=item.lead_identity,
+                lane_id=lane_id,
                 priority=item.priority,
                 reason="COLLISION",
                 collision_keys=keys,
@@ -187,8 +204,25 @@ def plan_wave_admission(
                 subject_id=item.subject_id,
                 family_id=item.family_id,
                 lead_identity=item.lead_identity,
+                lane_id=lane_id,
                 priority=item.priority,
                 reason="GLOBAL_BUDGET",
+                collision_keys=keys,
+            ))
+            continue
+
+        if (
+            budget.max_per_lane is not None
+            and lane_load[lane_id] >= budget.max_per_lane
+        ):
+            deferred.append(WaveDeferral(
+                subject_kind=item.subject_kind,
+                subject_id=item.subject_id,
+                family_id=item.family_id,
+                lead_identity=item.lead_identity,
+                lane_id=lane_id,
+                priority=item.priority,
+                reason="LANE_BUDGET",
                 collision_keys=keys,
             ))
             continue
@@ -199,6 +233,7 @@ def plan_wave_admission(
                 subject_id=item.subject_id,
                 family_id=item.family_id,
                 lead_identity=item.lead_identity,
+                lane_id=lane_id,
                 priority=item.priority,
                 reason="IDENTITY_BUDGET",
                 collision_keys=keys,
@@ -211,6 +246,7 @@ def plan_wave_admission(
                 subject_id=item.subject_id,
                 family_id=item.family_id,
                 lead_identity=item.lead_identity,
+                lane_id=lane_id,
                 priority=item.priority,
                 reason="FAMILY_BUDGET",
                 collision_keys=keys,
@@ -222,6 +258,7 @@ def plan_wave_admission(
             subject_id=item.subject_id,
             family_id=item.family_id,
             lead_identity=item.lead_identity,
+            lane_id=lane_id,
             reviewer_identities=item.reviewer_identities,
             priority=item.priority,
             action=item.action,
@@ -234,6 +271,7 @@ def plan_wave_admission(
         ))
         identity_load[item.lead_identity] += 1
         family_load[item.family_id] += 1
+        lane_load[lane_id] += 1
         reserved.update(keys)
 
     return WaveAdmissionPlan(

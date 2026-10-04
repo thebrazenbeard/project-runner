@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import errno
 import json
 import os
@@ -104,38 +104,61 @@ def reconcile_orphaned_tasks(tasks_root: Path) -> list[dict[str, Any]]:
         record = _load_task_record(path)
         if record is None:
             continue
-        if _process_is_running(int(record["pid"])):
+        runtime_state = _process_runtime_state(record)
+        if runtime_state in {"RUNNING", "IDENTITY_UNVERIFIED"}:
             continue
+        reason = (
+            "PROCESS_IDENTITY_REUSED_WITHOUT_FINAL_RECEIPT"
+            if runtime_state == "PID_REUSED"
+            else "PROCESS_GONE_WITHOUT_FINAL_RECEIPT"
+        )
         reconciled.append(
             _archive_terminal_task(
                 tasks_root,
                 task_id=str(record["task_id"]),
                 state="UNKNOWN_EXIT",
                 exit_code=None,
-                terminal_reason="PROCESS_GONE_WITHOUT_FINAL_RECEIPT",
+                terminal_reason=reason,
             )
         )
     return reconciled
 
 
-def summarize_tasks(tasks_root: Path) -> dict[str, Any]:
+def summarize_tasks(
+    tasks_root: Path,
+    *,
+    lane: str | None = None,
+) -> dict[str, Any]:
     active = Path(tasks_root) / "active"
     tasks: list[dict[str, Any]] = []
+    lane_counts: dict[str, dict[str, int]] = {}
     if active.exists():
         for path in sorted(active.glob("*.json")):
             record = _load_task_record(path)
             if record is None:
                 continue
+            if lane is not None and record.get("lane") != lane:
+                continue
             task = dict(record)
-            task["state"] = "RUNNING" if _process_is_running(int(task["pid"])) else "ORPHANED"
+            task["state"] = _process_runtime_state(task)
             tasks.append(task)
+            lane_id = str(task.get("lane") or "unassigned")
+            counts = lane_counts.setdefault(lane_id, {})
+            state = str(task["state"])
+            counts[state] = counts.get(state, 0) + 1
     return {
         "mode": "PROJECT_RUNNER_TASK_MONITOR_V1",
+        "lane_filter": lane,
+        "lane_counts": lane_counts,
         "tasks": tasks,
     }
 
 
-def summarize_task_history(tasks_root: Path) -> dict[str, Any]:
+def summarize_task_history(
+    tasks_root: Path,
+    *,
+    lane: str | None = None,
+) -> dict[str, Any]:
     history = Path(tasks_root) / "history"
     tasks: list[dict[str, Any]] = []
     if history.exists():
@@ -143,10 +166,13 @@ def summarize_task_history(tasks_root: Path) -> dict[str, Any]:
             record = _load_task_record(path)
             if record is None:
                 continue
+            if lane is not None and record.get("lane") != lane:
+                continue
             tasks.append(record)
     tasks.sort(key=lambda item: str(item.get("ended_at_utc") or ""), reverse=True)
     return {
         "mode": "PROJECT_RUNNER_TASK_HISTORY_V1",
+        "lane_filter": lane,
         "tasks": tasks,
     }
 
@@ -236,6 +262,57 @@ def _atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
         raise
 
 
+def _process_matches_record(record: dict[str, Any]) -> bool:
+    return _process_runtime_state(record) == "RUNNING"
+
+
+def _process_runtime_state(record: dict[str, Any]) -> str:
+    try:
+        pid = int(record["pid"])
+    except (KeyError, TypeError, ValueError):
+        return "IDENTITY_UNVERIFIED"
+    if not _process_is_running(pid):
+        return "ORPHANED"
+
+    expected = record.get("process_started_at_utc")
+    if expected is None:
+        return "RUNNING"
+    if not isinstance(expected, str) or not expected.strip():
+        return "IDENTITY_UNVERIFIED"
+
+    observed = _process_started_at_utc(pid)
+    if observed is None:
+        return "IDENTITY_UNVERIFIED"
+
+    match = _process_start_times_match(expected, observed)
+    if match is None:
+        return "IDENTITY_UNVERIFIED"
+    return "RUNNING" if match else "PID_REUSED"
+
+
+def _process_start_times_match(expected: str, observed: str) -> bool | None:
+    try:
+        expected_dt = datetime.fromisoformat(expected)
+        observed_dt = datetime.fromisoformat(observed)
+    except ValueError:
+        return None
+    if expected_dt.tzinfo is None or observed_dt.tzinfo is None:
+        return None
+    delta = abs(
+        (
+            expected_dt.astimezone(timezone.utc)
+            - observed_dt.astimezone(timezone.utc)
+        ).total_seconds()
+    )
+    return delta <= 1.0
+
+
+def _process_started_at_utc(pid: int) -> str | None:
+    if pid <= 0 or os.name != "nt":
+        return None
+    return _windows_process_started_at_utc(pid)
+
+
 def _process_is_running(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -277,5 +354,52 @@ def _windows_process_is_running(pid: int) -> bool:
         if not get_exit_code(handle, ctypes.byref(exit_code)):
             return False
         return exit_code.value == still_active
+    finally:
+        close_handle(handle)
+
+
+def _windows_process_started_at_utc(pid: int) -> str | None:
+    import ctypes
+    from ctypes import wintypes
+
+    process_query_limited_information = 0x1000
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    open_process = kernel32.OpenProcess
+    open_process.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    open_process.restype = wintypes.HANDLE
+    get_process_times = kernel32.GetProcessTimes
+    get_process_times.argtypes = (
+        wintypes.HANDLE,
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+        ctypes.POINTER(wintypes.FILETIME),
+    )
+    get_process_times.restype = wintypes.BOOL
+    close_handle = kernel32.CloseHandle
+    close_handle.argtypes = (wintypes.HANDLE,)
+    close_handle.restype = wintypes.BOOL
+
+    handle = open_process(process_query_limited_information, False, pid)
+    if not handle:
+        return None
+    try:
+        creation = wintypes.FILETIME()
+        exit_time = wintypes.FILETIME()
+        kernel = wintypes.FILETIME()
+        user = wintypes.FILETIME()
+        if not get_process_times(
+            handle,
+            ctypes.byref(creation),
+            ctypes.byref(exit_time),
+            ctypes.byref(kernel),
+            ctypes.byref(user),
+        ):
+            return None
+        ticks = (creation.dwHighDateTime << 32) | creation.dwLowDateTime
+        started = datetime(1601, 1, 1, tzinfo=timezone.utc) + timedelta(
+            microseconds=ticks / 10
+        )
+        return started.isoformat()
     finally:
         close_handle(handle)

@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 import runner.cli as cli_module
+import runner.task_monitor as task_monitor_module
 from runner.cli import main
 from runner.task_supervisor import _windows_command_argv
 
@@ -266,3 +267,113 @@ def test_task_finalize_rejects_unsafe_task_id(tmp_path):
             "--task-id", "../escape",
             "--exit-code", "0",
         ])
+
+
+def test_task_process_identity_rejects_reused_pid(monkeypatch):
+    record = {
+        "pid": 4242,
+        "process_started_at_utc": "2026-10-04T12:00:00+00:00",
+    }
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_is_running",
+        lambda pid: pid == 4242,
+    )
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_started_at_utc",
+        lambda pid: "2026-10-04T12:05:00+00:00",
+    )
+    assert task_monitor_module._process_matches_record(record) is False
+
+
+def test_task_status_filters_by_lane(tmp_path, capsys):
+    tasks_root = tmp_path / "tasks"
+    for name, lane in (("lane-a-task", "lane-a"), ("lane-b-task", "lane-b")):
+        assert main([
+            "task-register",
+            "--tasks-root", str(tasks_root),
+            "--name", name,
+            "--pid", str(os.getpid()),
+            "--owner", "test",
+            "--lane", lane,
+        ]) == 0
+        capsys.readouterr()
+
+    assert main([
+        "task-status",
+        "--tasks-root", str(tasks_root),
+        "--lane", "lane-b",
+    ]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert [task["name"] for task in status["tasks"]] == ["lane-b-task"]
+    assert status["lane_counts"] == {"lane-b": {"RUNNING": 1}}
+
+
+def test_task_status_marks_reused_pid_distinct_from_missing_process(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    tasks_root = tmp_path / "tasks"
+    assert main([
+        "task-register",
+        "--tasks-root", str(tasks_root),
+        "--name", "reused-pid",
+        "--pid", "4242",
+        "--owner", "test",
+        "--process-started-at-utc", "2026-10-04T12:00:00+00:00",
+    ]) == 0
+    capsys.readouterr()
+
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_is_running",
+        lambda pid: pid == 4242,
+    )
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_started_at_utc",
+        lambda pid: "2026-10-04T12:05:00+00:00",
+    )
+
+    assert main(["task-status", "--tasks-root", str(tasks_root)]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["tasks"][0]["state"] == "PID_REUSED"
+
+
+def test_unverifiable_process_identity_is_not_reconciled_as_dead(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    tasks_root = tmp_path / "tasks"
+    assert main([
+        "task-register",
+        "--tasks-root", str(tasks_root),
+        "--name", "identity-unknown",
+        "--pid", "4242",
+        "--owner", "test",
+        "--process-started-at-utc", "2026-10-04T12:00:00+00:00",
+    ]) == 0
+    capsys.readouterr()
+
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_is_running",
+        lambda pid: pid == 4242,
+    )
+    monkeypatch.setattr(
+        task_monitor_module,
+        "_process_started_at_utc",
+        lambda pid: None,
+    )
+
+    assert main(["task-status", "--tasks-root", str(tasks_root)]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["tasks"][0]["state"] == "IDENTITY_UNVERIFIED"
+
+    assert main(["task-reconcile", "--tasks-root", str(tasks_root)]) == 0
+    reconciliation = json.loads(capsys.readouterr().out)
+    assert reconciliation["reconciled"] == 0
+    assert len(list((tasks_root / "active").glob("*.json"))) == 1

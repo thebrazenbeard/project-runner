@@ -26,6 +26,11 @@ class AdvancementItem:
     review_gate: str
     frontier: str | None
     source_status: str
+    lane_id: str | None = None
+
+    @property
+    def effective_lane(self) -> str:
+        return self.lane_id or self.lead_identity
 
     @classmethod
     def from_mapping(cls, data: Mapping[str, object]) -> "AdvancementItem":
@@ -42,6 +47,12 @@ class AdvancementItem:
         raw_reviewers = data.get("reviewer_identities", [])
         if not isinstance(raw_reviewers, list):
             raise ValueError("reviewer_identities must be a list")
+        raw_lane = data.get("lane")
+        lane_id = None
+        if raw_lane is not None:
+            lane_id = str(raw_lane).strip()
+            if not lane_id:
+                raise ValueError("lane must not be empty")
         return cls(
             subject_kind=subject_kind,
             subject_id=str(data["subject_id"]),
@@ -61,6 +72,7 @@ class AdvancementItem:
                 else None
             ),
             source_status=str(data["source_status"]),
+            lane_id=lane_id,
         )
 
 
@@ -82,6 +94,9 @@ class AdvancementWave:
             "held": sum(item.execution_state == "HELD" for item in self.items),
             "by_identity": dict(sorted(Counter(
                 item.lead_identity for item in self.items
+            ).items())),
+            "by_lane": dict(sorted(Counter(
+                item.effective_lane for item in self.items
             ).items())),
             "by_action": dict(sorted(Counter(
                 item.action for item in self.items
