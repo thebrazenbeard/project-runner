@@ -4,7 +4,8 @@ param(
     [ValidateRange(1, 3600)]
     [int]$RefreshSeconds = 2,
     [switch]$Once,
-    [switch]$IncludeCommand
+    [switch]$IncludeCommand,
+    [switch]$History
 )
 
 Set-StrictMode -Version Latest
@@ -202,6 +203,7 @@ function Add-DiscoveredTaskRow {
 
 $TasksRoot = Resolve-ProjectRunnerTasksRoot $TasksRoot
 $activeRoot = Join-Path $TasksRoot "active"
+$historyRoot = Join-Path $TasksRoot "history"
 
 do {
     $now = [DateTimeOffset]::UtcNow
@@ -367,6 +369,50 @@ do {
         $rows |
             Sort-Object State, Origin, Task, PID |
             Format-Table -AutoSize
+    }
+
+    if ($History) {
+        Write-Host ""
+        Write-Host "Task History"
+        $historyRows = @()
+        if (Test-Path $historyRoot) {
+            foreach ($file in Get-ChildItem -Path $historyRoot -Filter "*.json" -File) {
+                try {
+                    $task = Get-Content -Raw -Path $file.FullName | ConvertFrom-Json
+                    if ($task.schema -ne "PROJECT_RUNNER_LOCAL_TASK_V1") { continue }
+                    $historyRows += [pscustomobject]@{
+                        Task = [string]$task.name
+                        State = [string]$task.state
+                        Exit = $task.exit_code
+                        Ended = [string]$task.ended_at_utc
+                        Runtime_s = if ($null -eq $task.duration_seconds) { "" } else { [Math]::Round([double]$task.duration_seconds, 1) }
+                        Repo = [string]$task.repository
+                        Lane = [string]$task.lane
+                        Reason = [string]$task.terminal_reason
+                    }
+                }
+                catch {
+                    $historyRows += [pscustomobject]@{
+                        Task = $file.BaseName
+                        State = "INVALID_RECORD"
+                        Exit = ""
+                        Ended = ""
+                        Runtime_s = ""
+                        Repo = ""
+                        Lane = ""
+                        Reason = ""
+                    }
+                }
+            }
+        }
+        if ($historyRows.Count -eq 0) {
+            Write-Host "No historical Project Runner task records."
+        }
+        else {
+            $historyRows |
+                Sort-Object Ended -Descending |
+                Format-Table -AutoSize
+        }
     }
 
     if ($Once) { break }
