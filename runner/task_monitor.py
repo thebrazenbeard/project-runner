@@ -24,6 +24,8 @@ def register_task(
     lane: str | None = None,
     work_unit: str | None = None,
     command: str | None = None,
+    working_directory: str | None = None,
+    process_started_at_utc: str | None = None,
     stdout_log: str | None = None,
     stderr_log: str | None = None,
 ) -> dict[str, Any]:
@@ -48,6 +50,8 @@ def register_task(
         "lane": lane,
         "work_unit": work_unit,
         "command": command,
+        "working_directory": working_directory,
+        "process_started_at_utc": process_started_at_utc,
         "stdout_log": stdout_log,
         "stderr_log": stderr_log,
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
