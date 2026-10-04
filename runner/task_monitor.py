@@ -67,13 +67,14 @@ def finalize_task(
     *,
     task_id: str,
     exit_code: int,
+    terminal_reason: str = "PROCESS_EXITED",
 ) -> dict[str, Any]:
     return _archive_terminal_task(
         tasks_root,
         task_id=task_id,
         state="COMPLETED" if exit_code == 0 else "FAILED",
         exit_code=exit_code,
-        terminal_reason="PROCESS_EXITED",
+        terminal_reason=terminal_reason,
     )
 
 
