@@ -109,10 +109,14 @@ do {
                     )
                 }
 
-                $cpuSeconds = ($liveProcesses | Measure-Object -Property CPU -Sum).Sum
-                $ramBytes = ($liveProcesses | Measure-Object -Property WorkingSet64 -Sum).Sum
-                if ($null -eq $cpuSeconds) { $cpuSeconds = 0 }
-                if ($null -eq $ramBytes) { $ramBytes = 0 }
+                if ($liveProcesses.Count -gt 0) {
+                    $cpuSeconds = ($liveProcesses | Measure-Object -Property CPU -Sum).Sum
+                    $ramBytes = ($liveProcesses | Measure-Object -Property WorkingSet64 -Sum).Sum
+                }
+                else {
+                    $cpuSeconds = 0
+                    $ramBytes = 0
+                }
 
                 try {
                     $started = [DateTimeOffset]::Parse([string]$task.started_at_utc)
