@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -265,3 +266,37 @@ def test_lane_budget_allows_independent_progress_without_bypassing_collisions():
         deferred.subject_id == "a2" and deferred.reason == "LANE_BUDGET"
         for deferred in planned.deferred
     )
+
+
+def test_wave_schema_accepts_explicit_lane_without_requiring_it_everywhere(
+    tmp_path,
+):
+    source = json.loads(
+        (ROOT / "portfolio" / "advancement_wave.public.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    source["items"][0]["lane"] = "integration"
+    path = tmp_path / "wave.json"
+    path.write_text(json.dumps(source), encoding="utf-8")
+
+    loaded = load_advancement_wave(path)
+    assert loaded.items[0].lane_id == "integration"
+    assert any(item.lane_id is None for item in loaded.items[1:])
+
+
+def test_lane_is_bound_in_plan_summary_but_not_a_collision_override():
+    shared_a = item("shared-a", repository="owner/shared", lead="ONE")
+    shared_b = item("shared-b", repository="owner/shared", lead="VOSS")
+    planned = plan_wave_admission(
+        wave(shared_a, shared_b),
+        budget=WaveExecutionBudget(
+            max_parallel=2,
+            max_per_identity=2,
+            max_per_family=2,
+            max_per_lane=2,
+        ),
+    )
+    assert [item.subject_id for item in planned.selected] == ["shared-a"]
+    assert planned.deferred[0].reason == "COLLISION"
+    assert planned.summary()["selected_by_lane"] == {"ONE": 1}
