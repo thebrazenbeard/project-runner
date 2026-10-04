@@ -223,3 +223,45 @@ def test_non_repository_surface_gets_explicit_collision_key():
         kind="workstream",
     )
     assert collision_keys(workstream) == ("surface:google drive staging",)
+
+
+def test_advancement_item_can_declare_explicit_lane():
+    mapped = AdvancementItem.from_mapping({
+        "subject_kind": "repository",
+        "subject_id": "research-a",
+        "repository": "owner/research-a",
+        "priority": "P1",
+        "family_id": "research",
+        "activity_state": "ACTIVE",
+        "lead_identity": "ONE",
+        "reviewer_identities": ["REZON"],
+        "action": "CURRENTNESS_AUDIT",
+        "execution_state": "QUEUED",
+        "effect_ceiling": "NO_EFFECT",
+        "review_gate": "EXACT_HEAD_REVIEW",
+        "frontier": "inspect",
+        "source_status": "queued",
+        "lane": "research",
+    })
+    assert mapped.lane_id == "research"
+
+
+def test_lane_budget_allows_independent_progress_without_bypassing_collisions():
+    planned = plan_wave_admission(
+        wave(
+            item("a1", priority="P0", lead="ONE", repository="owner/a1"),
+            item("a2", priority="P0", lead="ONE", repository="owner/a2"),
+            item("b1", priority="P0", lead="VOSS", repository="owner/b1"),
+        ),
+        budget=WaveExecutionBudget(
+            max_parallel=3,
+            max_per_identity=3,
+            max_per_family=3,
+            max_per_lane=1,
+        ),
+    )
+    assert [selected.subject_id for selected in planned.selected] == ["a1", "b1"]
+    assert any(
+        deferred.subject_id == "a2" and deferred.reason == "LANE_BUDGET"
+        for deferred in planned.deferred
+    )
