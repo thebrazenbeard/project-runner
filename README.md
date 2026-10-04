@@ -116,8 +116,12 @@ Launch a tracked background task from **any working directory** with:
 The CLI and all task-status/history/reconcile commands share the same default task
 root: `PROJECT_RUNNER_TASKS_ROOT` when set, otherwise
 `%LOCALAPPDATA%\ProjectRunner\tasks` on Windows. They therefore do not depend on
-the shell's current directory. `scripts\Start-ProjectRunnerTask.ps1` remains as a
-checkout-local compatibility launcher, but the CLI is the normal entry point.
+the shell's current directory.
+
+`task-start` uses `cmd.exe` by default for bounded noninteractive execution.
+Use `--shell powershell` only when the task command requires PowerShell syntax.
+The checkout-local `scripts\Start-ProjectRunnerTask.ps1` compatibility launcher
+retains its historical PowerShell command semantics.
 
 Tracked launches run through the Python `runner.task_supervisor` module. The
 supervisor registers itself as the live task root, launches the requested command,
@@ -128,7 +132,8 @@ remaining in the live monitor as dead PIDs.
 
 By default Windows state is stored under
 `%LOCALAPPDATA%\ProjectRunner\tasks`; set `PROJECT_RUNNER_TASKS_ROOT` or pass
-`-TasksRoot` to select another local state directory.
+`--tasks-root` to a Project Runner task command to select another local state
+directory.
 
 Open the live dashboard with:
 

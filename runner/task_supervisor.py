@@ -85,6 +85,7 @@ def launch_background_task(
     lane: str | None = None,
     work_unit: str | None = None,
     display_command: str | None = None,
+    shell: str = "cmd",
     working_directory: Path | None = None,
     tasks_root: Path | None = None,
     registration_timeout_seconds: float = 5.0,
@@ -95,6 +96,9 @@ def launch_background_task(
         raise ValueError("task name must not be empty")
     if not command.strip():
         raise ValueError("task command must not be empty")
+    shell = shell.strip().lower()
+    if shell not in {"cmd", "powershell"}:
+        raise ValueError("task shell must be 'cmd' or 'powershell'")
     if registration_timeout_seconds <= 0:
         raise ValueError("registration timeout must be positive")
 
@@ -126,6 +130,7 @@ def launch_background_task(
             "name": name,
             "command": command,
             "display_command": display_command,
+            "shell": shell,
             "repository": repository,
             "worktree": worktree,
             "lane": lane,
@@ -195,6 +200,37 @@ def launch_background_task(
     )
 
 
+def _windows_command_argv(command: str, shell: str) -> list[str]:
+    system_root = Path(os.environ.get("SystemRoot", r"C:\Windows"))
+    if shell == "cmd":
+        return [
+            str(system_root / "System32" / "cmd.exe"),
+            "/d",
+            "/s",
+            "/c",
+            command,
+        ]
+    if shell == "powershell":
+        encoded_command = base64.b64encode(
+            command.encode("utf-16-le")
+        ).decode("ascii")
+        return [
+            str(
+                system_root
+                / "System32"
+                / "WindowsPowerShell"
+                / "v1.0"
+                / "powershell.exe"
+            ),
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-EncodedCommand",
+            encoded_command,
+        ]
+    raise ValueError(f"unsupported task shell: {shell}")
+
+
 def run_supervisor(request_path: Path) -> int:
     request = json.loads(request_path.read_text(encoding="utf-8-sig"))
     if request.get("schema") != REQUEST_SCHEMA:
@@ -205,6 +241,7 @@ def run_supervisor(request_path: Path) -> int:
     stdout_log = Path(str(request["stdout_log"])).resolve()
     stderr_log = Path(str(request["stderr_log"])).resolve()
     ack_path = Path(str(request["ack_path"])).resolve()
+    shell = str(request.get("shell") or "powershell").strip().lower()
 
     record = register_task(
         tasks_root,
@@ -216,6 +253,7 @@ def run_supervisor(request_path: Path) -> int:
         lane=request.get("lane"),
         work_unit=request.get("work_unit"),
         command=str(request.get("display_command") or request["command"]),
+        shell=shell,
         working_directory=str(working_directory),
         process_started_at_utc=_windows_current_process_started_at_utc(),
         stdout_log=str(stdout_log),
@@ -231,6 +269,7 @@ def run_supervisor(request_path: Path) -> int:
             "task_id": task_id,
             "supervisor_pid": os.getpid(),
             "name": str(request["name"]),
+            "shell": shell,
             "tasks_root": str(tasks_root),
         },
     )
@@ -239,26 +278,12 @@ def run_supervisor(request_path: Path) -> int:
     stdout_log.parent.mkdir(parents=True, exist_ok=True)
     stderr_log.parent.mkdir(parents=True, exist_ok=True)
     command = str(request["command"])
-    encoded_command = base64.b64encode(command.encode("utf-16-le")).decode("ascii")
-    powershell_exe = (
-        Path(os.environ.get("SystemRoot", r"C:\Windows"))
-        / "System32"
-        / "WindowsPowerShell"
-        / "v1.0"
-        / "powershell.exe"
-    )
+    command_argv = _windows_command_argv(command, shell)
 
     try:
         with stdout_log.open("wb") as stdout_handle, stderr_log.open("wb") as stderr_handle:
             child = subprocess.Popen(
-                [
-                    str(powershell_exe),
-                    "-NoLogo",
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-EncodedCommand",
-                    encoded_command,
-                ],
+                command_argv,
                 cwd=working_directory,
                 stdout=stdout_handle,
                 stderr=stderr_handle,

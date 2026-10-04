@@ -6,6 +6,7 @@ import pytest
 
 import runner.cli as cli_module
 from runner.cli import main
+from runner.task_supervisor import _windows_command_argv
 
 
 def test_task_register_and_status_round_trip(tmp_path, capsys):
@@ -104,6 +105,23 @@ def test_task_start_cli_does_not_depend_on_checkout_cwd(
     assert captured["working_directory"] == tmp_path
     assert captured["name"] == "from-system32"
     assert captured["command"] == "exit 0"
+    assert captured["shell"] == "cmd"
+
+
+def test_windows_shell_argv_is_explicit_and_bounded():
+    cmd = _windows_command_argv("echo hello", "cmd")
+    assert Path(cmd[0]).name.lower() == "cmd.exe"
+    assert cmd[1:4] == ["/d", "/s", "/c"]
+    assert cmd[4] == "echo hello"
+
+    powershell = _windows_command_argv("Write-Output hello", "powershell")
+    assert Path(powershell[0]).name.lower() == "powershell.exe"
+    assert "-NoProfile" in powershell
+    assert "-NonInteractive" in powershell
+    assert "-EncodedCommand" in powershell
+
+    with pytest.raises(ValueError, match="unsupported task shell"):
+        _windows_command_argv("echo nope", "unknown")
 
 
 def test_windows_task_launcher_and_read_only_monitor_are_shipped():

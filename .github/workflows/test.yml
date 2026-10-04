@@ -89,7 +89,7 @@ jobs:
               --repository "$env:GITHUB_REPOSITORY" `
               --lane "windows-ci" `
               --working-directory "$env:GITHUB_WORKSPACE" `
-              --command "Start-Sleep -Seconds 2; exit 0" | Out-Null
+              --command "ping -n 3 127.0.0.1 >nul & exit /b 0" | Out-Null
             $snapshot = & $monitorScript -TasksRoot $tasksRoot -Once | Out-String
             Write-Host $snapshot
             if ($snapshot -notmatch "ci-task-monitor" -or $snapshot -notmatch "RUNNING") {
@@ -110,7 +110,7 @@ jobs:
               --name "ci-task-failure" `
               --owner "github-actions" `
               --working-directory "$env:GITHUB_WORKSPACE" `
-              --command "exit 7" | Out-Null
+              --command "exit /b 7" | Out-Null
             $failed = Wait-ForTaskHistory -TasksRoot $tasksRoot -Name "ci-task-failure"
             if ($null -eq $failed -or $failed.state -ne "FAILED" -or $failed.exit_code -ne 7) {
               throw "failed task did not preserve its nonzero exit code"
