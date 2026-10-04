@@ -41,7 +41,7 @@ def test_task_register_and_status_round_trip(tmp_path, capsys):
 def test_windows_task_launcher_and_read_only_monitor_are_shipped():
     root = Path(__file__).resolve().parents[2]
     launcher_path = root / "scripts" / "Start-ProjectRunnerTask.ps1"
-    supervisor_path = root / "scripts" / "Invoke-ProjectRunnerTaskSupervisor.ps1"
+    supervisor_path = root / "runner" / "task_supervisor.py"
     monitor_path = root / "scripts" / "Watch-ProjectRunnerTasks.ps1"
 
     assert launcher_path.exists()
@@ -52,12 +52,11 @@ def test_windows_task_launcher_and_read_only_monitor_are_shipped():
     supervisor = supervisor_path.read_text(encoding="utf-8")
     monitor = monitor_path.read_text(encoding="utf-8")
     assert "Start-Process" in launcher
-    assert "Invoke-ProjectRunnerTaskSupervisor.ps1" in launcher
-    assert "task-register" in supervisor
-    assert "task-finalize" in supervisor
-    assert "WaitForExit" in supervisor
-    assert "ExitCode" in supervisor
-    assert "EncodedCommand" in supervisor
+    assert "runner.task_supervisor" in launcher
+    assert "subprocess.Popen" in supervisor
+    assert "finalize_task" in supervisor
+    assert "child.wait()" in supervisor
+    assert "return exit_code" in supervisor
     assert "Get-CimInstance Win32_Process" in monitor
     assert "Stop-Process" not in monitor
     assert "Remove-Item" not in monitor
