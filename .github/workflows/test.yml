@@ -56,7 +56,7 @@ jobs:
           python-version: '3.12'
       - name: Install
         run: python -m pip install -e '.[dev]'
-      - name: Exercise registered Windows task monitor
+      - name: Exercise registered Windows task lifecycle
         shell: pwsh
         run: |
           $tasksRoot = Join-Path $env:RUNNER_TEMP "project-runner-task-monitor"
@@ -66,19 +66,32 @@ jobs:
             -Repository "$env:GITHUB_REPOSITORY" `
             -Lane "windows-ci" `
             -TasksRoot $tasksRoot `
-            -Command "Start-Sleep -Seconds 20" | Out-Null
+            -Command "Start-Sleep -Seconds 5; exit 0" | Out-Null
           $snapshot = .\scripts\Watch-ProjectRunnerTasks.ps1 -TasksRoot $tasksRoot -Once | Out-String
           Write-Host $snapshot
-          if ($snapshot -notmatch "RUNNING") {
-            throw "task monitor did not observe the registered process as RUNNING"
+          if ($snapshot -notmatch "ci-task-monitor" -or $snapshot -notmatch "RUNNING") {
+            throw "task monitor did not observe the supervised task as RUNNING"
           }
-          project-runner task-status --tasks-root $tasksRoot
-          Start-Sleep -Seconds 21
-          $orphanSnapshot = .\scripts\Watch-ProjectRunnerTasks.ps1 -TasksRoot $tasksRoot -Once | Out-String
-          Write-Host $orphanSnapshot
-          if ($orphanSnapshot -notmatch "ORPHANED") {
-            throw "task monitor did not render an exited registered process as ORPHANED"
+          Start-Sleep -Seconds 7
+          $liveAfter = .\scripts\Watch-ProjectRunnerTasks.ps1 -TasksRoot $tasksRoot -Once | Out-String
+          Write-Host $liveAfter
+          if ($liveAfter -match "ci-task-monitor") {
+            throw "completed task remained in the live task set"
           }
-          if ($orphanSnapshot -match "INVALID_RECORD") {
-            throw "task monitor misclassified a valid orphaned record as INVALID_RECORD"
+          $history = project-runner task-history --tasks-root $tasksRoot | ConvertFrom-Json
+          $completed = @($history.tasks | Where-Object { $_.name -eq "ci-task-monitor" }) | Select-Object -First 1
+          if ($null -eq $completed -or $completed.state -ne "COMPLETED" -or $completed.exit_code -ne 0) {
+            throw "completed task did not receive an authoritative terminal receipt"
+          }
+
+          .\scripts\Start-ProjectRunnerTask.ps1 `
+            -Name "ci-task-failure" `
+            -Owner "github-actions" `
+            -TasksRoot $tasksRoot `
+            -Command "exit 7" | Out-Null
+          Start-Sleep -Seconds 2
+          $history = project-runner task-history --tasks-root $tasksRoot | ConvertFrom-Json
+          $failed = @($history.tasks | Where-Object { $_.name -eq "ci-task-failure" }) | Select-Object -First 1
+          if ($null -eq $failed -or $failed.state -ne "FAILED" -or $failed.exit_code -ne 7) {
+            throw "failed task did not preserve its nonzero exit code"
           }
