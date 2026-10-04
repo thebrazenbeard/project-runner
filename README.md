@@ -99,9 +99,10 @@ See docs/OPERATOR_EXECUTION_V1.md.
 
 ## Local background-task monitor (Windows / Lappy)
 
-Project Runner can keep a local registry of background processes that it explicitly owns.
-This is intentionally registration-based: it does not guess that every `python.exe`,
-`pwsh.exe`, or `git.exe` on a shared workstation belongs to Project Runner.
+Project Runner keeps an explicit local registry for background processes it owns and
+also discovers several live ChatGPT execution trees (Executor, Codex bridge workers,
+and named VERA workers) without pretending that every generic Python/PowerShell
+process belongs to ChatGPT.
 
 Launch a tracked background task with:
 
@@ -111,29 +112,39 @@ Launch a tracked background task with:
       -Lane "lane-b" `
       -Command "python train.py"
 
-The launcher redirects stdout/stderr to per-launch log files and registers the root
-PID, process-start identity, repository/worktree, lane, owner, optional WorkUnit,
-working directory, and display command. By default Windows state is stored under
+Tracked launches run through `Invoke-ProjectRunnerTaskSupervisor.ps1`. The
+supervisor registers itself as the live task root, launches the requested command,
+waits for it to terminate, captures its exit code, and writes a terminal receipt.
+Exit code `0` becomes `COMPLETED`; a nonzero exit code becomes `FAILED`.
+Terminal tasks are atomically moved from `active\` to `history\` instead of
+remaining in the live monitor as dead PIDs.
+
+By default Windows state is stored under
 `%LOCALAPPDATA%\ProjectRunner\tasks`; set `PROJECT_RUNNER_TASKS_ROOT` or pass
 `-TasksRoot` to select another local state directory.
 
-Open the read-only live dashboard with:
+Open the live dashboard with:
 
     powershell -NoProfile -File .\scripts\Watch-ProjectRunnerTasks.ps1
 
-Use `-Once` for one snapshot and `-IncludeCommand` to display command metadata.
-The dashboard aggregates the registered root process and its live descendants for
-CPU/RAM reporting. States include `RUNNING`, `ORPHANED`, `PID_REUSED`, and
-`INVALID_RECORD`. PID reuse is checked against the recorded process start time so
-an unrelated later process is not silently attributed to an old task.
+Use `-Once` for one snapshot, `-IncludeCommand` to display command metadata,
+and `-History` to display terminal task history below the live set. The live
+dashboard reports registered Project Runner tasks plus discovered ChatGPT process
+trees and labels their attribution strength (`EXACT`, `STRONG`, or
+`HEURISTIC`).
 
-The same registry is available as JSON for automation:
+An `ORPHANED` record is now exceptional: the registered supervisor disappeared
+before an authoritative terminal receipt was written. Reconcile such stale records
+without inventing an exit code with:
 
-    project-runner task-status --tasks-root "$env:LOCALAPPDATA\ProjectRunner\tasks"
+    project-runner task-reconcile --tasks-root "$env:LOCALAPPDATA\ProjectRunner\tasks"
 
-Existing processes are not retroactively claimed. They can be registered explicitly
-with `project-runner task-register` when their ownership and PID are already known.
-The monitor itself is observability-only: it has no stop/kill action.
+Reconciliation moves dead unresolved records to history as `UNKNOWN_EXIT` with
+`PROCESS_GONE_WITHOUT_FINAL_RECEIPT`. Historical state is available as JSON with:
+
+    project-runner task-history --tasks-root "$env:LOCALAPPDATA\ProjectRunner\tasks"
+
+The monitor remains observability-only: it has no stop/kill action.
 
 ## Durable portfolio currentness
 
