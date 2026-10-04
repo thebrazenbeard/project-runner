@@ -947,6 +947,8 @@ def _task_register(args) -> int:
         lane=args.lane,
         work_unit=args.work_unit,
         command=args.display_command,
+        working_directory=args.working_directory,
+        process_started_at_utc=args.process_started_at_utc,
         stdout_log=args.stdout_log,
         stderr_log=args.stderr_log,
     )
@@ -1408,6 +1410,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     task_register.add_argument("--lane")
     task_register.add_argument("--work-unit")
     task_register.add_argument("--command", dest="display_command")
+    task_register.add_argument("--working-directory")
+    task_register.add_argument("--process-started-at-utc")
     task_register.add_argument("--stdout-log")
     task_register.add_argument("--stderr-log")
 
