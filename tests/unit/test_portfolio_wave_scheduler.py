@@ -165,7 +165,7 @@ def test_existing_occupied_collision_key_blocks_admission():
     assert planned.deferred[0].reason == "COLLISION"
 
 
-def test_held_or_no_effect_item_never_executes():
+def test_held_item_never_executes():
     held = item(
         "old",
         state="HELD",
@@ -178,6 +178,21 @@ def test_held_or_no_effect_item_never_executes():
     )
     assert planned.selected == ()
     assert planned.deferred[0].reason == "NOT_QUEUED"
+
+
+def test_queued_no_effect_research_is_schedulable_without_source_authority():
+    research = item(
+        "research",
+        action="CURRENTNESS_AUDIT",
+        ceiling="NO_EFFECT",
+    )
+    planned = plan_wave_admission(
+        wave(research),
+        budget=WaveExecutionBudget(max_parallel=1, max_per_identity=1, max_per_family=1),
+    )
+    assert [selected.subject_id for selected in planned.selected] == ["research"]
+    assert planned.selected[0].effect_ceiling == "NO_EFFECT"
+    assert planned.deferred == ()
 
 
 def test_real_public_wave_produces_bounded_collision_free_slice():
