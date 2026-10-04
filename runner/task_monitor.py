@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import errno
 import json
 import os
+import re
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -145,6 +146,8 @@ def _archive_terminal_task(
 ) -> dict[str, Any]:
     if state not in TERMINAL_STATES:
         raise ValueError(f"invalid terminal task state: {state}")
+    if re.fullmatch(r"[0-9a-f]{32}", task_id) is None:
+        raise ValueError("invalid task id")
 
     root = Path(tasks_root)
     active_path = root / "active" / f"{task_id}.json"
