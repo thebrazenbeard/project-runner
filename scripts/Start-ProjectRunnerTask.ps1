@@ -34,6 +34,22 @@ function Resolve-ProjectRunnerTasksRoot {
     return (Join-Path $HOME ".project-runner\tasks")
 }
 
+function Resolve-ProjectRunnerPython {
+    if ($null -ne (Get-Command py -ErrorAction SilentlyContinue)) {
+        $resolved = @(& py -c "import sys; print(sys.executable)")
+        if ($LASTEXITCODE -eq 0 -and $resolved.Count -gt 0) {
+            return [System.IO.Path]::GetFullPath([string]$resolved[0])
+        }
+    }
+
+    $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
+    if ($null -ne $pythonCommand) {
+        return [System.IO.Path]::GetFullPath($pythonCommand.Source)
+    }
+
+    throw "Project Runner task launch requires a usable Python interpreter"
+}
+
 $TasksRoot = Resolve-ProjectRunnerTasksRoot $TasksRoot
 $WorkingDirectory = [System.IO.Path]::GetFullPath($WorkingDirectory)
 $logsRoot = Join-Path $TasksRoot "logs"
@@ -70,20 +86,11 @@ $request = [ordered]@{
 }
 $request | ConvertTo-Json -Depth 4 | Set-Content -Path $requestPath -Encoding UTF8
 
-$supervisorPath = Join-Path $PSScriptRoot "Invoke-ProjectRunnerTaskSupervisor.ps1"
-if (-not (Test-Path $supervisorPath)) {
-    throw "Project Runner task supervisor is missing: $supervisorPath"
-}
-
-$powershellExe = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
-$supervisor = Start-Process -FilePath $powershellExe `
+$pythonExe = Resolve-ProjectRunnerPython
+$supervisor = Start-Process -FilePath $pythonExe `
     -ArgumentList @(
-        "-NoLogo",
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy", "Bypass",
-        "-File", $supervisorPath,
-        "-RequestPath", $requestPath
+        "-m", "runner.task_supervisor",
+        "--request-path", $requestPath
     ) `
     -WorkingDirectory $WorkingDirectory `
     -RedirectStandardOutput $supervisorStdout `
