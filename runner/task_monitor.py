@@ -15,6 +15,19 @@ TASK_SCHEMA = "PROJECT_RUNNER_LOCAL_TASK_V1"
 TERMINAL_STATES = {"COMPLETED", "FAILED", "CANCELLED", "UNKNOWN_EXIT"}
 
 
+def default_tasks_root() -> Path:
+    override = os.environ.get("PROJECT_RUNNER_TASKS_ROOT", "").strip()
+    if override:
+        return Path(override).expanduser()
+
+    if os.name == "nt":
+        local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+        if local_app_data:
+            return Path(local_app_data) / "ProjectRunner" / "tasks"
+
+    return Path.home() / ".project-runner" / "tasks"
+
+
 def register_task(
     tasks_root: Path,
     *,

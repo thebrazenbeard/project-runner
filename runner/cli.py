@@ -63,12 +63,14 @@ from .queue_consumer import (
 )
 from .reference_worker import run_reference_read_worker_once
 from .task_monitor import (
+    default_tasks_root,
     finalize_task,
     reconcile_orphaned_tasks,
     register_task,
     summarize_task_history,
     summarize_tasks,
 )
+from .task_supervisor import launch_background_task
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import (
@@ -942,6 +944,24 @@ def _run_inspection(args) -> int:
     return 0 if result.status is WorkUnitStatus.COMPLETE else 2
 
 
+def _task_start(args) -> int:
+    launch = launch_background_task(
+        name=args.name,
+        command=args.task_command,
+        owner=args.owner,
+        repository=args.repository,
+        worktree=args.worktree,
+        lane=args.lane,
+        work_unit=args.work_unit,
+        display_command=args.display_command,
+        working_directory=args.working_directory,
+        tasks_root=args.tasks_root,
+        registration_timeout_seconds=args.registration_timeout,
+    )
+    print(json.dumps(launch, sort_keys=True))
+    return 0
+
+
 def _task_register(args) -> int:
     task = register_task(
         args.tasks_root,
@@ -1428,11 +1448,36 @@ def main(argv: Sequence[str] | None = None) -> int:
     run_inspection.add_argument("--holder", default="project-runner-cli")
     run_inspection.add_argument("--lease-ttl", type=float, default=300.0)
 
+    task_start = subparsers.add_parser("task-start")
+    task_start.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=default_tasks_root(),
+    )
+    task_start.add_argument("--name", required=True)
+    task_start.add_argument("--command", dest="task_command", required=True)
+    task_start.add_argument("--owner", default="chatgpt")
+    task_start.add_argument("--repository")
+    task_start.add_argument("--worktree")
+    task_start.add_argument("--lane")
+    task_start.add_argument("--work-unit")
+    task_start.add_argument("--display-command")
+    task_start.add_argument(
+        "--working-directory",
+        type=Path,
+        default=Path.cwd(),
+    )
+    task_start.add_argument(
+        "--registration-timeout",
+        type=float,
+        default=5.0,
+    )
+
     task_register = subparsers.add_parser("task-register")
     task_register.add_argument(
         "--tasks-root",
         type=Path,
-        default=Path(".project-runner/tasks"),
+        default=default_tasks_root(),
     )
     task_register.add_argument("--name", required=True)
     task_register.add_argument("--pid", type=int, required=True)
@@ -1451,14 +1496,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     task_status.add_argument(
         "--tasks-root",
         type=Path,
-        default=Path(".project-runner/tasks"),
+        default=default_tasks_root(),
     )
 
     task_finalize = subparsers.add_parser("task-finalize")
     task_finalize.add_argument(
         "--tasks-root",
         type=Path,
-        default=Path(".project-runner/tasks"),
+        default=default_tasks_root(),
     )
     task_finalize.add_argument("--task-id", required=True)
     task_finalize.add_argument("--exit-code", type=int, required=True)
@@ -1468,14 +1513,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     task_history.add_argument(
         "--tasks-root",
         type=Path,
-        default=Path(".project-runner/tasks"),
+        default=default_tasks_root(),
     )
 
     task_reconcile = subparsers.add_parser("task-reconcile")
     task_reconcile.add_argument(
         "--tasks-root",
         type=Path,
-        default=Path(".project-runner/tasks"),
+        default=default_tasks_root(),
     )
 
     operator_status = subparsers.add_parser("operator-status")
@@ -1708,6 +1753,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     if args.command == "run-inspection":
         return _run_inspection(args)
+    if args.command == "task-start":
+        return _task_start(args)
     if args.command == "task-register":
         return _task_register(args)
     if args.command == "task-status":

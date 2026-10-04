@@ -104,13 +104,20 @@ also discovers several live ChatGPT execution trees (Executor, Codex bridge work
 and named VERA workers) without pretending that every generic Python/PowerShell
 process belongs to ChatGPT.
 
-Launch a tracked background task with:
+Launch a tracked background task from **any working directory** with:
 
-    powershell -NoProfile -File .\scripts\Start-ProjectRunnerTask.ps1 `
-      -Name "model-training-lane-b" `
-      -Repository "thebrazenbeard/vera_model_training" `
-      -Lane "lane-b" `
-      -Command "python train.py"
+    project-runner task-start `
+      --name "model-training-lane-b" `
+      --repository "thebrazenbeard/vera_model_training" `
+      --lane "lane-b" `
+      --working-directory "C:\path\to\vera_model_training" `
+      --command "python train.py"
+
+The CLI and all task-status/history/reconcile commands share the same default task
+root: `PROJECT_RUNNER_TASKS_ROOT` when set, otherwise
+`%LOCALAPPDATA%\ProjectRunner\tasks` on Windows. They therefore do not depend on
+the shell's current directory. `scripts\Start-ProjectRunnerTask.ps1` remains as a
+checkout-local compatibility launcher, but the CLI is the normal entry point.
 
 Tracked launches run through the Python `runner.task_supervisor` module. The
 supervisor registers itself as the live task root, launches the requested command,

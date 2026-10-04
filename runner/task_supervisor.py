@@ -9,9 +9,11 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 from typing import Any
+from uuid import uuid4
 
-from .task_monitor import finalize_task, register_task
+from .task_monitor import default_tasks_root, finalize_task, register_task
 
 
 REQUEST_SCHEMA = "PROJECT_RUNNER_TASK_LAUNCH_REQUEST_V1"
@@ -71,6 +73,126 @@ def _atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
+
+
+def launch_background_task(
+    *,
+    name: str,
+    command: str,
+    owner: str = "chatgpt",
+    repository: str | None = None,
+    worktree: str | None = None,
+    lane: str | None = None,
+    work_unit: str | None = None,
+    display_command: str | None = None,
+    working_directory: Path | None = None,
+    tasks_root: Path | None = None,
+    registration_timeout_seconds: float = 5.0,
+) -> dict[str, Any]:
+    if os.name != "nt":
+        raise RuntimeError("task-start currently requires Windows")
+    if not name.strip():
+        raise ValueError("task name must not be empty")
+    if not command.strip():
+        raise ValueError("task command must not be empty")
+    if registration_timeout_seconds <= 0:
+        raise ValueError("registration timeout must be positive")
+
+    root = Path(tasks_root or default_tasks_root()).expanduser().resolve()
+    cwd = Path(working_directory or Path.cwd()).expanduser().resolve()
+    if not cwd.is_dir():
+        raise ValueError(f"task working directory does not exist: {cwd}")
+
+    logs_root = root / "logs"
+    requests_root = root / "requests"
+    launches_root = root / "launches"
+    logs_root.mkdir(parents=True, exist_ok=True)
+    requests_root.mkdir(parents=True, exist_ok=True)
+    launches_root.mkdir(parents=True, exist_ok=True)
+
+    launch_id = uuid4().hex
+    stdout_log = logs_root / f"{launch_id}.stdout.log"
+    stderr_log = logs_root / f"{launch_id}.stderr.log"
+    supervisor_stdout = logs_root / f"{launch_id}.supervisor.stdout.log"
+    supervisor_stderr = logs_root / f"{launch_id}.supervisor.stderr.log"
+    request_path = requests_root / f"{launch_id}.json"
+    ack_path = launches_root / f"{launch_id}.json"
+
+    _atomic_json_write(
+        request_path,
+        {
+            "schema": REQUEST_SCHEMA,
+            "launch_id": launch_id,
+            "name": name,
+            "command": command,
+            "display_command": display_command,
+            "repository": repository,
+            "worktree": worktree,
+            "lane": lane,
+            "owner": owner,
+            "work_unit": work_unit,
+            "working_directory": str(cwd),
+            "tasks_root": str(root),
+            "stdout_log": str(stdout_log),
+            "stderr_log": str(stderr_log),
+            "ack_path": str(ack_path),
+        },
+    )
+
+    creation_flags = (
+        getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    )
+    try:
+        with (
+            supervisor_stdout.open("wb") as stdout_handle,
+            supervisor_stderr.open("wb") as stderr_handle,
+        ):
+            supervisor = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "runner.task_supervisor",
+                    "--request-path",
+                    str(request_path),
+                ],
+                cwd=cwd,
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+                creationflags=creation_flags,
+            )
+    except BaseException:
+        request_path.unlink(missing_ok=True)
+        raise
+
+    deadline = time.monotonic() + registration_timeout_seconds
+    while time.monotonic() < deadline:
+        if ack_path.exists():
+            return json.loads(ack_path.read_text(encoding="utf-8"))
+        exit_code = supervisor.poll()
+        if exit_code is not None:
+            detail = (
+                supervisor_stderr.read_text(encoding="utf-8", errors="replace")
+                if supervisor_stderr.exists()
+                else ""
+            )
+            request_path.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"task supervisor exited before registration (exit {exit_code}): {detail}"
+            )
+        time.sleep(0.05)
+
+    supervisor.terminate()
+    try:
+        supervisor.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        supervisor.kill()
+        supervisor.wait(timeout=2)
+    request_path.unlink(missing_ok=True)
+    raise TimeoutError(
+        f"task supervisor did not confirm registration within "
+        f"{registration_timeout_seconds:g} seconds; PID {supervisor.pid}"
+    )
 
 
 def run_supervisor(request_path: Path) -> int:

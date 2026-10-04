@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import runner.cli as cli_module
 from runner.cli import main
 
 
@@ -36,6 +37,73 @@ def test_task_register_and_status_round_trip(tmp_path, capsys):
         "state": "RUNNING",
     }]
     assert (tasks_root / "active" / f"{task_id}.json").exists()
+
+
+def test_task_commands_share_location_independent_default_root(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    tasks_root = tmp_path / "shared-tasks"
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.setenv("PROJECT_RUNNER_TASKS_ROOT", str(tasks_root))
+    monkeypatch.chdir(elsewhere)
+
+    assert main([
+        "task-register",
+        "--name", "cwd-independent",
+        "--pid", str(os.getpid()),
+        "--owner", "test",
+    ]) == 0
+    registered = json.loads(capsys.readouterr().out)["task"]
+
+    assert main(["task-status"]) == 0
+    status = json.loads(capsys.readouterr().out)
+    assert status["tasks"][0]["task_id"] == registered["task_id"]
+    assert (tasks_root / "active" / f"{registered['task_id']}.json").exists()
+
+
+def test_task_start_cli_does_not_depend_on_checkout_cwd(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    tasks_root = tmp_path / "tasks"
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.setenv("PROJECT_RUNNER_TASKS_ROOT", str(tasks_root))
+    monkeypatch.chdir(elsewhere)
+
+    captured = {}
+
+    def fake_launch_background_task(**kwargs):
+        captured.update(kwargs)
+        return {
+            "mode": "PROJECT_RUNNER_TASK_SUPERVISOR_V2",
+            "task_id": "a" * 32,
+            "supervisor_pid": 1234,
+        }
+
+    monkeypatch.setattr(
+        cli_module,
+        "launch_background_task",
+        fake_launch_background_task,
+    )
+
+    assert main([
+        "task-start",
+        "--name", "from-system32",
+        "--command", "exit 0",
+        "--working-directory", str(tmp_path),
+    ]) == 0
+    launch = json.loads(capsys.readouterr().out)
+
+    assert launch["task_id"] == "a" * 32
+    assert captured["tasks_root"] == tasks_root
+    assert captured["working_directory"] == tmp_path
+    assert captured["name"] == "from-system32"
+    assert captured["command"] == "exit 0"
 
 
 def test_windows_task_launcher_and_read_only_monitor_are_shipped():
