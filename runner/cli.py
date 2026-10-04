@@ -62,6 +62,7 @@ from .queue_consumer import (
     summarize_queue_state,
 )
 from .reference_worker import run_reference_read_worker_once
+from .task_monitor import register_task, summarize_tasks
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import (
@@ -935,6 +936,29 @@ def _run_inspection(args) -> int:
     return 0 if result.status is WorkUnitStatus.COMPLETE else 2
 
 
+def _task_register(args) -> int:
+    task = register_task(
+        args.tasks_root,
+        name=args.name,
+        pid=args.pid,
+        owner=args.owner,
+        repository=args.repository,
+        worktree=args.worktree,
+        lane=args.lane,
+        work_unit=args.work_unit,
+        command=args.command,
+        stdout_log=args.stdout_log,
+        stderr_log=args.stderr_log,
+    )
+    print(json.dumps({"mode": "PROJECT_RUNNER_TASK_REGISTER_V1", "task": task}, sort_keys=True))
+    return 0
+
+
+def _task_status(args) -> int:
+    print(json.dumps(summarize_tasks(args.tasks_root), sort_keys=True))
+    return 0
+
+
 def _operator_status(args) -> int:
     if args.detailed:
         _require_public_safe_reporting()
@@ -1370,6 +1394,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     run_inspection.add_argument("--holder", default="project-runner-cli")
     run_inspection.add_argument("--lease-ttl", type=float, default=300.0)
 
+    task_register = subparsers.add_parser("task-register")
+    task_register.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=Path(".project-runner/tasks"),
+    )
+    task_register.add_argument("--name", required=True)
+    task_register.add_argument("--pid", type=int, required=True)
+    task_register.add_argument("--owner", default="project-runner")
+    task_register.add_argument("--repository")
+    task_register.add_argument("--worktree")
+    task_register.add_argument("--lane")
+    task_register.add_argument("--work-unit")
+    task_register.add_argument("--command")
+    task_register.add_argument("--stdout-log")
+    task_register.add_argument("--stderr-log")
+
+    task_status = subparsers.add_parser("task-status")
+    task_status.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=Path(".project-runner/tasks"),
+    )
+
     operator_status = subparsers.add_parser("operator-status")
     operator_status.add_argument(
         "--state-db",
@@ -1600,6 +1648,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     if args.command == "run-inspection":
         return _run_inspection(args)
+    if args.command == "task-register":
+        return _task_register(args)
+    if args.command == "task-status":
+        return _task_status(args)
     if args.command == "operator-status":
         return _operator_status(args)
     if args.command == "portfolio-cycle":
