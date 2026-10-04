@@ -37,70 +37,74 @@ function Resolve-ProjectRunnerTasksRoot {
 $TasksRoot = Resolve-ProjectRunnerTasksRoot $TasksRoot
 $WorkingDirectory = [System.IO.Path]::GetFullPath($WorkingDirectory)
 $logsRoot = Join-Path $TasksRoot "logs"
+$requestsRoot = Join-Path $TasksRoot "requests"
+$launchesRoot = Join-Path $TasksRoot "launches"
 New-Item -ItemType Directory -Path $logsRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $requestsRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $launchesRoot -Force | Out-Null
 
 $launchId = [guid]::NewGuid().ToString("N")
 $stdoutLog = Join-Path $logsRoot "$launchId.stdout.log"
 $stderrLog = Join-Path $logsRoot "$launchId.stderr.log"
-$encodedCommand = [Convert]::ToBase64String(
-    [Text.Encoding]::Unicode.GetBytes($Command)
-)
+$supervisorStdout = Join-Path $logsRoot "$launchId.supervisor.stdout.log"
+$supervisorStderr = Join-Path $logsRoot "$launchId.supervisor.stderr.log"
+$requestPath = Join-Path $requestsRoot "$launchId.json"
+$ackPath = Join-Path $launchesRoot "$launchId.json"
+
+$request = [ordered]@{
+    schema = "PROJECT_RUNNER_TASK_LAUNCH_REQUEST_V1"
+    launch_id = $launchId
+    name = $Name
+    command = $Command
+    display_command = $DisplayCommand
+    repository = $Repository
+    worktree = $Worktree
+    lane = $Lane
+    owner = $Owner
+    work_unit = $WorkUnit
+    working_directory = $WorkingDirectory
+    tasks_root = $TasksRoot
+    stdout_log = $stdoutLog
+    stderr_log = $stderrLog
+    ack_path = $ackPath
+}
+$request | ConvertTo-Json -Depth 4 | Set-Content -Path $requestPath -Encoding UTF8
+
+$supervisorPath = Join-Path $PSScriptRoot "Invoke-ProjectRunnerTaskSupervisor.ps1"
+if (-not (Test-Path $supervisorPath)) {
+    throw "Project Runner task supervisor is missing: $supervisorPath"
+}
 
 $powershellExe = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
-$process = $null
-try {
-    $process = Start-Process -FilePath $powershellExe `
-        -ArgumentList @("-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", $encodedCommand) `
-        -WorkingDirectory $WorkingDirectory `
-        -RedirectStandardOutput $stdoutLog `
-        -RedirectStandardError $stderrLog `
-        -PassThru
+$supervisor = Start-Process -FilePath $powershellExe `
+    -ArgumentList @(
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy", "Bypass",
+        "-File", $supervisorPath,
+        "-RequestPath", $requestPath
+    ) `
+    -WorkingDirectory $WorkingDirectory `
+    -RedirectStandardOutput $supervisorStdout `
+    -RedirectStandardError $supervisorStderr `
+    -PassThru
 
-    $shownCommand = if ([string]::IsNullOrWhiteSpace($DisplayCommand)) {
-        $Command
-    } else {
-        $DisplayCommand
+$deadline = [DateTime]::UtcNow.AddSeconds(5)
+while ([DateTime]::UtcNow -lt $deadline -and -not (Test-Path $ackPath)) {
+    if ($supervisor.HasExited) {
+        $detail = if (Test-Path $supervisorStderr) {
+            Get-Content -Raw -Path $supervisorStderr
+        } else {
+            ""
+        }
+        throw "task supervisor exited before registration (exit $($supervisor.ExitCode)): $detail"
     }
-
-    $registerArgs = @(
-        "task-register",
-        "--tasks-root", $TasksRoot,
-        "--name", $Name,
-        "--pid", [string]$process.Id,
-        "--owner", $Owner,
-        "--command", $shownCommand,
-        "--working-directory", $WorkingDirectory,
-        "--process-started-at-utc", $process.StartTime.ToUniversalTime().ToString("o"),
-        "--stdout-log", $stdoutLog,
-        "--stderr-log", $stderrLog
-    )
-    if ($Repository) { $registerArgs += @("--repository", $Repository) }
-    if ($Worktree) { $registerArgs += @("--worktree", $Worktree) }
-    if ($Lane) { $registerArgs += @("--lane", $Lane) }
-    if ($WorkUnit) { $registerArgs += @("--work-unit", $WorkUnit) }
-
-    $runnerCommand = Get-Command project-runner -ErrorAction SilentlyContinue
-    if ($null -ne $runnerCommand) {
-        $registration = & $runnerCommand.Source @registerArgs
-    }
-    elseif ($null -ne (Get-Command py -ErrorAction SilentlyContinue)) {
-        $registration = & py -m runner.cli @registerArgs
-    }
-    elseif ($null -ne (Get-Command python -ErrorAction SilentlyContinue)) {
-        $registration = & python -m runner.cli @registerArgs
-    }
-    else {
-        throw "Project Runner is installed but no usable Python launcher was found"
-    }
-    if ($LASTEXITCODE -ne 0) {
-        throw "project-runner task registration failed with exit code $LASTEXITCODE"
-    }
-
-    $registration
+    Start-Sleep -Milliseconds 50
 }
-catch {
-    if ($null -ne $process -and -not $process.HasExited) {
-        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-    }
-    throw
+
+if (-not (Test-Path $ackPath)) {
+    throw "task supervisor did not confirm registration within 5 seconds; PID $($supervisor.Id)"
 }
+
+Get-Content -Raw -Path $ackPath
