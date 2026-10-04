@@ -62,7 +62,13 @@ from .queue_consumer import (
     summarize_queue_state,
 )
 from .reference_worker import run_reference_read_worker_once
-from .task_monitor import register_task, summarize_tasks
+from .task_monitor import (
+    finalize_task,
+    reconcile_orphaned_tasks,
+    register_task,
+    summarize_task_history,
+    summarize_tasks,
+)
 from .prioritize import rank_frontiers
 from .propagate import derive_invalidations
 from .registry import (
@@ -961,6 +967,31 @@ def _task_status(args) -> int:
     return 0
 
 
+def _task_finalize(args) -> int:
+    task = finalize_task(
+        args.tasks_root,
+        task_id=args.task_id,
+        exit_code=args.exit_code,
+    )
+    print(json.dumps({"mode": "PROJECT_RUNNER_TASK_FINALIZE_V1", "task": task}, sort_keys=True))
+    return 0
+
+
+def _task_history(args) -> int:
+    print(json.dumps(summarize_task_history(args.tasks_root), sort_keys=True))
+    return 0
+
+
+def _task_reconcile(args) -> int:
+    tasks = reconcile_orphaned_tasks(args.tasks_root)
+    print(json.dumps({
+        "mode": "PROJECT_RUNNER_TASK_RECONCILE_V1",
+        "reconciled": len(tasks),
+        "tasks": tasks,
+    }, sort_keys=True))
+    return 0
+
+
 def _operator_status(args) -> int:
     if args.detailed:
         _require_public_safe_reporting()
@@ -1422,6 +1453,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=Path(".project-runner/tasks"),
     )
 
+    task_finalize = subparsers.add_parser("task-finalize")
+    task_finalize.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=Path(".project-runner/tasks"),
+    )
+    task_finalize.add_argument("--task-id", required=True)
+    task_finalize.add_argument("--exit-code", type=int, required=True)
+
+    task_history = subparsers.add_parser("task-history")
+    task_history.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=Path(".project-runner/tasks"),
+    )
+
+    task_reconcile = subparsers.add_parser("task-reconcile")
+    task_reconcile.add_argument(
+        "--tasks-root",
+        type=Path,
+        default=Path(".project-runner/tasks"),
+    )
+
     operator_status = subparsers.add_parser("operator-status")
     operator_status.add_argument(
         "--state-db",
@@ -1656,6 +1710,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _task_register(args)
     if args.command == "task-status":
         return _task_status(args)
+    if args.command == "task-finalize":
+        return _task_finalize(args)
+    if args.command == "task-history":
+        return _task_history(args)
+    if args.command == "task-reconcile":
+        return _task_reconcile(args)
     if args.command == "operator-status":
         return _operator_status(args)
     if args.command == "portfolio-cycle":
