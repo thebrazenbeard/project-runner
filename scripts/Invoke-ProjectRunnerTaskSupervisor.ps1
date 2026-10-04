@@ -89,17 +89,40 @@ $encodedCommand = [Convert]::ToBase64String(
     [Text.Encoding]::Unicode.GetBytes([string]$request.command)
 )
 $powershellExe = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
+$exitReceiptsRoot = Join-Path $tasksRoot "exit-receipts"
+New-Item -ItemType Directory -Path $exitReceiptsRoot -Force | Out-Null
+$exitReceiptPath = Join-Path $exitReceiptsRoot "$taskId.txt"
+
+# Windows PowerShell can lose Process.ExitCode when Start-Process also owns
+# stdout/stderr redirection. Run the requested command in a nested child whose
+# wrapper records the authoritative exit code before the redirected wrapper exits.
+$receiptLiteral = $exitReceiptPath.Replace("'", "''")
+$exeLiteral = $powershellExe.Replace("'", "''")
+$wrapperCommand = @"
+\$inner = Start-Process -FilePath '$exeLiteral' -ArgumentList @('-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand','$encodedCommand') -NoNewWindow -PassThru
+\$inner.WaitForExit()
+\$code = [int]\$inner.ExitCode
+Set-Content -LiteralPath '$receiptLiteral' -Value \$code -Encoding ASCII
+exit \$code
+"@
+$wrapperEncoded = [Convert]::ToBase64String(
+    [Text.Encoding]::Unicode.GetBytes($wrapperCommand)
+)
 
 try {
     $child = Start-Process -FilePath $powershellExe `
-        -ArgumentList @("-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", $encodedCommand) `
+        -ArgumentList @("-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand", $wrapperEncoded) `
         -WorkingDirectory $workingDirectory `
         -RedirectStandardOutput $stdoutLog `
         -RedirectStandardError $stderrLog `
         -PassThru
 
     $child.WaitForExit()
-    $exitCode = [int]$child.ExitCode
+    if (-not (Test-Path $exitReceiptPath)) {
+        throw "task command exited without an exit-code receipt"
+    }
+    $exitCode = [int](Get-Content -Raw -Path $exitReceiptPath).Trim()
+    Remove-Item -Path $exitReceiptPath -Force -ErrorAction SilentlyContinue
 }
 catch {
     Write-Error $_
