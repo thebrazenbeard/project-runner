@@ -366,9 +366,23 @@ do {
         Write-Host "No registered or discovered ChatGPT task trees are currently visible."
     }
     else {
-        $rows |
-            Sort-Object State, Origin, Task, PID |
+        $sortedRows = @($rows | Sort-Object State, Origin, Task, PID)
+        $sortedRows |
+            Select-Object Task, PID, State, Origin, Trust, Runtime, CPU_s, RAM_MB, Children, Repo, Lane, Owner |
             Format-Table -AutoSize
+
+        if ($IncludeCommand) {
+            Write-Host ""
+            Write-Host "Commands"
+            foreach ($row in $sortedRows) {
+                $commandProperty = $row.PSObject.Properties["Command"]
+                if ($null -eq $commandProperty) { continue }
+                $commandText = [string]$commandProperty.Value
+                if ([string]::IsNullOrWhiteSpace($commandText)) { continue }
+                Write-Host ("[{0}] {1}" -f $row.PID, $row.Task)
+                Write-Host ("  {0}" -f $commandText)
+            }
+        }
     }
 
     if ($History) {
