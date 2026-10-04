@@ -946,7 +946,7 @@ def _task_register(args) -> int:
         worktree=args.worktree,
         lane=args.lane,
         work_unit=args.work_unit,
-        command=args.command,
+        command=args.display_command,
         stdout_log=args.stdout_log,
         stderr_log=args.stderr_log,
     )
@@ -1407,7 +1407,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     task_register.add_argument("--worktree")
     task_register.add_argument("--lane")
     task_register.add_argument("--work-unit")
-    task_register.add_argument("--command")
+    task_register.add_argument("--command", dest="display_command")
     task_register.add_argument("--stdout-log")
     task_register.add_argument("--stderr-log")
 
