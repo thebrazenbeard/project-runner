@@ -29,8 +29,8 @@ def test_public_wave_covers_public_corpus_exactly():
     workstream_items = [
         item for item in wave.items if item.subject_kind == "workstream"
     ]
-    assert len(repo_items) == 53
-    assert len(workstream_items) == 2
+    assert len(repo_items) == corpus.counts.public
+    assert len(workstream_items) == corpus.workstream_counts.public
 
 
 def test_every_queued_subject_has_independent_review():
@@ -61,7 +61,7 @@ def test_superseded_subject_is_preserve_only_and_held():
     build_team = next(
         item for item in wave.items if item.subject_id == "build-team-2.0"
     )
-    assert build_team.activity_state == "SUPERSEDED"
+    assert build_team.activity_state == "ARCHIVED"
     assert build_team.action == "PRESERVE_ONLY"
     assert build_team.execution_state == "HELD"
     assert build_team.effect_ceiling == "NO_EFFECT"
@@ -105,7 +105,7 @@ def test_summary_and_identity_projection_are_deterministic():
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
     summary = wave.summary()
-    assert summary["subjects"] == 55
+    assert summary["subjects"] == len(wave.items)
     assert summary["held"] >= 1
     one_items = wave.for_identity("ONE")
     assert all(item.lead_identity == "ONE" for item in one_items)
@@ -131,7 +131,7 @@ def test_20260928_new_public_repositories_are_source_only():
     wave = load_advancement_wave(
         ROOT / "portfolio" / "advancement_wave.public.json"
     )
-    expected = {"axle", "ingest", "lgcm", "pro-run"}
+    expected = {"axle", "ingest", "lgcm"}
     items = {
         item.subject_id: item
         for item in wave.items
@@ -142,3 +142,23 @@ def test_20260928_new_public_repositories_are_source_only():
     assert all(item.effect_ceiling == "SOURCE_ONLY" for item in items.values())
     assert all(item.execution_state == "QUEUED" for item in items.values())
     assert all(item.review_gate == "EXACT_HEAD_REVIEW" for item in items.values())
+
+
+def test_october_2026_census_holds_unclassified_and_retired_membership():
+    corpus = load_portfolio_corpus(ROOT / "portfolio" / "corpus.public.json", public_safe=True)
+    wave = load_advancement_wave(ROOT / "portfolio" / "advancement_wave.public.json")
+    repos = {r.repository for r in corpus.records}
+    assert "thebrazenbeard/tattler" in repos
+    assert "thebrazenbeard/freerowcochkar" not in repos
+    assert "thebrazenbeard/pro-run" not in repos
+    for item in wave.items:
+        if item.subject_kind != "repository":
+            continue
+        if item.activity_state == "UNKNOWN":
+            assert item.action == "CURRENTNESS_AUDIT"
+            assert item.execution_state == "HELD"
+            assert item.effect_ceiling == "NO_EFFECT"
+    tattler = next(i for i in wave.items if i.subject_id == "tattler")
+    assert tattler.effect_ceiling == "SOURCE_ONLY"
+    assert tattler.review_gate == "EXACT_HEAD_REVIEW"
+    assert tattler.execution_state == "QUEUED"
