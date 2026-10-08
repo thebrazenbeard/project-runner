@@ -1,19 +1,19 @@
 {
   "corpus_id": "PROJECT_RUNNER_PORTFOLIO_CORPUS_V1",
-  "observed_at": "2026-09-28T05:32:00-04:00",
+  "observed_at": "2026-10-07T19:42:35-04:00",
   "owner": "thebrazenbeard",
-  "status_basis": "Live GitHub repository/PR/commit audit reconciled with user-authorized ChatGPT and durable project-history evidence.",
-  "freshness_rule": "Descriptive status is an observed cut, not authority; refresh live source/runtime evidence before scheduling, merging, deploying, or claiming current completion.",
+  "status_basis": "GitHub owner inventory reconciled 2026-10-07 (67 public names, 19 private aggregate only); existing semantic/status narratives retain September 28 historical basis unless individually refreshed.",
+  "freshness_rule": "Observed_at timestamps only this repository census and archived/branch metadata; older project/workstream descriptions are historical, not current source or runtime verification.",
   "counts": {
-    "total": 71,
-    "public": 53,
-    "private": 18,
-    "archived": 2,
-    "public_archived": 0,
-    "private_archived": 2
+    "total": 86,
+    "public": 67,
+    "private": 19,
+    "archived": 5,
+    "public_archived": 2,
+    "private_archived": 3
   },
   "private_inventory": {
-    "count": 18,
+    "count": 19,
     "public_commitment_scheme": "COUNT_ONLY_PUBLIC_V1",
     "exact_membership_publicly_committed": false
   },
@@ -61,20 +61,6 @@
   ],
   "records": [
     {
-      "id": "abil",
-      "repository": "thebrazenbeard/abil",
-      "name": "ABIL",
-      "visibility": "public",
-      "archived": false,
-      "default_branch": "main",
-      "priority": "P1",
-      "family_id": "industrial-intelligence",
-      "activity_state": "ACTIVE_HEAVY",
-      "purpose": "Adaptive Brownfield Intelligence Layer for governed learning on existing machines and processes.",
-      "status": "Large active research/assurance stack spans currentness, execution evidence, anti-replay and governance.",
-      "current_frontier": "Reconcile the research stack into an executable bounded industrial-intelligence path."
-    },
-    {
       "id": "attune",
       "repository": "thebrazenbeard/Attune",
       "name": "Attune",
@@ -87,6 +73,48 @@
       "purpose": "Attunement contracts for adaptive interaction.",
       "status": "Foundation contracts are merged; no current pull request.",
       "current_frontier": "Use only when a concrete runtime needs attunement."
+    },
+    {
+      "id": "repairtracker",
+      "repository": "thebrazenbeard/RepairTracker",
+      "name": "RepairTracker",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "assurance-and-repair",
+      "activity_state": "ACTIVE",
+      "purpose": "Evidence-governed repair/debugging and parallel remediation.",
+      "status": "Repair spine, artifact attestation and GitHub signal-promotion work remain open.",
+      "current_frontier": "Prove a distinct role alongside BT2, Project Runner and BugOps."
+    },
+    {
+      "id": "workbridgemcp",
+      "repository": "thebrazenbeard/WorkBridgeMCP",
+      "name": "WorkBridge MCP",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P0",
+      "family_id": "vera-runtime",
+      "activity_state": "ACTIVE",
+      "purpose": "Workstation bridge MCP for bounded machine-facing operations.",
+      "status": "Repair/build, listener ownership and VeraMesh integration restack remain open.",
+      "current_frontier": "Qualify one narrow machine-control surface before broader capability exposure."
+    },
+    {
+      "id": "abil",
+      "repository": "thebrazenbeard/abil",
+      "name": "ABIL",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P1",
+      "family_id": "industrial-intelligence",
+      "activity_state": "ACTIVE_HEAVY",
+      "purpose": "Adaptive Brownfield Intelligence Layer for governed learning on existing machines and processes.",
+      "status": "Large active research/assurance stack spans currentness, execution evidence, anti-replay and governance.",
+      "current_frontier": "Reconcile the research stack into an executable bounded industrial-intelligence path."
     },
     {
       "id": "axle",
@@ -121,28 +149,28 @@
       "repository": "thebrazenbeard/bugops",
       "name": "BugOps",
       "visibility": "public",
-      "archived": false,
+      "archived": true,
       "default_branch": "main",
-      "priority": "P2",
+      "priority": "P4",
       "family_id": "assurance-and-repair",
-      "activity_state": "STABLE",
+      "activity_state": "ARCHIVED",
       "purpose": "Operational incident and bug-reporting surface.",
-      "status": "Recent incident repair is merged; no current pull request.",
-      "current_frontier": "Remain an incident source rather than a competing orchestrator."
+      "status": "GitHub archived at the October 7 census. Earlier historical status: Recent incident repair is merged; no current pull request.",
+      "current_frontier": "Preserve archived source; do not activate without explicit review."
     },
     {
       "id": "build-team-2.0",
       "repository": "thebrazenbeard/build-team-2.0",
       "name": "Build Team 2.0",
       "visibility": "public",
-      "archived": false,
+      "archived": true,
       "default_branch": "main",
       "priority": "P4",
       "family_id": "portfolio-spine",
       "activity_state": "SUPERSEDED",
       "purpose": "Earlier Build Team repository and protocol lineage.",
-      "status": "Operationally superseded by bt2.",
-      "current_frontier": "Preserve history; do not start new canonical work here."
+      "status": "GitHub archived at the October 7 census. Earlier historical status: Operationally superseded by bt2.",
+      "current_frontier": "Preserve historically superseded and now archived repository; no automatic revival."
     },
     {
       "id": "ccb-core",
@@ -171,6 +199,20 @@
       "purpose": "Governed conative and goal-directed state representation.",
       "status": "Continuity-gap work is merged.",
       "current_frontier": "Treat wants/goals as provenance-bearing state, not standing instruction."
+    },
+    {
+      "id": "cricket",
+      "repository": "thebrazenbeard/cricket",
+      "name": "cricket",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
     },
     {
       "id": "deepmemorystorage",
@@ -215,6 +257,20 @@
       "current_frontier": "Finish effect fencing while retaining exact-subject qualification."
     },
     {
+      "id": "ears",
+      "repository": "thebrazenbeard/ears",
+      "name": "ears",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
       "id": "empathy",
       "repository": "thebrazenbeard/empathy",
       "name": "Empathy",
@@ -229,18 +285,18 @@
       "current_frontier": "Consolidate lanes while preserving falsification independence."
     },
     {
-      "id": "freerowcochkar",
-      "repository": "thebrazenbeard/freerowcochkar",
-      "name": "FreeRowCochkar",
+      "id": "executor",
+      "repository": "thebrazenbeard/executor",
+      "name": "executor",
       "visibility": "public",
       "archived": false,
       "default_branch": "main",
       "priority": "P2",
-      "family_id": "specialist-reasoning",
-      "activity_state": "INCUBATOR",
-      "purpose": "Adversarial loophole and legal-style reasoning engine.",
-      "status": "Foundation/restack work remains open.",
-      "current_frontier": "Prove bounded value on concrete cases before broad integration."
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
     },
     {
       "id": "fuckup",
@@ -341,18 +397,60 @@
       "current_frontier": "Run stronger continual-learning evaluation and preserve the standalone research boundary before any Vera integration."
     },
     {
+      "id": "lou-pole",
+      "repository": "thebrazenbeard/lou-pole",
+      "name": "lou-pole",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
       "id": "masamune",
       "repository": "thebrazenbeard/masamune",
       "name": "Masamune",
       "visibility": "public",
       "archived": false,
-      "default_branch": "collab",
+      "default_branch": "main",
       "priority": "P2",
       "family_id": "specialist-workers",
       "activity_state": "QUIET",
       "purpose": "Masa/Mune debugger and hostile defect-isolation team.",
       "status": "No current pull request; recent work is continuation/review checkpointing.",
       "current_frontier": "Activate only against concrete defects."
+    },
+    {
+      "id": "mediaphile-client",
+      "repository": "thebrazenbeard/mediaphile-client",
+      "name": "mediaphile-client",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
+      "id": "mediaphile-server",
+      "repository": "thebrazenbeard/mediaphile-server",
+      "name": "mediaphile-server",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
     },
     {
       "id": "meso-crct",
@@ -397,6 +495,20 @@
       "current_frontier": "Prefer empirical validation over architectural enlargement."
     },
     {
+      "id": "ocd",
+      "repository": "thebrazenbeard/ocd",
+      "name": "ocd",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
       "id": "on-theo",
       "repository": "thebrazenbeard/on-theo",
       "name": "ON_THEO",
@@ -425,18 +537,32 @@
       "current_frontier": "Establish measurable behavior without laundering self-description into phenomenology."
     },
     {
-      "id": "pro-run",
-      "repository": "thebrazenbeard/pro-run",
-      "name": "Pro-Run",
+      "id": "portal",
+      "repository": "thebrazenbeard/portal",
+      "name": "portal",
       "visibility": "public",
       "archived": false,
       "default_branch": "main",
-      "priority": "P1",
-      "family_id": "coordination",
-      "activity_state": "ACTIVE_HEAVY",
-      "purpose": "Durable continuous execution environment for tool-using language models with recovery, leases, and effect fencing.",
-      "status": "Core durable runtime is on main; Windows/local-Qwen runtime and stale-error recovery successors are green and open.",
-      "current_frontier": "Integrate verified Windows/Qwen runtime and recovery fixes while preserving exact effect and reconciliation boundaries."
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
+      "id": "pre-active",
+      "repository": "thebrazenbeard/pre-active",
+      "name": "pre-active",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
     },
     {
       "id": "project-achilles",
@@ -481,20 +607,6 @@
       "current_frontier": "Make the corpus a validated descriptive input without turning priority into authority."
     },
     {
-      "id": "repairtracker",
-      "repository": "thebrazenbeard/RepairTracker",
-      "name": "RepairTracker",
-      "visibility": "public",
-      "archived": false,
-      "default_branch": "main",
-      "priority": "P2",
-      "family_id": "assurance-and-repair",
-      "activity_state": "ACTIVE",
-      "purpose": "Evidence-governed repair/debugging and parallel remediation.",
-      "status": "Repair spine, artifact attestation and GitHub signal-promotion work remain open.",
-      "current_frontier": "Prove a distinct role alongside BT2, Project Runner and BugOps."
-    },
-    {
       "id": "rezon",
       "repository": "thebrazenbeard/rezon",
       "name": "Rezon",
@@ -537,6 +649,34 @@
       "current_frontier": "Finish currentness custody while separating evidence from authority."
     },
     {
+      "id": "semiotics",
+      "repository": "thebrazenbeard/semiotics",
+      "name": "semiotics",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
+      "id": "spk-packager",
+      "repository": "thebrazenbeard/spk-packager",
+      "name": "spk-packager",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
       "id": "spm",
       "repository": "thebrazenbeard/spm",
       "name": "SPM",
@@ -565,6 +705,20 @@
       "current_frontier": "Stabilize semantic/execution boundaries and compose with BT2 database/Lantern work without turning translation or connectivity into effect authority."
     },
     {
+      "id": "tattler",
+      "repository": "thebrazenbeard/tattler",
+      "name": "Tattler",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P0",
+      "family_id": "host-observability",
+      "activity_state": "ACTIVE_HEAVY",
+      "purpose": "Evidence-bound host diagnostics and local network endpoint telemetry.",
+      "status": "2026-10-07 exact main d091584cf1bb514dcf1ba786ed16f705fabf807d; PR #6 open and unmerged; local desktop redesign approved but runtime unverified.",
+      "current_frontier": "Stage 1: correct duplicate/partial-scan/freshness evidence; Stage 2: four collapsible tables, semantic filtering, grouped/raw drill-down and efficient polling. Source-only."
+    },
+    {
       "id": "temporal",
       "repository": "thebrazenbeard/temporal",
       "name": "Temporal",
@@ -591,6 +745,20 @@
       "purpose": "Literary/research downstream for source-critical Yeshua reconstruction.",
       "status": "Foundation restack, ON_THEO handoff and historical/literary review lanes remain open.",
       "current_frontier": "Consume survived source claims without promoting literary hypotheses upstream."
+    },
+    {
+      "id": "thebrazenbeard",
+      "repository": "thebrazenbeard/thebrazenbeard",
+      "name": "thebrazenbeard",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
     },
     {
       "id": "transcendence",
@@ -649,18 +817,18 @@
       "current_frontier": "Reconcile useful mechanisms into the current implementation without competing runtime roots."
     },
     {
-      "id": "vera-model-training",
-      "repository": "thebrazenbeard/vera_model_training",
-      "name": "Vera Model Training",
+      "id": "vera-r9a0",
+      "repository": "thebrazenbeard/vera-R9A0",
+      "name": "Vera R9A0",
       "visibility": "public",
       "archived": false,
       "default_branch": "main",
-      "priority": "P0",
-      "family_id": "vera-runtime",
-      "activity_state": "ACTIVE_HEAVY",
-      "purpose": "Vera/BV corpus construction, model training and qualification.",
-      "status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open.",
-      "current_frontier": "Execute one reproducible training line with exact corpus lineage."
+      "priority": "P2",
+      "family_id": "vera-lineage",
+      "activity_state": "QUIET",
+      "purpose": "Historical Vera Revision 9 architecture/rollout lineage.",
+      "status": "Voice currentness-guard work remains open; otherwise mostly lineage.",
+      "current_frontier": "Migrate useful mechanisms forward rather than revive a competing runtime."
     },
     {
       "id": "vera-control-plane",
@@ -719,20 +887,6 @@
       "current_frontier": "Finish portable recovery and reduce external runtime dependency without erasing provenance."
     },
     {
-      "id": "vera-r9a0",
-      "repository": "thebrazenbeard/vera-R9A0",
-      "name": "Vera R9A0",
-      "visibility": "public",
-      "archived": false,
-      "default_branch": "main",
-      "priority": "P2",
-      "family_id": "vera-lineage",
-      "activity_state": "QUIET",
-      "purpose": "Historical Vera Revision 9 architecture/rollout lineage.",
-      "status": "Voice currentness-guard work remains open; otherwise mostly lineage.",
-      "current_frontier": "Migrate useful mechanisms forward rather than revive a competing runtime."
-    },
-    {
       "id": "vera-synology",
       "repository": "thebrazenbeard/vera-synology",
       "name": "Vera Synology",
@@ -745,6 +899,34 @@
       "purpose": "Synology/DS216 Vera runtime packaging and hosting.",
       "status": "Runtime Host SPK and VeraMesh packaging/open-route work remain open.",
       "current_frontier": "Build one reproducible source/build/install/runtime path."
+    },
+    {
+      "id": "vera-model-training",
+      "repository": "thebrazenbeard/vera_model_training",
+      "name": "Vera Model Training",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P0",
+      "family_id": "vera-runtime",
+      "activity_state": "ACTIVE_HEAVY",
+      "purpose": "Vera/BV corpus construction, model training and qualification.",
+      "status": "Qwen3.5 4B HF continuation, 50k corpus, qualification gates and local-runtime work remain open.",
+      "current_frontier": "Execute one reproducible training line with exact corpus lineage."
+    },
+    {
+      "id": "volition",
+      "repository": "thebrazenbeard/volition",
+      "name": "volition",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
     },
     {
       "id": "voss",
@@ -775,18 +957,32 @@
       "current_frontier": "Reconcile overlap with Project Runner/BT2 and keep only distinct recovery semantics."
     },
     {
-      "id": "workbridgemcp",
-      "repository": "thebrazenbeard/WorkBridgeMCP",
-      "name": "WorkBridge MCP",
+      "id": "workbridge",
+      "repository": "thebrazenbeard/workbridge",
+      "name": "workbridge",
       "visibility": "public",
       "archived": false,
       "default_branch": "main",
-      "priority": "P0",
-      "family_id": "vera-runtime",
-      "activity_state": "ACTIVE",
-      "purpose": "Workstation bridge MCP for bounded machine-facing operations.",
-      "status": "Repair/build, listener ownership and VeraMesh integration restack remain open.",
-      "current_frontier": "Qualify one narrow machine-control surface before broader capability exposure."
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
+    },
+    {
+      "id": "workbridgecommander",
+      "repository": "thebrazenbeard/workbridgecommander",
+      "name": "workbridgecommander",
+      "visibility": "public",
+      "archived": false,
+      "default_branch": "main",
+      "priority": "P2",
+      "family_id": "unclassified",
+      "activity_state": "UNKNOWN",
+      "purpose": "Repository purpose not established by the inventory; inspect before assigning work.",
+      "status": "New to the 2026-10-07 public census; source/behavioral status not assessed.",
+      "current_frontier": "Verify source, role and current work; hold until qualified."
     },
     {
       "id": "world-zero",
