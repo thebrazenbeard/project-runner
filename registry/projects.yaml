@@ -149,3 +149,87 @@ projects:
   - read
   - analyze
   - propose
+- id: bt2
+  name: Build Team Two
+  visibility: public
+  repositories:
+  - thebrazenbeard/bt2
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: portfolio-spine
+  scheduling_state: HELD
+  scope_note: Public P0 corpus subject registered for source and review routing only; no execution target is admitted.
+- id: project-lantern
+  name: Project Lantern
+  visibility: public
+  repositories:
+  - thebrazenbeard/project-lantern
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: memory-and-provenance
+  scheduling_state: HELD
+  scope_note: Public P0 corpus subject registered for source and review routing only; no runtime/currentness backend is inferred.
+- id: vera-mesh
+  name: VeraMesh
+  visibility: public
+  repositories:
+  - thebrazenbeard/vera-mesh
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: vera-runtime
+  scheduling_state: HELD
+  scope_note: Public P0 corpus subject registered for source and review routing only; no transport activation authority is admitted.
+- id: vera-model-training
+  name: Vera Model Training
+  visibility: public
+  repositories:
+  - thebrazenbeard/vera_model_training
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: vera-runtime
+  scheduling_state: HELD
+  scope_note: Public P0 corpus subject registered for source and review routing only; training source is not installed-model or runtime authority.
+- id: vera-mono
+  name: Vera Monorepo
+  visibility: public
+  repositories:
+  - thebrazenbeard/vera-mono
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: vera-runtime
+  scheduling_state: HELD
+  scope_note: Public P0 corpus subject registered for source and review routing only; package source is not installation or runtime effect.
+- id: workbridgemcp
+  name: WorkBridge MCP
+  visibility: public
+  repositories:
+  - thebrazenbeard/WorkBridgeMCP
+  capabilities:
+  - read
+  - analyze
+  - propose
+  assignment_scope: EXTERNAL_BOUNDED
+  review_scope: STANDING
+  family_id: vera-runtime
+  scheduling_state: HELD
+  scope_note: Public P0 corpus subject registered for source and review routing only; machine-facing execution remains separately authority-gated.
