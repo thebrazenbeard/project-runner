@@ -61,7 +61,7 @@ def test_superseded_subject_is_preserve_only_and_held():
     build_team = next(
         item for item in wave.items if item.subject_id == "build-team-2.0"
     )
-    assert build_team.activity_state == "ARCHIVED"
+    assert build_team.activity_state == "SUPERSEDED"
     assert build_team.action == "PRESERVE_ONLY"
     assert build_team.execution_state == "HELD"
     assert build_team.effect_ceiling == "NO_EFFECT"

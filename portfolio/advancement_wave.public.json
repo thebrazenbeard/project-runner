@@ -3,10 +3,10 @@
   "generated_at": "2026-10-07T19:47:19-04:00",
   "corpus_binding": {
     "repository": "thebrazenbeard/project-runner",
-    "ref": "657340e937c134e85cd600a5b6b888fa9ade923b",
-    "commit": "657340e937c134e85cd600a5b6b888fa9ade923b",
+    "ref": "d5c5fe0321c52ec40a4579b69837f1697c46b223",
+    "commit": "d5c5fe0321c52ec40a4579b69837f1697c46b223",
     "path": "portfolio/corpus.public.json",
-    "git_blob_sha": "cc4cc66338b9ef8b60cf02e66f514ae904bf2dcd",
+    "git_blob_sha": "114b471334a37b63ef40a7784820d500118a79f4",
     "public_repository_count": 67,
     "total_repository_count": 86,
     "private_repository_count": 19,
@@ -167,7 +167,7 @@
       "effect_ceiling": "NO_EFFECT",
       "review_gate": "CONSUMER_EVIDENCE",
       "frontier": "Preserve archived source; do not activate without explicit review.",
-      "source_status": "Archived at October 7 GitHub census; source/runtime not requalified."
+      "source_status": "GitHub archived; historical activity ARCHIVED preserved. No runtime requalification."
     },
     {
       "subject_kind": "repository",
@@ -175,7 +175,7 @@
       "repository": "thebrazenbeard/build-team-2.0",
       "priority": "P4",
       "family_id": "portfolio-spine",
-      "activity_state": "ARCHIVED",
+      "activity_state": "SUPERSEDED",
       "lead_identity": "ONE",
       "reviewer_identities": [
         "REZON",
@@ -185,8 +185,8 @@
       "execution_state": "HELD",
       "effect_ceiling": "NO_EFFECT",
       "review_gate": "NO_NEW_WORK",
-      "frontier": "Preserve archived source; do not activate without explicit review.",
-      "source_status": "Archived at October 7 GitHub census; source/runtime not requalified."
+      "frontier": "Preserve historically superseded and now archived repository; no automatic revival.",
+      "source_status": "GitHub archived; historical activity SUPERSEDED preserved. No runtime requalification."
     },
     {
       "subject_kind": "repository",
