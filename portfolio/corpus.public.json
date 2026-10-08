@@ -155,7 +155,7 @@
       "family_id": "assurance-and-repair",
       "activity_state": "ARCHIVED",
       "purpose": "Operational incident and bug-reporting surface.",
-      "status": "Archived at the 2026-10-07 GitHub inventory cut; older historical status is superseded.",
+      "status": "GitHub archived at the October 7 census. Earlier historical status: Recent incident repair is merged; no current pull request.",
       "current_frontier": "Preserve archived source; do not activate without explicit review."
     },
     {
@@ -167,10 +167,10 @@
       "default_branch": "main",
       "priority": "P4",
       "family_id": "portfolio-spine",
-      "activity_state": "ARCHIVED",
+      "activity_state": "SUPERSEDED",
       "purpose": "Earlier Build Team repository and protocol lineage.",
-      "status": "Archived at the 2026-10-07 GitHub inventory cut; older historical status is superseded.",
-      "current_frontier": "Preserve archived source; do not activate without explicit review."
+      "status": "GitHub archived at the October 7 census. Earlier historical status: Operationally superseded by bt2.",
+      "current_frontier": "Preserve historically superseded and now archived repository; no automatic revival."
     },
     {
       "id": "ccb-core",
