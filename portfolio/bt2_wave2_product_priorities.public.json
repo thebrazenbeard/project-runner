@@ -1,0 +1,108 @@
+{
+  "schema": "BT2_WAVE2_PRODUCT_PRIORITY_SELECTION_V1",
+  "observed_date": "2026-10-09",
+  "origin": "Authenticated 88-repository GitHub inspection + live user correction",
+  "not_an_execution_grant": true,
+  "public_repository_count": 12,
+  "private_repository_count": 1,
+  "private_repository_names_intentionally_omitted": true,
+  "public_corpus_restaging_required": true,
+  "proposed_public_subjects": [
+    {
+      "repository": "thebrazenbeard/portal",
+      "head_sha": "55cea19ad841e9714a114341a31ac8fff9b5f4bf",
+      "selection_basis": "USER_NAMED",
+      "frontier": "resident admission and worker dispatch",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/project-runner",
+      "head_sha": "9c84721609c434232db66d0d21c3675bbfa4f020",
+      "selection_basis": "USER_NAMED",
+      "frontier": "validate source-bound execution frontier",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/tattler",
+      "head_sha": "e8d18730aa63575bad6b5cdcd7469b22213a646d",
+      "selection_basis": "USER_NAMED",
+      "frontier": "candidate-versus-published SPK CI qualification",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/sql-connectome",
+      "head_sha": "036af6dba09b105a7be4a82ea723d89119ddfba8",
+      "selection_basis": "USER_NAMED",
+      "frontier": "credential-safe provider observation",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/blotter",
+      "head_sha": "0916ffaa1741ec3879b3d1592cde91ad215a9b0a",
+      "selection_basis": "USER_NAMED",
+      "frontier": "central activity log and agent integration",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/pre-active",
+      "head_sha": "0721d24493a1d282bc252b3250ea14173e013a99",
+      "selection_basis": "USER_NAMED",
+      "frontier": "local model provenance and resident scheduling",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/meso-crct",
+      "head_sha": "461ed86ddbf21d8a298b7288cbfea234b8c0d5da",
+      "selection_basis": "USER_NAMED",
+      "frontier": "finite-horizon admitted obligation service",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/vera_model_training",
+      "head_sha": "adcfde606bfe806e6c7dd6170be6e22bdd4643db",
+      "selection_basis": "USER_NAMED",
+      "frontier": "CPU eval recipe/custody semantics",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/vera-mono",
+      "head_sha": "55d380db89e50dc09a763e7cddf652b961362d46",
+      "selection_basis": "BT2_PROPOSED",
+      "frontier": "installed runtime provenance and packaging",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/executor",
+      "head_sha": "b931063be3441525ebaef2d092bc419968c3c558",
+      "selection_basis": "BT2_PROPOSED",
+      "frontier": "bounded workstation execution and MCP recovery",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/volition",
+      "head_sha": "78b56f7f0f24d4340677d6d4fc05e946a2b154db",
+      "selection_basis": "BT2_PROPOSED",
+      "frontier": "finite motivational inputs and self-initiated choices",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    },
+    {
+      "repository": "thebrazenbeard/vera-mesh",
+      "head_sha": "0d22be6fc54243498f9b7db16a7c18eff95d9f33",
+      "selection_basis": "BT2_PROPOSED",
+      "frontier": "governed multi-device transport",
+      "effect_ceiling": "SOURCE_ONLY",
+      "integration_status": "CANDIDATE_ONLY"
+    }
+  ]
+}
