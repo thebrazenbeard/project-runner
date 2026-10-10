@@ -85,3 +85,13 @@ def test_unknown_project_remains_authority_blocked_when_scheduling_lookup_is_sup
         scheduling_lookup={},
     )
     assert frontiers[0].status is FrontierStatus.WAITING_AUTHORITY
+
+
+def test_string_scheduling_status_cannot_be_treated_as_true():
+    frontiers = derive_frontiers(
+        (_invalidation(),),
+        capability_lookup={"vera": {"analyze"}},
+        scheduling_lookup={"vera": "False"},
+    )
+    assert frontiers[0].status is FrontierStatus.WAITING_SCHEDULING
+    assert frontiers[0].priority_inputs["executable_now"] == 0
