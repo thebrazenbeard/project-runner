@@ -55,7 +55,7 @@ def derive_frontiers(
             and invalidation.consumer in scheduling_lookup
         )
         schedulable = (
-            bool(scheduling_lookup[invalidation.consumer])
+            scheduling_lookup[invalidation.consumer] is True
             if scheduling_known
             else True
         )
