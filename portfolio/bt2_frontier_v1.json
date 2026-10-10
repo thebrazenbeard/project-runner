@@ -1,0 +1,19 @@
+{
+  "schema": "BT2_CROSS_REPO_FRONTIER_V1",
+  "repository": "thebrazenbeard/project-runner",
+  "source_baseline": {
+    "observed_sha": "8a2255c5c5b986acc011931fad63a21f930256df",
+    "source_only": true
+  },
+  "lane": "execution-kernel",
+  "objective": "Consume exact-head portfolio frontier metadata as advisory input to fenced source-only admissions.",
+  "acceptance_invariant": "A changed head or missing exact-subject evidence must block promotion, not silently replan.",
+  "release_gates": {
+    "source_test": "REQUIRED",
+    "exact_head_review": "REQUIRED",
+    "installed_runtime": "NOT_CLAIMED",
+    "protected_effect_authority": false
+  },
+  "kind": "ADVISORY_SOURCE_ONLY",
+  "observed_at": "2026-10-09"
+}
