@@ -23,8 +23,8 @@ import argparse
 from runner.portfolio_advancement import AdvancementItem, AdvancementWave
 from runner.portfolio_wave_scheduler import WaveExecutionBudget, plan_wave_admission
 
-# Maximum scheduling limits: eight active execution slots, sixty-four
-# queued analytical items. These are NOT 64 independent agents.
+# Maximum scheduling limits: eight active execution slots, seventy-two
+# queued analytical items. These are NOT 72 independent agents.
 OUTPUT: Path = Path(".")
 OWNER = "thebrazenbeard"
 LIMIT = 8
@@ -157,8 +157,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--execution-lanes",type=int,default=8)
     parser.add_argument("--logic-slots",type=int,default=64)
     args=parser.parse_args(argv)
-    if not 1 <= args.execution_lanes <= 8 or not 1 <= args.logic_slots <= 64:
-        raise ValueError("execution lanes limited to 8 and logical queue to 64")
+    if not 1 <= args.execution_lanes <= 8 or not 1 <= args.logic_slots <= 72:
+        raise ValueError("execution lanes limited to 8 and logical queue to 72")
     global OUTPUT, OWNER, LIMIT, LOGIC, EXPECTED
     OUTPUT=args.output.absolute()
     OWNER=args.owner
@@ -189,13 +189,13 @@ def main(argv: list[str] | None = None) -> int:
             execution_state="QUEUED", effect_ceiling="NO_EFFECT",
             review_gate="SOURCE_REVIEW_REQUIRED",
             frontier=None, source_status="live inventory only",
-            lane_id=f"executor-{i%LIMIT+1:02d}"))
-    wave=AdvancementWave(wave_id="portfolio-89-8x64-20261015",
+            lane_id=f"logical-{i%LOGIC+1:02d}"))
+    wave=AdvancementWave(wave_id="portfolio-89-bounded-wave",
         generated_at=datetime.now(timezone.utc).isoformat(),
         corpus_binding={"binding_kind":"LIVE_OWNER_SCOPE","repositories":len(subjects)},
         identities={f"logic-{i:02d}":"ANALYSIS_TASK_NOT_AGENT" for i in range(LOGIC)},
         policy={"max_execution_lanes":LIMIT,"max_logical_queue":LOGIC,
-            "no_protected_effects":True,"real_64_agent_workers":False},
+            "no_protected_effects":True,"independent_logic_agents":0},
         items=tuple(subjects))
     index={item.subject_id:i for i,item in enumerate(subjects)}
     budget=WaveExecutionBudget(max_parallel=LIMIT,max_per_identity=LIMIT,
@@ -212,7 +212,7 @@ def main(argv: list[str] | None = None) -> int:
     completed=set()
     outputs=[]
     batches=[]
-    # Break into windows of <=64 pending logic tasks without asserting 64
+    # Break into windows of <=LOGIC pending tasks without asserting LOGIC
     # simultaneous CPU threads or independent LLMs.
     for logical_start in range(0,len(names),LOGIC):
         logical_subjects=set(names[logical_start:logical_start+LOGIC])
@@ -247,6 +247,7 @@ def main(argv: list[str] | None = None) -> int:
        "state_counts":dict(counts),"next_actions":dict(actions),
        "batches":len(batches),"max_concurrent_executions":LIMIT,
        "max_logical_queue":LOGIC,"independent_logic_agents":0,
+       "distinct_logical_lanes":len(set(x["lane"] for x in outputs)),
        "source_code_executed":0,"repositories_modified":0,
        "runtime_source_sha":observed,
        "finished_utc":datetime.now(timezone.utc).isoformat()}
