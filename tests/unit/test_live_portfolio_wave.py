@@ -69,8 +69,8 @@ def test_runner_reconciles_exact_scope_across_execution_and_logic_windows(
                    "--execution-lanes","2","--logic-slots","2"])
 
 
-def test_8_by_64_limits_and_no_checkout_receipts(tmp_path):
-    for lane,queue in ((9,64),(8,65),(0,8),(2,0)):
+def test_8_by_72_limits_and_no_checkout_receipts(tmp_path):
+    for lane,queue in ((9,64),(8,73),(0,8),(2,0)):
         with pytest.raises(ValueError,match="limited to"):
             wave.main(["--expected","3","--output",str(tmp_path/"bad"),
                        "--execution-lanes",str(lane),"--logic-slots",str(queue)])
@@ -90,3 +90,23 @@ def test_cross_repository_identity_mismatch_is_held(monkeypatch,tmp_path):
     assert result["github_repository_mutated"] is False
     assert (tmp_path/"subjects"/"alpha"/"attempt.json").is_file()
     assert (tmp_path/"subjects"/"alpha"/"final.json").is_file()
+
+
+def test_72_distinct_logical_lanes_with_at_most_8_workers(monkeypatch,tmp_path):
+    names=tuple(f"thebrazenbeard/project-{i:03d}" for i in range(73))
+    monkeypatch.setattr(wave,"owner_scope",lambda owner,expected_count:names)
+    monkeypatch.setattr(wave,"gh",_mocked_gh)
+    root=tmp_path/"wave-72"
+    assert wave.main(["--expected","73","--output",str(root),
+                      "--execution-lanes","8","--logic-slots","72"])==0
+    report=json.loads((root/"summary.json").read_text())
+    assert report["scope_count"]==73
+    assert report["receipts"]==73
+    assert report["max_concurrent_executions"]==8
+    assert report["distinct_logical_lanes"]==72
+    assert report["max_logical_queue"]==72
+    assert report["independent_logic_agents"]==0
+    finals=[json.loads(p.read_text()) for p in (root/"subjects").rglob("final.json")]
+    assert len(set(x["lane"] for x in finals))==72
+    assert all(not x["source_code_executed"] for x in finals)
+    assert all(not x["github_repository_mutated"] for x in finals)
