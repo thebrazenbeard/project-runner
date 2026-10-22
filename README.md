@@ -307,3 +307,27 @@ See `docs/superpowers/plans/2026-09-17-m5-github-backend.md`.
 ## Worker recovery
 
 Project Runner and its dispatched workers do not require permanent ChatGPT conversations. Fresh runtimes reconstruct from durable repository/Bus/currentness/authority evidence; chat URLs and Custom GPT share links are locators or provenance only. See `docs/PROJECT_RUNNER_WORKER_RECONSTRUCTION_V1.md`.
+## Governed live owner-wide 8-by-72 source-evidence wave
+
+The standalone Project Runner source contains a read-only, source-currentness
+wave entry point. It uses Project Runner's own collision-key admission
+and budget enforcement, not a separate ad hoc scheduling policy.
+
+  python -m runner.live_portfolio_wave --owner thebrazenbeard --expected 89 --execution-lanes 8 --logic-slots 72 --output C:\PRIVATE\wave-unique
+
+This command authenticates through the user's existing GitHub CLI,
+requires the exact live nonarchived membership (excluding owner profile),
+and rejects a mismatch. It admits at most eight simultaneous GitHub reads,
+keeping at most 72 subjects in a queued analytical window.
+Queueing 72 work units DOES NOT establish 64 independently hosted agents.
+
+Each subject writes non-overwritten attempt.json and final.json receipts;
+the wave writes manifest, Project Runner admission batches, and summary.
+Current-branch SHA, PRs, current-head CI, and source/testing clues are classified.
+An existing output directory prevents unintended replay. Private receipts
+may not be written inside the source checkout.
+
+LIMITS: Source inspection, not arbitrary project code execution, bug fixes,
+independent review, or provider write authority. Each target needs a
+qualified exact source, worker route, and effect approval to execute tests
+or mutate a branch. Failures are HELD, never counted as completed work.
