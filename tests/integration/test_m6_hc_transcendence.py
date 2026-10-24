@@ -4,6 +4,10 @@ from pathlib import Path
 import pytest
 
 from runner.backends import MockBackend
+from scripts.m6_hc_transcendence_live_proof import (
+    TRANSCENDENCE_SUBJECT,
+    _live_transcendence_subject,
+)
 from runner.budgets import BudgetEnvelope
 from runner.collisions import partition_collision_groups
 from runner.dedup import deduplicate_frontiers
@@ -320,3 +324,25 @@ def test_refreshed_current_hc_frontier_completes_with_restart_safe_state(tmp_pat
     reopened_budget.close()
     reopened_lease.close()
     reopened_recursive.close()
+
+
+def test_live_transcendence_target_uses_newly_observed_exact_head():
+    updated = replace(TRANSCENDENCE_SUBJECT, commit="f" * 40)
+
+    class Reader:
+        def read(self, subject):
+            assert subject == TRANSCENDENCE_SUBJECT
+            return updated
+
+    assert _live_transcendence_subject(Reader()) == updated
+
+
+@pytest.mark.parametrize("missing", [None, replace(TRANSCENDENCE_SUBJECT, commit=None)])
+def test_live_transcendence_target_fails_closed_when_unavailable(missing):
+    class Reader:
+        def read(self, subject):
+            assert subject == TRANSCENDENCE_SUBJECT
+            return missing
+
+    with pytest.raises(RuntimeError, match="Transcendence currentness snapshot is unavailable"):
+        _live_transcendence_subject(Reader())

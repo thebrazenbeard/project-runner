@@ -76,6 +76,15 @@ def _github_backend(token: str | None) -> GitHubBackend:
     )
 
 
+def _live_transcendence_subject(reader: GitHubCurrentSubjectReader) -> ExactSubject:
+    # The declared commit is only an identity seed: the read resolves the live
+    # branch head without treating its historical commit as a precondition.
+    observed = reader.read(TRANSCENDENCE_SUBJECT)
+    if observed is None or observed.commit is None:
+        raise RuntimeError("live Transcendence currentness snapshot is unavailable")
+    return observed
+
+
 def main() -> int:
     token = os.environ.get("PROJECT_RUNNER_GITHUB_TOKEN")
     previous = load_observations(SUBSTANTIVE)
@@ -126,9 +135,10 @@ def main() -> int:
         recursive_store = SqliteRecursiveWorkStore(db)
         execution_backend = GitHubReadInspectionBackend(_github_backend(token))
 
+        live_transcendence = _live_transcendence_subject(live_reader)
         work = frontier_to_github_inspection_work(
             frontiers[0],
-            TRANSCENDENCE_SUBJECT,
+            live_transcendence,
             persisted_budget.depth,
             registry_digest=registry_snapshot.sha256,
         )
@@ -304,7 +314,7 @@ def main() -> int:
                 "status": "COMPLETE",
                 "reaction": frontiers[0].work_type,
                 "provider_head": frontiers[0].subject.commit,
-                "consumer_head": TRANSCENDENCE_SUBJECT.commit,
+                "consumer_head": live_transcendence.commit,
                 "budget_generation": new_generation,
                 "recursive_work_generation": recursive_generation,
                 "recursive_work_status": WorkUnitStatus.COMPLETE.value,
