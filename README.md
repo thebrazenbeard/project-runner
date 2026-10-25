@@ -97,6 +97,62 @@ This first operator route is intentionally read-only. A GitHub token's technical
 
 See docs/OPERATOR_EXECUTION_V1.md.
 
+### Explicit Blotter journal export (opt-in)
+
+Project Runner's SQLite execution journal is authoritative **only for the
+recorded local attempt and verification state**. It does not prove independent
+installation, remote effect, or agent identity. To inspect the complete local
+journal before any network operation:
+
+    project-runner blotter-export --preview \
+      --state-db .project-runner/project-runner.sqlite3
+
+To record those source facts in an existing authenticated Blotter service,
+install the `agent-blotter` Python client from the canonical `blotter`
+repository in the **operator's** environment, then explicitly invoke:
+
+    # Set PROJECT_RUNNER_BLOTTER_TOKEN privately in the environment.
+    project-runner blotter-export \
+      --state-db .project-runner/project-runner.sqlite3 \
+      --url https://<your-approved-blotter-host> \
+      --actor <your-credential-bound-actor> \
+      --session <stable-session-id>
+
+No export runs during ordinary scheduling, execution, installation, or import.
+The token is read from `PROJECT_RUNNER_BLOTTER_TOKEN` only for this explicit
+command and never printed or included in events. The official client requires
+HTTPS except loopback and refuses redirects. The operator must supply their
+own authorized actor/token; this command does not enroll agents or create
+credentials.
+
+Each admission, result, verification, and reconciliation record receives a
+replay-stable `event_id`. Attempts and retries share a deterministic
+`correlation_id` but have distinct fencing-token event IDs. Source journal
+hashes are checked **before** the first POST; holder names, free-form reasons,
+raw work IDs, evidence text, and outputs are not exported. Event
+`evidence=SOURCE` and `effect=REPORTED` explicitly mean "this journal records
+the stated transition," **not** independently verified real-world effects.
+Hashes and correlation IDs are pseudonyms, not a confidentiality boundary for
+predictable identifiers; only export to a journal permitted to hold this metadata.
+The original verification status remains in the event payload for later review.
+Orphan child records and inconsistent journal hashes fail the whole export
+before any outbound write. Use `pytest -q tests/unit/test_blotter_export.py`
+for deterministic negative controls. When the canonical `agent-blotter`
+package is installed, the optional
+`tests/integration/test_blotter_http_contract.py` spins up a temporary
+authenticated loopback server, checks remote persistence, and proves
+idempotent replay without contacting production.
+
+Every POST is followed by an authenticated event readback by exact remote
+sequence and ID. This verifies that the **Blotter record** persisted; it does
+not verify the original execution/effect. A disconnected POST or failed
+readback has an ambiguous outcome: the command stops at its specific `event_id` without
+blind retry. Reconcile the existing event with Blotter first, then rerun using
+the **same database and session**; Blotter's exact-content event-id
+idempotency makes unchanged events safe to replay. Never interpret a Blotter
+receipt as authorization for a protected effect. Blotter is a journal, not the
+Chat Communication Bus, and the adapter does not send inter-agent messages.
+
 ## Local background-task monitor (Windows / Lappy)
 
 Project Runner keeps an explicit local registry for background processes it owns and

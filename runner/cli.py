@@ -16,6 +16,7 @@ import time
 from typing import Sequence
 
 from .backends import MockBackend
+from .blotter_export import export_to_blotter, journal_events
 from .budgets import BudgetEnvelope
 from .collisions import partition_collision_groups
 from .currentness import observation_locus, subject_changed
@@ -1038,6 +1039,30 @@ def _operator_status(args) -> int:
     print(json.dumps(payload, sort_keys=True))
     return 0
 
+
+def _blotter_export(args) -> int:
+    if args.preview:
+        events = journal_events(args.state_db)
+        print(json.dumps({
+            "mode": "PROJECT_RUNNER_BLOTTER_JOURNAL_PREVIEW_V1",
+            "event_count": len(events),
+            "event_ids": [event["event_id"] for event in events],
+        }, sort_keys=True))
+        return 0
+    if not args.url or not args.actor or not args.session:
+        raise ValueError("Blotter export requires --url, --actor, and --session")
+    receipts = export_to_blotter(
+        args.state_db, url=args.url, actor=args.actor,
+        session=args.session, token=os.environ.get("PROJECT_RUNNER_BLOTTER_TOKEN", ""),
+    )
+    print(json.dumps({
+        "mode": "PROJECT_RUNNER_BLOTTER_JOURNAL_EXPORT_V1",
+        "event_count": len(receipts),
+        "receipts": list(receipts),
+        "blotter_event_persisted_readback": True,
+    }, sort_keys=True))
+    return 0
+
 def _portfolio_cycle(args) -> int:
     external = _external_project_registry_selected()
     try:
@@ -1558,6 +1583,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     operator_status.add_argument("--detailed", action="store_true")
 
+    blotter_export = subparsers.add_parser("blotter-export")
+    blotter_export.add_argument("--state-db", type=Path, required=True)
+    blotter_export.add_argument("--url")
+    blotter_export.add_argument("--actor")
+    blotter_export.add_argument("--session")
+    blotter_export.add_argument("--preview", action="store_true")
+
     portfolio_cycle = subparsers.add_parser("portfolio-cycle")
     portfolio_cycle.add_argument(
         "--dependencies",
@@ -1795,6 +1827,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _task_reconcile(args)
     if args.command == "operator-status":
         return _operator_status(args)
+    if args.command == "blotter-export":
+        return _blotter_export(args)
     if args.command == "portfolio-cycle":
         return _portfolio_cycle(args)
     if args.command == "portfolio-status":
