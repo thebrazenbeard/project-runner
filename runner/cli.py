@@ -17,6 +17,7 @@ from typing import Sequence
 
 from .backends import MockBackend
 from .blotter_export import export_to_blotter, journal_events
+from .temporal_preview import journal_temporal_events
 from .budgets import BudgetEnvelope
 from .collisions import partition_collision_groups
 from .currentness import observation_locus, subject_changed
@@ -1063,6 +1064,14 @@ def _blotter_export(args) -> int:
     }, sort_keys=True))
     return 0
 
+
+def _temporal_preview(args) -> int:
+    # Validate the entire read-only snapshot before emitting any NDJSON lines.
+    events = journal_temporal_events(args.state_db)
+    for event in events:
+        print(json.dumps(event, ensure_ascii=False, sort_keys=True))
+    return 0
+
 def _portfolio_cycle(args) -> int:
     external = _external_project_registry_selected()
     try:
@@ -1590,6 +1599,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     blotter_export.add_argument("--session")
     blotter_export.add_argument("--preview", action="store_true")
 
+    temporal_preview = subparsers.add_parser("temporal-preview")
+    temporal_preview.add_argument("--state-db", type=Path, required=True)
+
     portfolio_cycle = subparsers.add_parser("portfolio-cycle")
     portfolio_cycle.add_argument(
         "--dependencies",
@@ -1829,6 +1841,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _operator_status(args)
     if args.command == "blotter-export":
         return _blotter_export(args)
+    if args.command == "temporal-preview":
+        return _temporal_preview(args)
     if args.command == "portfolio-cycle":
         return _portfolio_cycle(args)
     if args.command == "portfolio-status":

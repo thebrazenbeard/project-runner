@@ -153,6 +153,30 @@ idempotency makes unchanged events safe to replay. Never interpret a Blotter
 receipt as authorization for a protected effect. Blotter is a journal, not the
 Chat Communication Bus, and the adapter does not send inter-agent messages.
 
+### Explicit Temporal chronology preview (no write)
+
+To inspect the same digest-validated execution journal as Temporal-compatible
+NDJSON without opening a network connection or writing event files:
+
+    project-runner temporal-preview \
+      --state-db .project-runner/project-runner.sqlite3
+
+Each output line has `id`, canonical UTC `timestamp`, `source`, `event`,
+`refs`, and small `metadata`. The `time_basis` is explicit for every phase:
+`admitted_at`, `result_recorded_at`, `verified_at`, or `observed_at`.
+`refs` carries a local journal record digest identifier, not a URL or an
+independent attestation. Output is a sanitized **source report**, not evidence
+that a remote effect occurred. It never sends to Blotter, changes Project
+Runner state, or appends to Temporal; any future ingestion must be a separate,
+authorized step that checks target duplicate IDs and storage rules.
+
+The complete source snapshot and hashes are checked before the first line is
+emitted, so a corrupt journal fails without a partial preview. Event IDs remain
+stable across previews. The current adapter covers only Project Runner's
+execution-journal phase records; it does not infer task causality or claim
+runtime adoption by BT2/Temporal. Verify with
+`pytest -q tests/unit/test_temporal_preview.py`.
+
 ## Local background-task monitor (Windows / Lappy)
 
 Project Runner keeps an explicit local registry for background processes it owns and
