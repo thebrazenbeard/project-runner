@@ -2,11 +2,52 @@
 
 # Project Runner
 
-Public-safe orchestration kernel for Patrick's multi-repository project ecosystem.
+**Evidence-gated work orchestration for portfolios of repositories and workers.**
 
-> Redundant? No. It's just an extra redundancy.
+Project Runner is a reusable Python CLI and orchestration kernel. It observes exact source changes, derives dependency-aware work, deduplicates competing requests, and tracks bounded work through durable claims, worker leases, verification, and recovery. It can inspect GitHub references and, under a separate explicit authority gate, perform a narrowly scoped source-file write.
 
-Project Runner answers: what exists, what changed, what depends on the change, what work is justified and authorized, what can execute now, and what evidence demonstrates completion.
+It is designed for engineering/platform operators coordinating several codebases, integration authors connecting existing workers, and reviewers who need to reconstruct *why* a job ran and *what* its completion evidence proves. It is **not** an AI model, a hosted service, an automatic authorization issuer, or a substitute for the systems that own actual effects.
+
+## What is available
+
+| Surface | Supported behavior | Important limit |
+| --- | --- | --- |
+| Portfolio planning | Typed registries, exact observations, dependency invalidation, READY/BLOCKED frontiers, collision-aware wave plans | A work proposal does not grant execution authority |
+| Durable scheduling | SQLite-backed work, budgets, monotonic fencing tokens, leases, retry/unknown handling and verified completion | State survives only where its database is retained |
+| Worker handoff | Exact-subject routed work packets, protected payload files, qualified worker-route checks and fenced receipts | A worker name or ChatGPT link is not a verified executable route |
+| GitHub operations | Read-only exact-ref inspection; a separately gated `PUT_FILE` operation with expected-head/blob preconditions and readback | No automatic PR merge, deployment, credential grant or general shell access |
+| Audit/export | Operator-status reports, optional Blotter journal export and read-only Temporal chronology preview | Local journal, export and source review are not independent physical-effect proof |
+
+The package installs a `project-runner` command and Python `runner` modules. The CLI commands below are the documented operator surface; the internal Python modules should not be presumed a stable third-party API.
+
+## Try the local, read-only workflow
+
+Python 3.12 or newer is required. From a checkout of this repository:
+
+```bash
+python -m pip install -e ".[dev]"
+project-runner validate
+project-runner inventory
+project-runner frontier-summary \
+  --before tests/fixtures/observations-before.yaml \
+  --after tests/fixtures/observations-after.yaml \
+  --dependencies tests/fixtures/m3-dependencies.yaml
+python -m pytest -q
+```
+
+The included fixtures exercise local frontier derivation and produce a count-only summary. This evaluation needs no GitHub token, hosted service, model, private portfolio registry or workstation agent.
+
+For an authorized live read, use `project-runner github-read-smoke` or `run-inspection` with an explicitly scoped GitHub token and exact target ref. Persistent scheduling uses `portfolio-cycle`, `consume-queue`, and `worker-route-status`. Source writes use the separately governed `github-source-write-execute` flow described below; they are not enabled by the local example.
+
+## Security, privacy, and qualification
+
+- **Capability is not authority.** A backend that can write a file does not authorize a particular repository, branch, path or operation. Mutations require exact grants, review, current fencing, expected state and post-write readback.
+- **Private portfolio information stays outside public source.** The committed registry is a public-safe seed. A complete private registry must be supplied as an external exact-digest replacement with protected collision-key material. Detailed frontier reporting is disabled for that mode.
+- **Ambiguity is not success.** Loss of a response after dispatch produces an unresolved outcome to reconcile; the service must not silently repeat a potentially completed effect.
+- **Source is not installation.** Cloning, running tests, publishing a PR, or seeing a successful GitHub Action does not prove a persistent worker, host service, Blotter connection, provider session or deployment exists. Verify each live endpoint and its authority separately.
+- **Rights are reserved.** This is source-visible proprietary software, not an open-source license. See [LICENSE](LICENSE) and [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) before redistribution, commercial use or derivative hosting.
+
+The sections below document the M6 implementation, protected operator routes, private-registry boundaries, and recovery details. Start with the local example above; add GitHub or worker credentials only for the exact governed operation you intend to run.
 
 ## Current state: M6 bounded execution fabric
 
@@ -42,15 +83,6 @@ M5 adds the first real GitHub execution route:
 - M4 post-work currentness and independent completion-evidence rules remain in force.
 
 The live CI route still has only `contents: read`; it proves exact-head GitHub connectivity and the read-only HC Brain → Transcendence M6 path without manufacturing downstream mutation authority.
-
-## Quick start
-
-    python -m pip install -e '.[dev]'
-    project-runner validate
-    project-runner inventory
-    project-runner dispatch-report --before tests/fixtures/observations-before.yaml --after tests/fixtures/observations-after.yaml --dependencies tests/fixtures/m3-dependencies.yaml
-    project-runner github-read-smoke --repository thebrazenbeard/project-runner --ref main
-    python -m pytest -q
 
 ## Governed read/write execution
 
@@ -387,3 +419,4 @@ See `docs/superpowers/plans/2026-09-17-m5-github-backend.md`.
 ## Worker recovery
 
 Project Runner and its dispatched workers do not require permanent ChatGPT conversations. Fresh runtimes reconstruct from durable repository/Bus/currentness/authority evidence; chat URLs and Custom GPT share links are locators or provenance only. See `docs/PROJECT_RUNNER_WORKER_RECONSTRUCTION_V1.md`.
+
