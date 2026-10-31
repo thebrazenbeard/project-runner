@@ -209,7 +209,7 @@ execution-journal phase records; it does not infer task causality or claim
 runtime adoption by BT2/Temporal. Verify with
 `pytest -q tests/unit/test_temporal_preview.py`.
 
-## Local background-task monitor (Windows / Lappy)
+## Local background-task monitor (Windows)
 
 Project Runner keeps an explicit local registry for background processes it owns and
 also discovers several live ChatGPT execution trees (Executor, Codex bridge workers,
@@ -220,9 +220,9 @@ Launch a tracked background task from **any working directory** with:
 
     project-runner task-start `
       --name "model-training-lane-b" `
-      --repository "thebrazenbeard/vera_model_training" `
+      --repository "example-org/model-training" `
       --lane "lane-b" `
-      --working-directory "C:\path\to\vera_model_training" `
+      --working-directory "C:\work\model-training" `
       --command "python train.py"
 
 The CLI and all task-status/history/reconcile commands share the same default task
