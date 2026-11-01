@@ -46,13 +46,19 @@ An item is not selectable when:
 
 - its execution state is not `QUEUED`;
 - its action is inert/preserve-only;
-- its effect ceiling is `NO_EFFECT`;
-- its effect ceiling exceeds `SOURCE_ONLY`;
+- its effect ceiling is neither `NO_EFFECT` nor `SOURCE_ONLY`;
 - the global budget is exhausted;
 - its lead identity has exhausted its identity budget;
 - any collision key is already reserved.
 
+Queued `NO_EFFECT` advisory/currentness research may therefore be selected for
+planning, but selection does not convert its effect ceiling to `SOURCE_ONLY`.
 Selection does not execute anything. It is only an admission plan.
+
+The separate V1 durable bound-plan claim bridge currently requires a queued
+repository subject with `SOURCE_ONLY` and an exact Git-blob-bound public
+corpus. A `NO_EFFECT` planning selection does not satisfy that claim contract;
+see [Portfolio Operator Bound-Plan Bridge V1](PORTFOLIO_OPERATOR_BOUND_PLAN_BRIDGE_V1.md).
 
 ## CLI
 
