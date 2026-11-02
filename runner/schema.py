@@ -7,17 +7,26 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 
-_ROOT = Path(__file__).resolve().parents[1]
+_RUNNER_DIR = Path(__file__).resolve().parent
+_SOURCE_ROOT = _RUNNER_DIR.parent
+# Source checkouts use the canonical schema files. Installed wheels must use
+# their private resources and fail closed when those resources are absent.
+_SCHEMA_DIR = (
+    _SOURCE_ROOT / "schemas"
+    if (_SOURCE_ROOT / "pyproject.toml").is_file()
+    and (_SOURCE_ROOT / "schemas").is_dir()
+    else _RUNNER_DIR / "_schemas"
+)
 _SCHEMA_FILES = {
-    "project": _ROOT / "schemas" / "project.schema.json",
-    "worker": _ROOT / "schemas" / "worker.schema.json",
-    "observation": _ROOT / "schemas" / "observation.schema.json",
-    "dependency": _ROOT / "schemas" / "dependency.schema.json",
-    "frontier": _ROOT / "schemas" / "frontier.schema.json",
-    "work-unit": _ROOT / "schemas" / "work-unit.schema.json",
-    "portfolio-corpus": _ROOT / "schemas" / "portfolio-corpus.schema.json",
-    "portfolio-advancement": _ROOT / "schemas" / "portfolio-advancement.schema.json",
-    "p0-project-manifest": _ROOT / "schemas" / "p0-project-manifest.schema.json",
+    "project": _SCHEMA_DIR / "project.schema.json",
+    "worker": _SCHEMA_DIR / "worker.schema.json",
+    "observation": _SCHEMA_DIR / "observation.schema.json",
+    "dependency": _SCHEMA_DIR / "dependency.schema.json",
+    "frontier": _SCHEMA_DIR / "frontier.schema.json",
+    "work-unit": _SCHEMA_DIR / "work-unit.schema.json",
+    "portfolio-corpus": _SCHEMA_DIR / "portfolio-corpus.schema.json",
+    "portfolio-advancement": _SCHEMA_DIR / "portfolio-advancement.schema.json",
+    "p0-project-manifest": _SCHEMA_DIR / "p0-project-manifest.schema.json",
 }
 
 
