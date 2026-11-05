@@ -25,19 +25,20 @@ spec.loader.exec_module(guard)
 
 class FakeDist:
     def __init__(self, *, name="project-runner", version="0.1.0", source=None,
-                 editable=True, files=()):
+                 editable=True, files=(), source_url=None):
         self.version = version
         self.metadata = {"Name": name}
         self._source = source
+        self._source_url = source_url
         self._editable = editable
         self.files = files
 
     def read_text(self, filename):
         assert filename == "direct_url.json"
-        if self._source is None:
+        if self._source is None and self._source_url is None:
             return None
         return json.dumps({
-            "url": self._source.as_uri(),
+            "url": self._source_url or self._source.as_uri(),
             "dir_info": {"editable": self._editable},
         })
 
@@ -55,10 +56,14 @@ class PackageOriginTests(unittest.TestCase):
             (pkg / "__init__.py").write_text("# synthetic package, not imported\n")
 
     def probe(self, dist_source, import_source, *, version="0.1.0",
-              editable=True, portal_dist=None):
+              editable=True, portal_dist=None, source_url=None,
+              runner_duplicates=1):
+        runner_dist = FakeDist(source=dist_source, version=version,
+                               editable=editable, source_url=source_url)
+
         def distributions(name):
             if name == "project-runner":
-                return FakeDist(source=dist_source, version=version, editable=editable)
+                return runner_dist
             if name == "portal-coordinator" and portal_dist is not None:
                 return portal_dist
             raise metadata.PackageNotFoundError(name)
@@ -68,7 +73,8 @@ class PackageOriginTests(unittest.TestCase):
             return SimpleNamespace(origin=str(import_source / "runner" / "__init__.py"))
 
         return guard.inspect(self.runner, "0.1.0", distribution_lookup=distributions,
-                             spec_lookup=find_spec)
+                             spec_lookup=find_spec,
+                             distributions_lookup=lambda: [runner_dist] * runner_duplicates)
 
     def test_standalone_runner_editable_install_can_be_identified(self):
         result = self.probe(self.runner, self.runner)
@@ -126,12 +132,75 @@ class PackageOriginTests(unittest.TestCase):
         result = self.probe(self.runner, self.runner, portal_dist=portal)
         self.assertIn("PORTAL_OWNS_RUNNER_NAMESPACE", result["failures"])
 
+    def test_windows_casefolded_runner_namespace_is_collision(self):
+        portal = FakeDist(name="portal-coordinator",
+                          files=["portal/__init__.py", "Runner/__init__.py"])
+        result = self.probe(self.runner, self.runner, portal_dist=portal)
+        self.assertIn("PORTAL_OWNS_RUNNER_NAMESPACE", result["failures"])
+
+    def test_portal_editable_record_does_not_attest_source_ownership(self):
+        portal = FakeDist(name="portal-coordinator", source=self.portal,
+                          files=["__editable__.portal_coordinator.pth",
+                                 "portal_coordinator-0.2.dist-info/METADATA"])
+        result = self.probe(self.runner, self.runner, portal_dist=portal)
+        self.assertIn("PORTAL_PACKAGE_RECORD_UNVERIFIABLE", result["failures"])
+
+    def test_noncanonical_portal_record_paths_do_not_prove_disjointness(self):
+        for unusual in ("./runner/__init__.py", "../runner/__init__.py",
+                        "/runner/__init__.py", "C:/runner/__init__.py",
+                        "portal//__init__.py"):
+            with self.subTest(unusual=unusual):
+                portal = FakeDist(name="portal-coordinator",
+                                  files=["portal/__init__.py", unusual])
+                result = self.probe(self.runner, self.runner, portal_dist=portal)
+                self.assertIn("PORTAL_PACKAGE_RECORD_UNVERIFIABLE", result["failures"])
+
+    def test_double_encoded_source_url_does_not_get_second_decode(self):
+        encoded = self.runner.as_uri().replace("project-runner", "%2570roject-runner")
+        result = self.probe(self.runner, self.runner, source_url=encoded)
+        self.assertIn("RUNNER_DISTRIBUTION_SOURCE_MISMATCH", result["failures"])
+
+    def test_duplicate_runner_metadata_is_unqualified(self):
+        result = self.probe(self.runner, self.runner, runner_duplicates=2)
+        self.assertIn("RUNNER_DISTRIBUTION_COUNT_UNVERIFIABLE", result["failures"])
+
+    def test_runner_metadata_getter_error_yields_hold_envelope(self):
+        class BadDist(FakeDist):
+            @property
+            def metadata(self):
+                raise RuntimeError("synthetic metadata error")
+            @metadata.setter
+            def metadata(self, _):
+                pass
+        bad = BadDist(source=self.runner)
+        result = guard.inspect(self.runner, "0.1.0",
+                               distribution_lookup=lambda _: bad,
+                               spec_lookup=lambda _: SimpleNamespace(
+                                   origin=str(self.runner / "runner" / "__init__.py")),
+                               distributions_lookup=lambda: [bad])
+        self.assertEqual(result["status"], "HOLD_UNQUALIFIED")
+        self.assertIn("RUNNER_DISTRIBUTION_UNREADABLE", result["failures"])
+        self.assertNotIn("synthetic metadata error", json.dumps(result))
+
+    def test_symlinked_runner_package_is_not_considered_custodied(self):
+        redirected = self.runner / "runner"
+        (redirected / "__init__.py").unlink()
+        redirected.rmdir()
+        try:
+            redirected.symlink_to(self.portal / "runner", target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink creation unavailable")
+        result = self.probe(self.runner, self.portal)
+        self.assertIn("EXPECTED_CHECKOUT_REDIRECTED", result["failures"])
+        self.assertEqual(result["status"], "HOLD_UNQUALIFIED")
+
     def test_missing_runner_dist_and_finder_fail_closed(self):
         def absent(_):
             raise metadata.PackageNotFoundError()
         result = guard.inspect(self.runner, "0.1.0",
                                distribution_lookup=absent,
-                               spec_lookup=lambda _: None)
+                               spec_lookup=lambda _: None,
+                               distributions_lookup=lambda: [])
         self.assertEqual(result["status"], "HOLD_UNQUALIFIED")
         self.assertIn("RUNNER_DISTRIBUTION_MISSING", result["failures"])
         self.assertIn("RUNNER_IMPORT_ORIGIN_MISMATCH", result["failures"])
