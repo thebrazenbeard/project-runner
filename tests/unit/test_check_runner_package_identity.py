@@ -138,6 +138,16 @@ class PackageOriginTests(unittest.TestCase):
         result = self.probe(self.runner, self.runner, portal_dist=portal)
         self.assertIn("PORTAL_OWNS_RUNNER_NAMESPACE", result["failures"])
 
+    def test_top_level_compiled_and_extension_runner_modules_are_collisions(self):
+        for module in ("runner.pyd", "runner.cp314-win_amd64.pyd",
+                       "runner.abi3.so", "runner.cpython-314-x86_64-linux-gnu.so",
+                       "runner.pyc", "RUNNER"):
+            with self.subTest(module=module):
+                portal = FakeDist(name="portal-coordinator",
+                                  files=[module, "portal/__init__.py"])
+                result = self.probe(self.runner, self.runner, portal_dist=portal)
+                self.assertIn("PORTAL_OWNS_RUNNER_NAMESPACE", result["failures"])
+
     def test_portal_editable_record_does_not_attest_source_ownership(self):
         portal = FakeDist(name="portal-coordinator", source=self.portal,
                           files=["__editable__.portal_coordinator.pth",
