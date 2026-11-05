@@ -71,6 +71,13 @@ def _portal_namespace_overlap(dist: object) -> bool | None:
             return None  # Noncanonical/escaping RECORD cannot prove disjointness.
         if any(f == "runner.py" or f.startswith("runner/") for f in entries):
             return True
+        if any(
+            f.endswith((".pth", ".egg-link"))
+            or f.rsplit("/", 1)[-1] in ("sitecustomize.py", "usercustomize.py")
+            or f.rsplit("/", 1)[-1].startswith("__editable__")
+            for f in entries
+        ):
+            return None  # Import-hook carriers can expose unrecorded packages.
         # Editable distribution RECORD tracks the .pth/finder, not necessarily
         # the source packages. Its apparent absence of runner files proves nil.
         raw = dist.read_text("direct_url.json")

@@ -145,6 +145,17 @@ class PackageOriginTests(unittest.TestCase):
         result = self.probe(self.runner, self.runner, portal_dist=portal)
         self.assertIn("PORTAL_PACKAGE_RECORD_UNVERIFIABLE", result["failures"])
 
+    def test_portal_legacy_import_hooks_are_unverifiable_without_direct_url(self):
+        for hook in ("__editable__.portal_coordinator.pth",
+                     "legacy-portal.egg-link",
+                     "__editable___portal_coordinator_finder.py",
+                     "sitecustomize.py", "usercustomize.py"):
+            with self.subTest(hook=hook):
+                portal = FakeDist(name="portal-coordinator",
+                                  files=[hook, "portal_coordinator-0.2.dist-info/METADATA"])
+                result = self.probe(self.runner, self.runner, portal_dist=portal)
+                self.assertIn("PORTAL_PACKAGE_RECORD_UNVERIFIABLE", result["failures"])
+
     def test_noncanonical_portal_record_paths_do_not_prove_disjointness(self):
         for unusual in ("./runner/__init__.py", "../runner/__init__.py",
                         "/runner/__init__.py", "C:/runner/__init__.py",
