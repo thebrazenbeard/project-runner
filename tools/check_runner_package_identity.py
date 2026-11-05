@@ -69,7 +69,7 @@ def _portal_namespace_overlap(dist: object) -> bool | None:
             for f in entries
         ):
             return None  # Noncanonical/escaping RECORD cannot prove disjointness.
-        if any(f == "runner.py" or f.startswith("runner/") for f in entries):
+        if any(f == "runner" or f.startswith(("runner/", "runner.")) for f in entries):
             return True
         if any(
             f.endswith((".pth", ".egg-link"))
