@@ -1,0 +1,15 @@
+name: Workspace startup source safety
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  editor-startup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Fail closed on editor startup source
+        run: python3 tools/check_editor_startup.py .
+      - name: Exercise normal and optimized guard regressions
+        run: |
+          python3 -m unittest discover -s tools -p test_editor_startup_guard.py -v
+          python3 -O -m unittest discover -s tools -p test_editor_startup_guard.py -v
