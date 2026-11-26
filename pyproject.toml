@@ -22,4 +22,10 @@ dev = ["pytest>=8,<10"]
 testpaths = ["tests"]
 
 [tool.setuptools]
-packages = ["runner"]
+packages = ["runner", "runner._schemas"]
+
+[tool.setuptools.package-dir]
+"runner._schemas" = "schemas"
+
+[tool.setuptools.package-data]
+"runner._schemas" = ["*.json"]
