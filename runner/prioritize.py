@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Iterable, Mapping
 
 import yaml
 
+from ._resources import resource_root
 from .dedup import frontier_fingerprint
 from .models import Frontier, FrontierStatus
 
 
-_DEFAULT_POLICY_PATH = Path(__file__).resolve().parents[1] / "policy" / "scheduling.yaml"
+_DEFAULT_POLICY_PATH = resource_root() / "policy" / "scheduling.yaml"
 
 
 @dataclass(frozen=True)

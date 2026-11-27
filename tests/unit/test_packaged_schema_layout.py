@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_schema_wheel_uses_runner_private_package() -> None:
     packaging = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     setuptools = packaging["tool"]["setuptools"]
-    assert setuptools["packages"] == ["runner", "runner._schemas"]
+    assert setuptools["packages"] == ["runner", "runner._schemas", "runner._data.policy", "runner._data.registry", "runner._data.topology", "runner._data.portfolio"]
     assert setuptools["package-dir"]["runner._schemas"] == "schemas"
     assert setuptools["package-data"]["runner._schemas"] == ["*.json"]
     assert "schemas" not in setuptools["packages"]

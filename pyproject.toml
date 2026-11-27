@@ -22,10 +22,18 @@ dev = ["pytest>=8,<10"]
 testpaths = ["tests"]
 
 [tool.setuptools]
-packages = ["runner", "runner._schemas"]
+packages = ["runner", "runner._schemas", "runner._data.policy", "runner._data.registry", "runner._data.topology", "runner._data.portfolio"]
 
 [tool.setuptools.package-dir]
 "runner._schemas" = "schemas"
+"runner._data.policy" = "policy"
+"runner._data.registry" = "registry"
+"runner._data.topology" = "topology"
+"runner._data.portfolio" = "portfolio"
 
 [tool.setuptools.package-data]
 "runner._schemas" = ["*.json"]
+"runner._data.policy" = ["scheduling.yaml"]
+"runner._data.registry" = ["projects.yaml", "workers.yaml"]
+"runner._data.topology" = ["dependencies.yaml"]
+"runner._data.portfolio" = ["advancement_wave.public.json", "corpus.public.json"]
