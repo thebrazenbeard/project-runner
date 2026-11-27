@@ -15,6 +15,7 @@ import tempfile
 import time
 from typing import Sequence
 
+from ._resources import resource_root
 from .backends import MockBackend
 from .blotter_export import export_to_blotter, journal_events
 from .temporal_preview import journal_temporal_events
@@ -88,7 +89,8 @@ from .verify import verify_attempt
 from .work_units import WorkUnit, WorkUnitStatus, work_unit_fingerprint
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = resource_root()
+PUBLIC_CHECKOUT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _project_registry_path() -> Path:
@@ -105,7 +107,7 @@ def _project_registry_path() -> Path:
     except OSError:
         raise ValueError("external project registry is unavailable") from None
 
-    root = ROOT.resolve()
+    root = PUBLIC_CHECKOUT_ROOT.resolve()
     if resolved == root or root in resolved.parents:
         raise ValueError(
             "external project registry must be outside the Project Runner checkout"
@@ -1198,7 +1200,7 @@ def _secure_windows_worker_packet(path: Path) -> None:
 
 def _claim_worker_route(args) -> int:
     payload_out = args.payload_out.expanduser().resolve()
-    root = ROOT.resolve()
+    root = PUBLIC_CHECKOUT_ROOT.resolve()
     payload_inside_public_checkout = (
         payload_out == root or root in payload_out.parents
     )

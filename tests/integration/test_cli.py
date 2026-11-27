@@ -131,7 +131,7 @@ projects:
 """.lstrip(),
         encoding="utf-8",
     )
-    monkeypatch.setattr(cli_module, "ROOT", checkout)
+    monkeypatch.setattr(cli_module, "PUBLIC_CHECKOUT_ROOT", checkout)
     _pin_external_registry(registry, monkeypatch)
 
     with pytest.raises(ValueError, match="outside the Project Runner checkout"):
@@ -1556,7 +1556,7 @@ def test_worker_route_pull_inside_checkout_skips_private_and_claims_public(
     )
     checkout = tmp_path / "public-checkout"
     checkout.mkdir()
-    monkeypatch.setattr(cli_module, "ROOT", checkout)
+    monkeypatch.setattr(cli_module, "PUBLIC_CHECKOUT_ROOT", checkout)
     payload_out = checkout / ".project-runner" / "worker-packet.json"
 
     assert main(
